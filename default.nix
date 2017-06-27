@@ -1,0 +1,23 @@
+{ pkgs ? import <nixpkgs> { inherit system; },
+  system ? builtins.currentSystem,
+  nodejs ? pkgs.nodejs }:
+
+let
+  npmInputs = import ./npm-env.nix {
+    inherit pkgs system nodejs;
+    packages = [
+      { typescript = "2.3.4"; }
+      { typings = "2.1.1"; }
+    ];
+  };
+in
+
+with pkgs;
+stdenv.mkDerivation {
+  name = "ben-srs";
+  buildInputs = npmInputs;
+
+  shellHook = ''
+    PATH=$PWD/node_modules/.bin/:$PATH
+  '';
+}

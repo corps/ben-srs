@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "noImplicitAny": true,
+    "moduleResolution": "node",
+    "target": "es5",
+    "sourceMap": false,
+    "jsx": "react",
+    "importHelpers": true,
+    "noUnusedLocals": true
+  },
+  "exclude": ["node_modules"]
+}
