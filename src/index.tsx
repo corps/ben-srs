@@ -6,6 +6,8 @@ import {generateRootElement} from "kamo-reducers/dom";
 import {renderLoop} from "kamo-reducers/reducers";
 import {Action, reducer} from "./reducer";
 import {view} from "./view";
+import {trackMutations} from "kamo-reducers/track-mutations";
+import {getServices} from "./services";
 
 declare var require: any;
 
@@ -16,28 +18,6 @@ if (module.hot) {
 }
 
 let subscription = new Subscription();
-
-subscription.add(generateRootElement().subscribe((element: HTMLElement) => {
-  let root: Root;
-  renderLoop<State, Action>((state, dispatch, next) => {
-    if (!root) {
-      root = ReactDom.render(<Root/>, element) as any;
-      root.view = view(dispatch);
-    }
-
-    root.setState(state, next);
-  }, reducer, [], initialState).subscribe(e => {
-    switch (e[0]) {
-      case "a":
-        console.log("action", e[1]);
-        break;
-
-      case "s":
-        console.log("next state", e[1]);
-        break;
-    }
-  });
-}));
 
 class Root extends React.Component<{}, State> {
   public view: (state: State) => JSX.Element;
@@ -50,6 +30,35 @@ class Root extends React.Component<{}, State> {
     return null;
   }
 }
+
+subscription.add(generateRootElement().subscribe((element: HTMLElement) => {
+  let root: Root;
+
+  let renderer = (state: State, dispatch: (a: Action) => void, next: () => void) => {
+    if (!root) {
+      root = ReactDom.render(<Root/>, element) as any;
+      root.view = view(dispatch);
+    }
+
+    if (state) {
+      root.setState(state, next);
+    }
+  };
+
+  renderer = trackMutations(renderer);
+
+  renderLoop<State, Action>(renderer, reducer, getServices(), initialState).subscribe(e => {
+    switch (e[0]) {
+      case "a":
+        console.log("action", e[1]);
+        break;
+
+      case "s":
+        console.log("next state", e[1]);
+        break;
+    }
+  });
+}));
 
 if (module.hot) {
   module.hot.dispose(subscription.unsubscribe);

@@ -19,5 +19,11 @@ stdenv.mkDerivation {
 
   shellHook = ''
     PATH=$PWD/node_modules/.bin/:$PATH
+
+    if [ -e $PWD/env.sh ]; then
+      source $PWD/env.sh
+    else
+      echo "Add $PWD/env.sh file and it will be source in this shell."
+    fi
   '';
 }

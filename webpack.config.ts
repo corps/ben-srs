@@ -15,7 +15,12 @@ var config: any = {
 
   plugins: [
     new webpack.DefinePlugin({
-      "process": "(" + JSON.stringify({env: {NODE_ENV: process.env.NODE_ENV}}) + ")"
+      "process": "(" + JSON.stringify({
+        env: {
+          NODE_ENV: process.env.NODE_ENV,
+          DROPBOX_CLIENT_ID: process.env.DROPBOX_CLIENT_ID
+        }
+      }) + ")"
     }),
     new CopyWebpackPlugin([{
       from: 'index.html',

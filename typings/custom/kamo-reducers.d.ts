@@ -1,26 +1,29 @@
 declare module "kamo-reducers/reducers/inputs" {
-  import {ReductionWithEffect} from "kamo-reducers/reducers";
+  import {GlobalAction, ReductionWithEffect} from "kamo-reducers/reducers";
   export interface InputChange<T> {
     type: 'input-change';
     target: keyof T;
+    debounceName: string;
+    debounceAction: GlobalAction;
     text: string;
   }
   export interface ApplyInputChange<T> {
     type: 'apply-input-change';
     target: keyof T;
     text: string;
+    debounceName: string;
   }
   export  type InputAction<T> = InputChange<T> | ApplyInputChange<T>;
   export function applyInputChange<T>(target: keyof T, text: string): ApplyInputChange<T>;
 
   export function inputChange<T>(target: keyof T, text: string): InputChange<T>;
 
-  export function inputChangeDispatcher<T>(parentDispatch: (a: InputAction<T>) => void, target: keyof T, dispatchApplyOnNewOrClearInput?: boolean): (e: {
+  export function inputChangeDispatcher<T>(dispatch: (a: InputAction<T>) => void, target: keyof T, lastValue?: string, dispatchApplyOnNewOrClearInput?: boolean): (e: {
     stopPropagation: () => void;
     target: any;
   }) => void;
 
-  export function applyInputChangeDispatcher<T>(parentDispatch: (a: ApplyInputChange<T>) => void, target: keyof T, ...value: string[]): (e: {
+  export function applyInputChangeDispatcher<T>(dispatch: (a: ApplyInputChange<T>) => void, target: keyof T, ...value: string[]): (e: {
     stopPropagation: () => void;
     target: any;
   }) => void;
@@ -197,15 +200,10 @@ declare module "kamo-reducers/services/notification" {
   export function withBrowserNotifications(effect$: Subject<SideEffect>): Subscriber<GlobalAction>;
 }
 declare module "kamo-reducers/services/resize" {
-  import {Sizing} from "kamo-reducers/services/sizing";
-  import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
+  import {SizeMap} from "kamo-reducers/services/sizing";
+  import {GlobalAction, SideEffect} from "kamo-reducers/reducers";
   import {Subject, Subscriber} from "kamo-reducers/subject";
-  export interface WindowResize {
-    type: "window-resize";
-  }
-  export function reduceWindowResizing(state: Sizing, action: WindowResize | IgnoredAction): ReductionWithEffect<Sizing>;
-
-  export function withResizeWatcher(effect$: Subject<SideEffect>): Subscriber<WindowResize>;
+  export function withResizeWatcher<S extends SizeMap>(key: keyof S): (effect$: Subject<SideEffect>) => Subscriber<GlobalAction>;
 }
 declare module "kamo-reducers/services/scroll-to" {
   import {Subscriber} from "kamo-reducers/subject";
@@ -254,7 +252,7 @@ declare module "kamo-reducers/services/sizing" {
 
   export function reduceSizings<T extends SizeMap>(state: SizeMap, a: SizeUpdate<T>): ReductionWithEffect<T>;
 
-  export function sizeUpdate(name: string, size: Sizing): SizeUpdate<SizeMap>;
+  export function sizeUpdate<T extends SizeMap>(name: keyof T, size: Sizing): SizeUpdate<SizeMap>;
 
   export function withSizeCalculator(effect$: Subject<SideEffect>): Subscriber<GlobalAction>;
 }
@@ -346,16 +344,18 @@ declare module "kamo-reducers/reducers" {
     | ["c"];
   export function renderLoop<State, Action extends GlobalAction>(renderer: Renderer<State, Action>, reducer: Reducer<State>, services: Service[], initialState?: State): Subscriber<RenderUpdate<State, Action>>;
 
-  export function reducerChain<State>(reduction: ReductionWithEffect<State>, action: GlobalAction): {
-    apply: (reducer: Reducer<State>) => any;
-    applySub: <K extends keyof State>(k: K, reducer: Reducer<State[K]>) => any;
+  export interface ReducerChain<S> {
+    state: S;
+    effect?: SideEffect | 0;
     finish: () => {
-      state: State;
-      effect: 0 | SideEffect;
+      state: S;
+      effect: SideEffect | 0;
     };
-    state: State;
-    effect?: 0 | SideEffect;
-  };
+    apply: (reducer: Reducer<S>) => ReducerChain<S>;
+  }
+  export function reducerChain<State>(reduction: ReductionWithEffect<State>, action: GlobalAction): ReducerChain<State>;
+
+  export function subReducersFor<State>(): <Key extends keyof State>(key: Key, reducer: Reducer<State[Key]>) => Reducer<State>;
 }
 declare module "kamo-reducers/subject" {
   export interface Dispatcher<T> {
