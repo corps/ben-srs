@@ -19,6 +19,12 @@ export interface LoadLocalData {
   data: object | 0
 }
 
+export interface ClearLocalData {
+  effectType: "clear-local-data"
+}
+
+export const clearLocalData: ClearLocalData = {effectType: "clear-local-data"};
+
 export function storeLocalData(key: string, data: object): StoreLocalData {
   return {effectType: "store-local-data", key, data};
 }
@@ -38,8 +44,12 @@ export function withStorage(storage: Storage = window.localStorage) {
         let subscription = new Subscription();
         let raw: string;
 
-        subscription.add(effect$.subscribe((effect: StoreLocalData | RequestLocalData | IgnoredSideEffect) => {
+        subscription.add(effect$.subscribe((effect: StoreLocalData | RequestLocalData | ClearLocalData | IgnoredSideEffect) => {
           switch (effect.effectType) {
+            case "clear-local-data":
+              storage.clear();
+              break;
+
             case "store-local-data":
               raw = lz.compressToUTF16(JSON.stringify(effect.data));
               storage.setItem(effect.key, raw);

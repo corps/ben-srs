@@ -5,10 +5,7 @@
 let
   npmInputs = import ./npm-env.nix {
     inherit pkgs system nodejs;
-    packages = [
-      { typescript = "2.3.4"; }
-      { typings = "2.1.1"; }
-    ];
+    packages = [ { typescript = "2.3.4"; } ];
   };
 in
 

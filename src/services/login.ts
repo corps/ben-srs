@@ -12,52 +12,67 @@ export interface AuthFailure {
   type: "auth-failure"
 }
 
-export const authFailure = {type: "auth-failure"};
+export const unauthorizedAccess = {type: "unauthorized-access"};
 
 export interface AuthSuccess {
   type: "auth-success"
-  id: string
+  login: string
   accessToken: string
-  expiresIn: number
+  expires: number
 }
 
-export function authSuccess(id: string, accessToken: string, expiresIn: number): AuthSuccess {
+export function authSuccess(login: string, accessToken: string, expires: number): AuthSuccess {
   return {
     type: "auth-success",
-    id,
+    login,
     accessToken,
-    expiresIn
+    expires
   }
 }
 
-export type AuthAction = AuthSuccess | AuthFailure;
+export interface AuthInitialized {
+  type: "auth-initialized"
+}
+
+export const authInitialized: AuthInitialized = {type: "auth-initialized"};
+
+export type AuthAction = AuthSuccess | AuthFailure | AuthInitialized;
 
 export function withLogin(effect$: Subject<SideEffect>): Subscriber<GlobalAction> {
   return {
     subscribe: (dispatch: (a: GlobalAction) => void) => {
       let subscription = new Subscription();
-      hello.init({dropbox: process.env.DROPBOX_CLIENT_ID});
+      hello.init({dropbox: process.env.DROPBOX_CLIENT_ID}, {
+        redirect_uri: location.protocol + "//" + location.host + location.pathname + "?"
+      });
 
       subscription.add(effect$.subscribe((effect: RequestLogin | IgnoredSideEffect) => {
         switch (effect.effectType) {
           case "request-login":
-            // hello.init()
-            hello.login("dropbox", {display: "page"});
+            hello.login("dropbox", {
+              display: "page",
+              response_type: "token",
+            });
             break;
         }
       }));
 
       let curAuth = hello.getAuthResponse("dropbox");
-      if (curAuth) {
-        if (curAuth.access_token && curAuth.expires * 1000 > Date.now()) {
-          hello.api({network: "dropbox", path: "/me", method: "get"}).then(function (data) {
-            console.log("got the goods", data);
-            // dispatch()
-          }, function (err) {
-            console.error(err);
-            dispatch(authFailure);
-          });
-        }
+      if (curAuth && curAuth.access_token && curAuth.expires * 1000 > Date.now()) {
+        location.search = "";
+
+        hello.api({network: "dropbox", path: "/me", method: "get"}).then(function (data) {
+          curAuth && curAuth.access_token && dispatch(authSuccess(data.email, curAuth.access_token, curAuth.expires));
+        }, function (err) {
+          console.error(err);
+          dispatch(unauthorizedAccess);
+        }).then(() => {
+          dispatch(authInitialized);
+        }, () => {
+          dispatch(authInitialized);
+        });
+      } else {
+        dispatch(authInitialized);
       }
 
       return subscription.unsubscribe;
