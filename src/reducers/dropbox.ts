@@ -4,6 +4,7 @@ import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/redu
 import {AuthSuccess} from "../services/login";
 import {WindowFocus} from "../services/window";
 import {Initialization} from "../services/initialization";
+import {sequence} from "kamo-reducers/services/sequence";
 
 export type DropboxAction = AuthSuccess | CompleteRequest | WindowFocus | Initialization;
 
@@ -20,7 +21,24 @@ export function reduceDropbox(state: State, action: DropboxAction | IgnoredActio
         break;
       }
 
+      effect = sequence(effect,
+          requestListFolder(state.settings.session.accessToken,
+              state.settings.session.syncCursor));
+
       state.syncOffline = false;
+
+      break;
+
+    case "complete-request":
+      state = {...state};
+      if (action.name[0] === listFolderRequestName) {
+        if (!action.success) {
+          state.syncOffline = true;
+          break;
+        }
+
+        let response = JSON.parse(action.response) as ListFolderResponse;
+      }
   }
 
   return {state, effect};
@@ -41,7 +59,7 @@ export function dropboxApiHeaders(accessToken: string): AjaxConfig["headers"] {
   }
 }
 
-export function listFolder(accessToken: string, cursor = ""): RequestAjax {
+export function requestListFolder(accessToken: string, cursor = ""): RequestAjax {
   let config: AjaxConfig = {
     url: "https://api.dropboxapi.com/2/files/list_folder",
     method: "POST",
@@ -59,6 +77,11 @@ export function listFolder(accessToken: string, cursor = ""): RequestAjax {
 }
 
 export interface ListUpdate {
-  
+  deletionPath?: string
+  requestNames: string[][]
+}
+
+export interface ListFolderResponse {
+
 }
 
