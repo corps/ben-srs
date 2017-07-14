@@ -3,12 +3,14 @@ import {Cloze, LogEntry, Note, Term} from "./model";
 
 export type NotesStore = {
   byId: Index<Note>
+  byPath: Index<Note>
   byLanguage: Index<Note>
 }
 
 export const notesIndexer = new Indexer<Note, NotesStore>("byId");
 notesIndexer.addIndex("byId", note => [note.id]);
-notesIndexer.addIndex("byLanguage", note => [note.language]);
+notesIndexer.addIndex("byPath", note => note.path.split("/"));
+notesIndexer.addIndex("byLanguage", note => [note.attributes.language]);
 
 export type TermsStore = {
   byNoteIdReferenceAndMarker: Index<Term>

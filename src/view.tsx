@@ -12,7 +12,7 @@ export function view(dispatch: (action: Action) => void) {
   return (state: State) => {
     return <FlexContainer topContainer vertical className="bg-black-80 overflow-y-hidden near-white kokoro">
       <Row fixedRow className="h_25">
-        <ProgressBar tasksNum={state.awaitingCount}/>
+        <ProgressBar tasksNum={state.awaiting.length}/>
       </Row>
       <Row fixedRow className="dn-ns h3 bg-mid-gray pa3">
         {Nav(state)}

@@ -28,12 +28,17 @@ export const newByLangPronunciationOverrides = {} as { [k: string]: Pronunciatio
 export type ByLangPronunciationOverrides = typeof newByLangPronunciationOverrides;
 
 export const newNote = {
+  // On the note itself
+  attributes: {
+    content: "",
+    language: "" as Language,
+    pronunciationOverrides: newPronunciationOverrides,
+    edit: true,
+  },
+
   id: "",
-  content: "",
-  language: "" as Language,
-  pronunciationOverrides: newPronunciationOverrides,
+  path: "",
   version: "",
-  edit: true,
 };
 
 export type Note = typeof newNote;
@@ -69,7 +74,7 @@ export const newCloze = {
 
 export type Cloze = typeof newCloze;
 
-export const newLocalSettings = {
+export const newSettings = {
   pronunciationOverrides: newByLangPronunciationOverrides,
   session: {
     accessToken: "",
@@ -79,7 +84,7 @@ export const newLocalSettings = {
   }
 };
 
-export type LocalSettings = typeof newLocalSettings;
+export type Settings = typeof newSettings;
 
 export type ClozeChange = { old: Cloze, next: Cloze, time: number, id: string, type: "cloze-change" };
 export type LogEntry = ClozeChange;

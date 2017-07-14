@@ -1,15 +1,16 @@
 import {indexesInitialState} from "./indexes";
-import {newLocalSettings} from "./model";
+import {newSettings} from "./model";
 
 export const initialState = {
-  awaitingCount: 0,
+  awaiting: [] as string[],
   ready: false,
   indexes: indexesInitialState,
-  localSettings: newLocalSettings,
+  settings: newSettings,
   clientId: process.env.DROPBOX_CLIENT_ID,
   pathParts: [] as string[],
   now: Date.now(),
   relativeNow: 0,
+  syncOffline: false,
 };
 
 export type State = typeof initialState;
