@@ -13,11 +13,13 @@ export const LanguageSettings = {
 export type Language = keyof typeof LanguageSettings;
 
 export const newSchedule = {
-  lastAnswered: 0,
-  nextDue: 0,
-  factor: 0,
+  lastAnsweredMinutes: 0,
+  nextDueMinutes: 0,
+  intervalMinutes: 0,
   isNew: false
 };
+
+export type Schedule = typeof newSchedule;
 
 export const newPronunciationOverrides = {} as { [k: string]: string };
 
@@ -32,7 +34,7 @@ export const newNote = {
   attributes: {
     content: "",
     language: "" as Language,
-    pronunciationOverrides: newPronunciationOverrides,
+    pronounce: newPronunciationOverrides,
     editsComplete: false,
     terms: undefined as Term[] | 0
   },
@@ -52,15 +54,16 @@ export const newTerm = {
   attributes: {
     reference: "",
     marker: "",
-    pronunciationOverride: "",
+    pronounce: "",
     definition: "",
+    hint: "",
     clozes: undefined as Cloze[] | 0
   }
 };
 
 export type Term = typeof newTerm;
 
-export type ClozeType = "produce" | "recall" | "listen" | "speak"
+export type ClozeType = "produce" | "recognize" | "listen" | "speak"
 
 export const newCloze = {
   noteId: "",
@@ -71,6 +74,7 @@ export const newCloze = {
 
   attributes: {
     type: "produce" as ClozeType,
+    clozed: "",
     schedule: newSchedule,
   },
 };
@@ -78,7 +82,7 @@ export const newCloze = {
 export type Cloze = typeof newCloze;
 
 export const newSettings = {
-  pronunciationOverrides: newByLangPronunciationOverrides,
+  pronounce: newByLangPronunciationOverrides,
   session: {
     accessToken: "",
     login: "",
@@ -180,8 +184,13 @@ export function parseNote(text: string): Note {
   note.attributes = {...newNote.attributes};
 
   let divisorIdx = text.lastIndexOf(divisor);
-  note.attributes = JSON.parse(text.slice(divisorIdx + divisor.length));
-  note.attributes.content = text.slice(0, divisorIdx);
+
+  if (divisorIdx !== -1) {
+    note.attributes = JSON.parse(text.slice(divisorIdx + divisor.length));
+    note.attributes.content = text.slice(0, divisorIdx);
+  } else {
+    note.attributes.content = text;
+  }
 
   return note;
 }

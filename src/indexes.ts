@@ -30,7 +30,7 @@ export type ClozesStore = {
 
 export const clozesIndexer = new Indexer<Cloze, ClozesStore>("byNoteIdReferenceMarkerAndClozeIdx");
 clozesIndexer.addIndex("byNoteIdReferenceMarkerAndClozeIdx", cloze => [cloze.noteId, cloze.reference, cloze.marker, cloze.clozeIdx]);
-clozesIndexer.addIndex("byLanguageAndNextDue", cloze => [cloze.language, cloze.attributes.schedule.nextDue]);
+clozesIndexer.addIndex("byLanguageAndNextDue", cloze => [cloze.language, cloze.attributes.schedule.nextDueMinutes]);
 
 export const indexesInitialState = {
   notes: notesIndexer.empty(),
