@@ -5,7 +5,7 @@ import {AuthAction, requestLogin} from "../services/login";
 import {clearLocalData} from "../services/local-storage";
 import {newSettings} from "../model";
 import {Initialization} from "../services/initialization";
-import {addAwaiting, removeAwaiting} from "./awaiting";
+import {withUpdatedAwaiting} from "./awaiting-reducer";
 
 export interface ClickLogin {
   type: "click-login"
@@ -20,14 +20,12 @@ export function reduceLogin(state: State, action: LoginAction | IgnoredAction): 
 
   switch (action.type) {
     case "initialization":
-      state = {...state};
-      addAwaiting(state, "auth");
-      break;
+      return withUpdatedAwaiting(state, true, "auth");
 
     case "auth-initialized":
+      ({state, effect} = withUpdatedAwaiting(state, true, "auth"));
       state = {...state};
-      removeAwaiting(state, "auth");
-      state.ready = true;
+      state.authReady = true;
       break;
 
     case "auth-success":

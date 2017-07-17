@@ -33,43 +33,46 @@ export const newNote = {
     content: "",
     language: "" as Language,
     pronunciationOverrides: newPronunciationOverrides,
-    edit: true,
+    editsComplete: false,
+    terms: undefined as Term[] | 0
   },
 
   id: "",
   path: "",
   version: "",
+  localEdits: false,
 };
 
 export type Note = typeof newNote;
 
 export const newTerm = {
-  language: "",
   noteId: "",
-  reference: "",
-  marker: "",
-  pronunciationOverride: "",
-  definition: "",
+  language: "" as Language,
+
+  attributes: {
+    reference: "",
+    marker: "",
+    pronunciationOverride: "",
+    definition: "",
+    clozes: undefined as Cloze[] | 0
+  }
 };
 
 export type Term = typeof newTerm;
 
-export const newClozeId = {
+export type ClozeType = "produce" | "recall" | "listen" | "speak"
+
+export const newCloze = {
   noteId: "",
   reference: "",
   marker: "",
   clozeIdx: -1,
-};
+  language: "" as Language,
 
-export type ClozeId = typeof newClozeId;
-
-export type ClozeType = "produce" | "recall" | "listen" | "speak"
-
-export const newCloze = {
-  ...newClozeId,
-  ...newSchedule,
-  type: "produce" as ClozeType,
-  language: "",
+  attributes: {
+    type: "produce" as ClozeType,
+    schedule: newSchedule,
+  },
 };
 
 export type Cloze = typeof newCloze;
@@ -86,5 +89,103 @@ export const newSettings = {
 
 export type Settings = typeof newSettings;
 
-export type ClozeChange = { old: Cloze, next: Cloze, time: number, id: string, type: "cloze-change" };
-export type LogEntry = ClozeChange;
+function denormalizeCloze(cloze: Cloze, clozeIdx: number, term: Term, note: Note) {
+  cloze.clozeIdx = clozeIdx;
+  cloze.marker = term.attributes.marker;
+  cloze.reference = term.attributes.reference;
+  cloze.language = note.attributes.language;
+  cloze.noteId = note.id;
+}
+
+function denormalizeTerm(term: Term, note: Note): Cloze[] | 0 {
+  let clozes = term.attributes.clozes;
+
+  if (clozes) {
+    clozes = clozes.slice();
+    term.attributes = {...term.attributes};
+    term.attributes.clozes = undefined;
+
+    for (let clozeIdx = 0; clozeIdx < clozes.length; ++clozeIdx) {
+      let cloze = clozes[clozeIdx] = {...clozes[clozeIdx]};
+      denormalizeCloze(cloze, clozeIdx, term, note);
+    }
+  }
+
+  term.language = note.attributes.language;
+  term.noteId = note.id;
+
+  return clozes;
+}
+
+export function denormalizedNote(note: Note): { terms: Term[] | 0, clozes: Cloze[] | 0 } {
+  let terms = note.attributes.terms;
+  let clozes = [] as Cloze[];
+
+  if (terms) {
+    note.attributes = {...note.attributes};
+    note.attributes.terms = undefined;
+    terms = terms.slice();
+
+    for (let termIdx = 0; termIdx < terms.length; ++termIdx) {
+      let term = terms[termIdx] = {...terms[termIdx]};
+      let termClozes = denormalizeTerm(term, note);
+      if (termClozes) clozes = clozes.concat(termClozes);
+    }
+  }
+
+  return {terms, clozes};
+}
+
+export function normalizedNote(note: Note, terms: Term[], clozes: Cloze[]) {
+  note = {...note};
+  note.attributes = {...note.attributes};
+  note.attributes.terms = [];
+
+  var idxOfClozes = 0;
+
+  for (var term of terms) {
+    term = {...term};
+    term.attributes = {...term.attributes};
+    term.attributes.clozes = [];
+    delete term.noteId;
+    delete term.language;
+
+    note.attributes.terms.push(term);
+
+    for (; idxOfClozes < clozes.length; ++idxOfClozes) {
+      var cloze = clozes[idxOfClozes];
+      if (cloze.reference !== term.attributes.reference ||
+        cloze.marker !== term.attributes.marker) {
+        break;
+      }
+
+      cloze = {...cloze};
+
+      delete cloze.noteId;
+      delete cloze.marker;
+      delete cloze.reference;
+      delete cloze.clozeIdx;
+      delete cloze.language;
+
+      term.attributes.clozes.push(cloze);
+    }
+  }
+
+  return note;
+}
+
+const divisor = "\n===\n";
+export function parseNote(text: string): Note {
+  let note = {...newNote};
+  note.attributes = {...newNote.attributes};
+
+  let divisorIdx = text.lastIndexOf(divisor);
+  note.attributes = JSON.parse(text.slice(divisorIdx + divisor.length));
+  note.attributes.content = text.slice(0, divisorIdx);
+
+  return note;
+}
+
+export function stringifyNote(note: Note): string {
+  return note.attributes.content + divisor + JSON.stringify({...note.attributes, content: undefined}, null, 2);
+}

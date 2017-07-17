@@ -11,10 +11,22 @@ export interface ClearAnimation {
   name: string
 }
 
+export interface AnimationCleared {
+  type: "animation-cleared"
+  name: string
+}
+
 export type AnimationEffect = AnimationRequest | ClearAnimation;
 
 export function clearAnimation(name: string): ClearAnimation {
   return {effectType: "clear-animation", name}
+}
+
+export function animationCleared(name: string): AnimationCleared {
+  return {
+    type: "animation-cleared",
+    name
+  };
 }
 
 export function animationRequest(action: GlobalAction, name: string): AnimationRequest {
@@ -42,6 +54,8 @@ export function withiAnimationFrames(effect$: Subject<SideEffect>): Subscriber<G
             var handle = handles[e.name];
             if (handle) {
               cancelAnimationFrame(handle.handle);
+              delete handles[e.name];
+              dispatch(animationCleared(name));
             }
             break;
 

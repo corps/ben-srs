@@ -1,16 +1,32 @@
 import {indexesInitialState} from "./indexes";
-import {newSettings} from "./model";
+import {Cloze, newSettings, Note, Term} from "./model";
+import {DropboxListFolderResponse} from "./reducers/sync-reducer";
+import {SideEffect} from "kamo-reducers/reducers";
 
 export const initialState = {
   awaiting: [] as string[],
-  ready: false,
   indexes: indexesInitialState,
   settings: newSettings,
-  clientId: process.env.DROPBOX_CLIENT_ID,
   pathParts: [] as string[],
   now: Date.now(),
   relativeNow: 0,
+
+  authReady: false,
+  indexesReady: false,
+
+  notesToLoad: [] as Note[],
+  termsToLoad: [] as Term[],
+  clozesToLoad: [] as Cloze[],
+
   syncOffline: false,
+  syncAuthBad: false,
+
+  remainingUploads: [] as string[][],
+
+  executingDownloads: [] as string[][],
+  downloadedNotes: [] as Note[],
+  syncingListFolder: null as DropboxListFolderResponse | 0,
+  clearSyncEffects: [] as SideEffect[],
 };
 
 export type State = typeof initialState;

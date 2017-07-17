@@ -22,7 +22,7 @@ export function view(dispatch: (action: Action) => void) {
           <Column stretchColumn>
             <div className="h-100 w-100">
               {(function () {
-                if (!state.ready) return null;
+                if (!state.authReady) return null;
 
                 switch (state.pathParts[0]) {
                   default:
@@ -46,7 +46,7 @@ export function nav(dispatch: (action: Action) => void) {
   return (state: State) => {
     return <div className="h-100 w5-l w4-m">
       {(function () {
-        if (!state.ready) return null;
+        if (!state.authReady) return null;
 
         switch (state.pathParts[0]) {
           default:

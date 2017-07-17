@@ -1,18 +1,45 @@
 import {initialState, State} from "../state";
 import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
-import {sequence} from "kamo-reducers/services/sequence";
+import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
 import {Cloze, Settings, newSettings, Note, Term} from "../model";
 import {LoadLocalData, requestLocalData, storeLocalData} from "../services/local-storage";
 import {WindowFocus} from "../services/window";
 import {Initialization} from "../services/initialization";
 import {AuthAction} from "../services/login";
 import {clozesIndexer, indexesInitialState, notesIndexer, termsIndexer} from "../indexes";
-import {animationRequest, clearAnimation} from "../services/animation-frame";
-import {updateAwaiting} from "./awaiting";
+import {AnimationCleared, animationRequest, clearAnimation} from "../services/animation-frame";
+import {withUpdatedAwaiting} from "./awaiting-reducer";
+import {clearOtherSyncProcesses, startSync} from "./sync-reducer";
 
 export const localStoreKey = "settings";
 
-export type LocalStoreAction = WindowFocus | LoadLocalData | Initialization | AuthAction | LoadNextIndexesBatch;
+export type LocalStoreAction =
+  WindowFocus
+  | LoadLocalData
+  | Initialization
+  | AuthAction
+  | LoadNextIndexesBatch
+  | AnimationCleared;
+
+export const indexesLoadBatchSize = 100;
+
+function getAwaitingLoads(state: State) {
+  let result = [] as string[];
+
+  for (var i = 0; i < Math.ceil(state.notesToLoad.length / indexesLoadBatchSize); ++i) {
+    result.push("indexes-notes-" + i);
+  }
+
+  for (i = 0; i < Math.ceil(state.termsToLoad.length / indexesLoadBatchSize); ++i) {
+    result.push("indexes-terms-" + i);
+  }
+
+  for (i = 0; i < Math.ceil(state.clozesToLoad.length / indexesLoadBatchSize); ++i) {
+    result.push("indexes-clozes-" + i);
+  }
+
+  return result;
+}
 
 export function reduceLocalStore(state: State, action: LocalStoreAction | IgnoredAction): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;
@@ -20,11 +47,15 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
   switch (action.type) {
     case "initialization":
     case "window-focus":
+      state = {...state};
+      state.indexesReady = false;
       effect = sequence(effect, requestLocalData(localStoreKey));
       break;
 
     case "load-local-data":
       if (action.key !== localStoreKey) break;
+
+      ({state, effect} = sequenceReduction(effect, clearOtherSyncProcesses(state)));
 
       state = {...state};
       state.indexes = initialState.indexes;
@@ -33,57 +64,66 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
       let data = action.data as LocalStore || newLocalStore;
       state.settings = data.settings;
 
-      updateAwaiting(state, "notes", !!data.notes.length);
-      updateAwaiting(state, "terms", !!data.terms.length);
-      updateAwaiting(state, "clozes", !!data.clozes.length);
+      state.notesToLoad = data.notes;
+      state.termsToLoad = data.terms;
+      state.clozesToLoad = data.clozes;
 
-      effect = sequence(effect, animationRequest(loadNextIndexesBatch(data.notes, data.terms, data.clozes),
-        loadNextIndexesBatchAnimationName));
+      ({state, effect} = sequenceReduction(effect, withUpdatedAwaiting(state, true, ...getAwaitingLoads(state))));
+
+      state.clearSyncEffects = state.clearSyncEffects.concat([clearAnimation(loadNextIndexesBatchAnimationName)]);
+      effect = sequence(effect, animationRequest(loadNextIndexesBatch, loadNextIndexesBatchAnimationName));
       break;
 
     case "auth-success":
       effect = sequence(effect, requestLocalStoreUpdate(state));
       break;
 
+    case "animation-cleared":
+      ({state, effect} = sequenceReduction(effect, withUpdatedAwaiting(state, false, ...getAwaitingLoads(state))));
+      break;
+
     case "load-next-indexes-batch":
-      var {notes, terms, clozes} = action;
+      ({state, effect} = sequenceReduction(effect, withUpdatedAwaiting(state, false,
+        "indexes-notes-" + (Math.ceil(state.notesToLoad.length / indexesLoadBatchSize) - 1),
+        "indexes-terms-" + (Math.ceil(state.termsToLoad.length / indexesLoadBatchSize) - 1),
+        "indexes-clozes-" + (Math.ceil(state.clozesToLoad.length / indexesLoadBatchSize) - 1),
+      )));
+
       state = {...state};
       state.indexes = {...state.indexes};
-      state.indexes.notes = notesIndexer.update(state.indexes.notes, notes.slice(0, 100));
-      state.indexes.terms = termsIndexer.update(state.indexes.terms, terms.slice(0, 100));
-      state.indexes.clozes = clozesIndexer.update(state.indexes.clozes, clozes.slice(0, 100));
 
-      updateAwaiting(state, "notes", !!notes.length);
-      updateAwaiting(state, "terms", !!terms.length);
-      updateAwaiting(state, "clozes", !!clozes.length);
+      state.notesToLoad = state.notesToLoad.slice();
+      state.termsToLoad = state.termsToLoad.slice();
+      state.clozesToLoad = state.clozesToLoad.slice();
 
-      if (notes.length || terms.length || clozes.length) {
-        let nextLoad = loadNextIndexesBatch(notes.slice(100), terms.slice(100), clozes.slice(100));
-        effect = sequence(effect, animationRequest(nextLoad, loadNextIndexesBatchAnimationName));
+      let notes = state.notesToLoad.splice(0, 100);
+      let terms = state.termsToLoad.splice(0, 100);
+      let clozes = state.clozesToLoad.splice(0, 100);
+
+
+      state.indexes.notes = notesIndexer.update(state.indexes.notes, notes);
+      state.indexes.terms = termsIndexer.update(state.indexes.terms, terms);
+      state.indexes.clozes = clozesIndexer.update(state.indexes.clozes, clozes);
+
+      if (state.notesToLoad.length || state.termsToLoad.length || state.clozesToLoad.length) {
+        effect = sequence(effect, animationRequest(loadNextIndexesBatch, loadNextIndexesBatchAnimationName));
+      } else {
+        state = {...state};
+        state.indexesReady = true;
+        ({state, effect} = sequenceReduction(effect, startSync(state)));
       }
-      break;
   }
 
   return {state, effect};
 }
 
-export interface LoadNextIndexesBatch {
-  type: "load-next-indexes-batch",
-  notes: Note[],
-  terms: Term[],
-  clozes: Cloze[]
+export interface LoadNextIndexesBatch { type: "load-next-indexes-batch"
 }
-
-export function loadNextIndexesBatch(notes: Note[], terms: Term[], clozes: Cloze[]): LoadNextIndexesBatch {
-  return {
-    type: "load-next-indexes-batch",
-    notes, terms, clozes
-  }
-}
+export const loadNextIndexesBatch: LoadNextIndexesBatch = {type: "load-next-indexes-batch"};
 
 export const loadNextIndexesBatchAnimationName = "load-next-indexes-batch";
 
-function requestLocalStoreUpdate(state: { indexes: typeof indexesInitialState, settings: Settings }) {
+export function requestLocalStoreUpdate(state: { indexes: typeof indexesInitialState, settings: Settings }) {
   let localStore = {...newLocalStore};
   localStore.settings = state.settings;
   localStore.notes = state.indexes.notes.byId.map(k => k[1]);
