@@ -231,7 +231,7 @@ export  function withSizeCalculator(effect$: Subject<SideEffect>): Subscriber<Gl
 }
 declare module "kamo-reducers/services/time" {
 import { Subject, Subscriber } from "kamo-reducers/subject";
-import { IgnoredAction, ReductionWithEffect, SideEffect } from "kamo-reducers/reducers";
+import { GlobalAction, IgnoredAction, ReductionWithEffect, SideEffect } from "kamo-reducers/reducers";
 export interface TimeState {
     now: number;
     relativeNow: number;
@@ -248,7 +248,7 @@ export interface RequestTick {
 export  function requestTick(after: number): RequestTick;
 export  function updateTime(absoluteTime: number, relativeTime: number): UpdateTime;
 export  function reduceTime<T extends TimeState>(state: T, action: UpdateTime | IgnoredAction): ReductionWithEffect<T>;
-export  function withTime(start?: number): (effect$: Subject<SideEffect>) => Subscriber<UpdateTime>;
+export  function withTime(start?: number): (effect$: Subject<SideEffect>) => Subscriber<GlobalAction>;
 }
 declare module "kamo-reducers/dom" {
 import { Subscriber } from "kamo-reducers/subject";
@@ -301,6 +301,7 @@ export  type Service = (sideEffect$: Subject<SideEffect>) => Subscriber<GlobalAc
 export  function isSideEffect(ae: SideEffect | GlobalAction): ae is SideEffect;
 export  type RenderUpdate<State, Action extends GlobalAction> = ["a", Action] | ["s", State] | ["e", SideEffect] | ["r"] | ["c"];
 export  function renderLoop<State, Action extends GlobalAction>(renderer: Renderer<State, Action>, reducer: Reducer<State>, services: Service[], initialState?: State): Subscriber<RenderUpdate<State, Action>>;
+export  function serviceActions(effect$: Subscriber<SideEffect>, services: Service[]): Subscriber<GlobalAction>;
 export interface ReducerChain<S> {
     result: () => {
         state: S;
