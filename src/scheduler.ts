@@ -12,16 +12,16 @@ function minimalIntervalOf(schedule: Schedule) {
 }
 
 export function configuredScheduler(random = () => Math.random()) {
-  return (schedule: Schedule, factor: number, answered: number) => {
+  return (schedule: Schedule, factor: number, answeredMinutes: number) => {
     let nextSchedule = {...schedule};
 
-    answered = Math.floor(answered);
+    answeredMinutes = Math.floor(answeredMinutes);
 
     let minimumInterval = minimalIntervalOf(schedule);
 
     if (factor == 0.0) {
-      nextSchedule.lastAnsweredMinutes = answered;
-      nextSchedule.nextDueMinutes = answered + minimumInterval;
+      nextSchedule.lastAnsweredMinutes = answeredMinutes;
+      nextSchedule.nextDueMinutes = answeredMinutes + minimumInterval;
       return nextSchedule;
     }
 
@@ -31,7 +31,7 @@ export function configuredScheduler(random = () => Math.random()) {
     var bonusFactor = Math.max(0.0, factor - 1.0);
     var randomFactor = random() * VARIANCE + (1.0 - VARIANCE / 2);
 
-    var answeredInterval = answered - schedule.lastAnsweredMinutes;
+    var answeredInterval = answeredMinutes - schedule.lastAnsweredMinutes;
     var currentInterval = Math.max(schedule.intervalMinutes, minimumInterval);
     var earlyAnswerMultiplier = Math.min(1.0, answeredInterval / currentInterval);
 
@@ -39,10 +39,20 @@ export function configuredScheduler(random = () => Math.random()) {
     var nextInterval = Math.max(currentInterval * effectiveFactor, minimumInterval);
     nextInterval = Math.floor(nextInterval);
 
-    nextSchedule.lastAnsweredMinutes = answered;
-    nextSchedule.nextDueMinutes = answered + nextInterval;
+    nextSchedule.lastAnsweredMinutes = answeredMinutes;
+    nextSchedule.nextDueMinutes = answeredMinutes + nextInterval;
     nextSchedule.intervalMinutes = nextInterval;
 
     return nextSchedule;
   }
+}
+
+export function delayScheduleBy(schedule: Schedule, minutes: number, answeredMinutes: number) {
+  answeredMinutes = Math.floor(answeredMinutes);
+
+  schedule = {...schedule};
+  schedule.lastAnsweredMinutes = answeredMinutes;
+  schedule.nextDueMinutes = answeredMinutes + minutes;
+
+  return schedule;
 }
