@@ -5,7 +5,8 @@ import {newSchedule, Schedule} from "../../src/model";
 testModule("unit/scheduler");
 
 function intervalOf(schedule: Schedule) {
-  return schedule.nextDueMinutes - schedule.lastAnsweredMinutes;
+  assert.equal(schedule.intervalMinutes, schedule.nextDueMinutes - schedule.lastAnsweredMinutes);
+  return schedule.intervalMinutes;
 }
 
 const scheduler = configuredScheduler(() => 0.5);

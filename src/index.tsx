@@ -47,7 +47,7 @@ subscription.add(generateRootElement().subscribe((element: HTMLElement) => {
 
   renderer = trackMutations(renderer);
 
-  renderLoop<State, Action>(renderer, reducer, getServices(), initialState).subscribe(e => {
+  subscription.add(renderLoop<State, Action>(renderer, reducer, getServices(), initialState).subscribe(e => {
     switch (e[0]) {
       case "a":
         console.log("action", e[1]);
@@ -57,7 +57,7 @@ subscription.add(generateRootElement().subscribe((element: HTMLElement) => {
         console.log("next state", e[1]);
         break;
     }
-  });
+  }));
 }));
 
 if (module.hot) {
