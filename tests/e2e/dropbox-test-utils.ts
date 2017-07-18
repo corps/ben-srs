@@ -33,23 +33,25 @@ function createFolder(path: string, token: string, cb: (err: any, data?: any) =>
 function deletePath(path: string, token: string, cb: (err: any, data?: any) => void) {
   dropboxApi("https://api.dropboxapi.com/2/files/delete_v2", "POST", {path}, token, cb);
 }
-//
-// function getLatestCursor(path: string, token: string, cb: (err: any, data?: any) => void) {
-//   dropboxApi("https://api.dropboxapi.com/2/files/list_folder/get_latest_cursor",
-//       "POST", {path, recursive: true}, token, cb);
-// }
 
-export function setupDropbox(token: string, cb: (err: any) => void) {
+function getLatestCursor(path: string, token: string, cb: (err: any, data?: any) => void) {
+  dropboxApi("https://api.dropboxapi.com/2/files/list_folder/get_latest_cursor",
+    "POST", {path, recursive: true}, token, cb);
+}
+
+export function setupDropbox(token: string, cb: (err: any, cursor: string) => void) {
   deletePath(testPath, token, (err: any, data: any) => {
 
     createFolder(testPath, token, (err: any, data: any) => {
 
-      if (err) {
-        cb(err)
-      }
-      else {
-        cb(undefined);
-      }
+      getLatestCursor(testPath, token, (err: any, data: any) => {
+        if (err) {
+          cb(err, undefined)
+        }
+        else {
+          cb(undefined, data.cursor);
+        }
+      })
     });
   })
 }

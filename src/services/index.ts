@@ -9,7 +9,11 @@ import {withiAnimationFrames} from "./animation-frame";
 import {withAjax} from "kamo-reducers/services/ajax";
 import {withRequestTracking} from "./request-tracker";
 
-export function getServices(): Service[] {
+export const newServiceConfig = {
+  storage: localStorage
+};
+
+export function getServices(config = newServiceConfig): Service[] {
   let services = [] as Service[];
   services.push(withWindowFocus);
   services.push(withAjax);
@@ -17,7 +21,7 @@ export function getServices(): Service[] {
   services.push(withHistory(createHashHistory()));
   services.push(withiAnimationFrames);
   services.push(withLogin);
-  services.push(withStorage());
+  services.push(withStorage(newServiceConfig.storage));
   services.push(withInitialization);
   return services;
 }
