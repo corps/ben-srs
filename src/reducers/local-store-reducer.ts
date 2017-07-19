@@ -24,7 +24,7 @@ export type LocalStoreAction =
 export const indexesLoadBatchSize = 100;
 
 function getAwaitingLoads(state: State) {
-  let result = [] as string[];
+  let result = ["indexes"] as string[];
 
   for (var i = 0; i < Math.ceil(state.notesToLoad.length / indexesLoadBatchSize); ++i) {
     result.push("indexes-notes-" + i);
@@ -110,6 +110,7 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
       } else {
         state = {...state};
         state.indexesReady = true;
+        ({state, effect} = sequenceReduction(effect, withUpdatedAwaiting(state, false, "indexes")));
         ({state, effect} = sequenceReduction(effect, startSync(state)));
       }
   }

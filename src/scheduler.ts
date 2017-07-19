@@ -7,7 +7,7 @@ export const DAY = HOUR * 24;
 
 const VARIANCE = 0.8;
 
-function minimalIntervalOf(schedule: Schedule) {
+export function minimalIntervalOf(schedule: Schedule) {
   return schedule.isNew ? 10 * MINUTE : DAY;
 }
 
@@ -17,11 +17,9 @@ export function configuredScheduler(random = () => Math.random()) {
 
     answeredMinutes = Math.floor(answeredMinutes);
 
-    let minimumInterval = minimalIntervalOf(schedule);
-
     if (factor == 0.0) {
       nextSchedule.lastAnsweredMinutes = answeredMinutes;
-      nextSchedule.nextDueMinutes = answeredMinutes + minimumInterval;
+      nextSchedule.nextDueMinutes = answeredMinutes + HOUR;
       return nextSchedule;
     }
 
@@ -32,11 +30,11 @@ export function configuredScheduler(random = () => Math.random()) {
     var randomFactor = random() * VARIANCE + (1.0 - VARIANCE / 2);
 
     var answeredInterval = answeredMinutes - schedule.lastAnsweredMinutes;
-    var currentInterval = Math.max(schedule.intervalMinutes, minimumInterval);
+    var currentInterval = Math.max(schedule.intervalMinutes, minimalIntervalOf(schedule));
     var earlyAnswerMultiplier = Math.min(1.0, answeredInterval / currentInterval);
 
     var effectiveFactor = baseFactor + (bonusFactor * earlyAnswerMultiplier * randomFactor);
-    var nextInterval = Math.max(currentInterval * effectiveFactor, minimumInterval);
+    var nextInterval = Math.max(currentInterval * effectiveFactor, minimalIntervalOf(nextSchedule));
     nextInterval = Math.floor(nextInterval);
 
     nextSchedule.lastAnsweredMinutes = answeredMinutes;

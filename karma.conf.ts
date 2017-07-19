@@ -24,6 +24,7 @@ export = function (config: any) {
       'karma-qunit',
       'karma-webpack',
       'karma-jsdom-launcher',
+      'karma-chrome-launcher',
     ],
 
     client: {

@@ -63,6 +63,8 @@ export function withiAnimationFrames(effect$: Subject<SideEffect>): Subscriber<G
             var handle = handles[e.name];
             if (handle) {
               cancelAnimationFrame(handle.handle);
+              delete handles[e.name];
+              dispatch(animationCleared(name));
             }
 
             const run = () => {

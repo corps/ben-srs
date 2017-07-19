@@ -16,7 +16,7 @@ export const newSchedule = {
   lastAnsweredMinutes: 0,
   nextDueMinutes: 0,
   intervalMinutes: 0,
-  isNew: false
+  isNew: true
 };
 
 export type Schedule = typeof newSchedule;

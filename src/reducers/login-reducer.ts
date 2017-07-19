@@ -23,7 +23,7 @@ export function reduceLogin(state: State, action: LoginAction | IgnoredAction): 
       return withUpdatedAwaiting(state, true, "auth");
 
     case "auth-initialized":
-      ({state, effect} = withUpdatedAwaiting(state, true, "auth"));
+      ({state, effect} = withUpdatedAwaiting(state, false, "auth"));
       state = {...state};
       state.authReady = true;
       break;

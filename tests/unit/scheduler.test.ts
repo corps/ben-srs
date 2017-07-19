@@ -1,5 +1,5 @@
 import {assert, test, testModule} from "../qunit";
-import {configuredScheduler, DAY, MINUTE} from "../../src/scheduler";
+import {configuredScheduler, DAY, minimalIntervalOf, MINUTE} from "../../src/scheduler";
 import {newSchedule, Schedule} from "../../src/model";
 
 testModule("unit/scheduler");
@@ -68,7 +68,7 @@ test("scheduling non new cards with various intervals and factors", () => {
   var schedule = {...newSchedule};
   schedule.isNew = false;
 
-  var minimal = DAY;
+  var minimal = minimalIntervalOf(schedule);
   var minimalRatioInterval: number;
   var factor: number;
   var intervalRatioWaited: number;
@@ -76,6 +76,7 @@ test("scheduling non new cards with various intervals and factors", () => {
   function assertResultingInterval(expected: number) {
     var interval = minimal * minimalRatioInterval;
     schedule.nextDueMinutes = schedule.lastAnsweredMinutes + interval;
+    schedule.intervalMinutes = interval;
 
     assert.equal(
       intervalOf(scheduler(schedule, factor, schedule.lastAnsweredMinutes + interval * intervalRatioWaited)),
