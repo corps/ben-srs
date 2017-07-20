@@ -23,7 +23,7 @@ export function getServices(config = newServiceConfig): Service[] {
   services.push(withiAnimationFrames);
   services.push(withSequenced);
   services.push(withLogin);
-  services.push(withStorage(newServiceConfig.storage));
+  services.push(withStorage(config.storage));
   services.push(withInitialization);
   return services;
 }

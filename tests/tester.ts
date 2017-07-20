@@ -1,6 +1,6 @@
 import {initialState, State} from "../src/state";
 import {GlobalAction, isSideEffect, serviceActions, SideEffect} from "kamo-reducers/reducers";
-import {BufferedSubject, Subject, Subscriber, Subscription} from "kamo-reducers/subject";
+import {BufferedSubject, Subject, Subscription} from "kamo-reducers/subject";
 import {getServices, newServiceConfig} from "../src/services";
 import {reducer} from "../src/reducer";
 import {Sequenced} from "kamo-reducers/services/sequence";
@@ -35,9 +35,13 @@ class MemoryStorage {
 }
 
 export class Tester {
-  constructor(public autoFlushQueue = false) {
-    this.subscription.add(serviceActions(this.queuedEffect$, this.services).subscribe(autoFlushQueue ? this.flushedDispatch : this.queuedAction$.dispatch));
-    this.subscription.add(this.queuedAction$.subscribe(this.flushedDispatch))
+  constructor() {
+  }
+
+  start(autoFlushQueue = false) {
+    this.subscription.add(this.queuedAction$.subscribe(this.flushedDispatch));
+    this.subscription.add(serviceActions(autoFlushQueue ? new Subject() : this.queuedEffect$, this.services)
+        .subscribe(autoFlushQueue ? this.flushedDispatch : this.queuedAction$.dispatch));
   }
 
   serviceConfig = (function () {
@@ -51,14 +55,6 @@ export class Tester {
   queued$ = new BufferedSubject<GlobalAction | SideEffect>();
   reducer = trackMutations(reducer);
 
-  // make this legit observer
-  update$: Subscriber<[GlobalAction, State]> = {
-    subscribe: (dispatch: (d: [GlobalAction, State]) => void) => {
-      let subscription = new Subscription();
-
-      return subscription.unsubscribe;
-    }
-  };
   update$ = new Subject<[GlobalAction, State]>();
 
   private services = getServices(this.serviceConfig);
@@ -94,14 +90,10 @@ export class Tester {
     let reduction = this.reducer(this.state, action as any);
 
     this.state = reduction.state;
-    if (reduction.effect) {
-      this.queued$.dispatch(reduction.effect);
-    }
-
     this.update$.dispatch([action, this.state]);
 
-    if (this.autoFlushQueue) {
-      this.queued$.flushUntilEmpty();
+    if (reduction.effect) {
+      this.queued$.dispatch(reduction.effect);
     }
   };
 

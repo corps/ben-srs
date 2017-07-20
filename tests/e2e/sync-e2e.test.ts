@@ -10,7 +10,7 @@ let tester: Tester;
 
 testModule("e2e/sync", {
   beforeEach: (assert) => {
-    tester = new Tester(true);
+    tester = new Tester();
     subscription.add(tester.subscription.unsubscribe);
 
     if (!token) assert.ok(token, "DROPBOX_TEST_ACCESS_TOKEN was not set");
@@ -34,6 +34,7 @@ test("can start sync from 0 safely", (assert) => {
   let finish = assert.async();
   subscription.add(tester.update$.subscribe(([action, state]) => {
     console.log(tester.queued$.queue.length, state.awaiting);
+
     if (state.awaiting.length == 0 && tester.queued$.queue.length == 0) {
       assert.equal(tester.state.authReady, true);
       assert.equal(tester.state.indexesReady, true);
@@ -41,6 +42,8 @@ test("can start sync from 0 safely", (assert) => {
       finish();
     }
   }));
+
+  tester.start(true);
 });
 
 // Add a bunch of test data and verify

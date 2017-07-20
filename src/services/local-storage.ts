@@ -37,7 +37,13 @@ export function requestLocalData(key: string): RequestLocalData {
   return {effectType: "request-local-data", key};
 }
 
-export function withStorage(storage: Storage = window.localStorage) {
+export interface SimpleStringStorage {
+  clear(): void,
+  getItem(key: string): string,
+  setItem(key: string, value: string): void
+}
+
+export function withStorage(storage: SimpleStringStorage = window.localStorage) {
   return (effect$: Subject<SideEffect>): Subscriber<GlobalAction> => {
     return {
       subscribe: (dispatch: (a: GlobalAction) => void) => {

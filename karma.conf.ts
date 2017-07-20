@@ -40,6 +40,15 @@ export = function (config: any) {
       'tests/index.js',
     ],
 
+    jsdomLauncher: {
+      jsdom: {
+        beforeParse: function (window: Window) {
+          window.constructor.prototype.requestAnimationFrame = setImmediate;
+          window.constructor.prototype.cancelAnimationFrame = clearImmediate;
+        }
+      }
+    },
+
     // list of files to exclude
     exclude: [],
 
