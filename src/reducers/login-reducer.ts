@@ -2,7 +2,7 @@ import {State} from "../state";
 import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
 import {sequence} from "kamo-reducers/services/sequence";
 import {AuthAction, requestLogin} from "../services/login";
-import {clearLocalData} from "../services/local-storage";
+import {clearLocalData} from "kamo-reducers/services/local-storage";
 import {newSettings} from "../model";
 import {Initialization} from "../services/initialization";
 import {withUpdatedAwaiting} from "./awaiting-reducer";

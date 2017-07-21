@@ -1,16 +1,16 @@
 import {test, testModule} from "../qunit";
 import {setupDropbox} from "./dropbox-test-utils";
-import {Tester} from "../tester";
 import {Subscription} from "kamo-reducers/subject";
+import {BensrsTester} from "../tester";
 
 let latestCursor = "";
 let subscription = new Subscription();
 let token = process.env.DROPBOX_TEST_ACCESS_TOKEN as string;
-let tester: Tester;
+let tester: BensrsTester;
 
 testModule("e2e/sync", {
   beforeEach: (assert) => {
-    tester = new Tester();
+    tester = new BensrsTester();
     subscription.add(tester.subscription.unsubscribe);
 
     if (!token) assert.ok(token, "DROPBOX_TEST_ACCESS_TOKEN was not set");
@@ -35,7 +35,7 @@ test("can start sync from 0 safely", (assert) => {
   subscription.add(tester.update$.subscribe(([action, state]) => {
     console.log(tester.queued$.queue.length, state.awaiting);
 
-    if (state.awaiting.length == 0 && tester.queued$.queue.length == 0) {
+    if (state.awaiting.length == 0 && tester.queued$.stack.length == 0) {
       assert.equal(tester.state.authReady, true);
       assert.equal(tester.state.indexesReady, true);
       assert.equal(tester.state.syncAuthBad, true);
@@ -43,7 +43,8 @@ test("can start sync from 0 safely", (assert) => {
     }
   }));
 
-  tester.start(true);
+  tester.queued$.buffering = false;
+  tester.start();
 });
 
 // Add a bunch of test data and verify

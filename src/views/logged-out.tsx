@@ -1,7 +1,7 @@
 import * as React from "react";
 import {Action} from "../reducer";
 import {State} from "../state";
-import {VCenteringContainer, VCentered} from "../components/layouts";
+import {VCenteringContainer, VCentered} from "../components/layout-utils";
 import {ClassAndChildren} from "../utils/class-names-for";
 import {NavigationItem} from "../components/navigation-item";
 import {clickLogin} from "../reducers/login-reducer";

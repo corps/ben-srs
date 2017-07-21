@@ -2,12 +2,12 @@ import {initialState, State} from "../state";
 import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
 import {Cloze, Settings, newSettings, Note, Term} from "../model";
-import {LoadLocalData, requestLocalData, storeLocalData} from "../services/local-storage";
+import {LoadLocalData, requestLocalData, storeLocalData} from "kamo-reducers/services/local-storage";
 import {WindowFocus} from "../services/window";
 import {Initialization} from "../services/initialization";
 import {AuthAction} from "../services/login";
 import {clozesIndexer, indexesInitialState, notesIndexer, termsIndexer} from "../indexes";
-import {AnimationCleared, animationRequest, clearAnimation} from "../services/animation-frame";
+import {AnimationCleared, animationRequest, clearAnimation} from "kamo-reducers/services/animation-frame";
 import {withUpdatedAwaiting} from "./awaiting-reducer";
 import {clearOtherSyncProcesses, startSync} from "./sync-reducer";
 
