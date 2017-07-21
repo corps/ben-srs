@@ -11,7 +11,7 @@ export class BensrsTester extends Tester<State> {
 
   serviceConfig = (function () {
     let config = {...newServiceConfig};
-    config.storage = new MemoryStorage() as any;
+    config.storage = new MemoryStorage();
     return config;
   })();
 

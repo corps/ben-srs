@@ -1,6 +1,6 @@
 import {Service} from "kamo-reducers/reducers";
 import {withWindowFocus} from "./window";
-import {withStorage} from "kamo-reducers/services/local-storage";
+import {SimpleStringStorage, withStorage} from "kamo-reducers/services/local-storage";
 import {withLogin} from "./login";
 import {withInitialization} from "./initialization";
 import {withHistory} from "kamo-reducers/services/navigation";
@@ -12,7 +12,7 @@ import {withiAnimationFrames} from "kamo-reducers/services/animation-frame";
 import lz = require("lz-string");
 
 export const newServiceConfig = {
-  storage: window.localStorage
+  storage: window.localStorage as SimpleStringStorage
 };
 
 export function getServices(config = newServiceConfig): Service[] {
