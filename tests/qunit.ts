@@ -51,7 +51,7 @@ interface Hooks {
 
 }
 
-interface Assert {
+export interface Assert {
   /**
    * Instruct QUnit to wait for an asynchronous operation.
    *

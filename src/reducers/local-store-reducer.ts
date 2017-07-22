@@ -1,7 +1,7 @@
 import {initialState, State} from "../state";
 import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
-import {Cloze, Settings, newSettings, Note, Term} from "../model";
+import {Cloze, Settings, newSettings, Note, Term, NormalizedNote} from "../model";
 import {LoadLocalData, requestLocalData, storeLocalData} from "kamo-reducers/services/local-storage";
 import {WindowFocus} from "../services/window";
 import {Initialization} from "../services/initialization";
@@ -63,6 +63,7 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
 
       let data = action.data as LocalStore || newLocalStore;
       state.settings = data.settings;
+      state.newNotes = data.newNotes;
 
       state.notesToLoad = data.notes;
       state.termsToLoad = data.terms;
@@ -124,12 +125,13 @@ export const loadNextIndexesBatch: LoadNextIndexesBatch = {type: "load-next-inde
 
 export const loadNextIndexesBatchAnimationName = "load-next-indexes-batch";
 
-export function requestLocalStoreUpdate(state: { indexes: typeof indexesInitialState, settings: Settings }) {
+export function requestLocalStoreUpdate(state: { indexes: typeof indexesInitialState, settings: Settings, newNotes: NormalizedNote[] }) {
   let localStore = {...newLocalStore};
   localStore.settings = state.settings;
   localStore.notes = state.indexes.notes.byId.map(k => k[1]);
   localStore.terms = state.indexes.terms.byNoteIdReferenceAndMarker.map(k => k[1]);
   localStore.clozes = state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx.map(k => k[1]);
+  localStore.newNotes = state.newNotes;
   return storeLocalData(localStoreKey, localStore);
 }
 
@@ -138,6 +140,7 @@ export const newLocalStore = {
   notes: [] as Note[],
   terms: [] as Term[],
   clozes: [] as Cloze[],
+  newNotes: [] as NormalizedNote[],
 };
 
 type LocalStore = typeof newLocalStore;

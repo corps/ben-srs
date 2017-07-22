@@ -20,6 +20,7 @@ var config: any = {
       "process": "(" + JSON.stringify({
         env: {
           NODE_ENV: process.env.NODE_ENV,
+          E2E_TEST: process.env.E2E_TEST,
           DROPBOX_CLIENT_ID: process.env.DROPBOX_CLIENT_ID,
           DROPBOX_TEST_ACCESS_TOKEN: process.env.NODE_ENV !== "production" ? process.env.DROPBOX_TEST_ACCESS_TOKEN : "",
         }

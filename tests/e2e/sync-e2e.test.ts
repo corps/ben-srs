@@ -1,7 +1,12 @@
-import {test, testModule} from "../qunit";
+import {assert, Assert, test, testModule} from "../qunit";
 import {setupDropbox} from "./dropbox-test-utils";
 import {Subscription} from "kamo-reducers/subject";
 import {BensrsTester} from "../tester";
+import {IndexesFactory, NoteFactory, TermFactory} from "../factories/notes-factories";
+import {initialState} from "../../src/state";
+import {indexesInitialState} from "../../src/indexes";
+import {newSettings} from "../../src/model";
+import {requestLocalStoreUpdate} from "../../src/reducers/local-store-reducer";
 
 let latestCursor = "";
 let subscription = new Subscription();
@@ -29,22 +34,73 @@ testModule("e2e/sync", {
   }
 });
 
-// Test that we can start sync from 0 safely.
-test("can start sync from 0 safely", (assert) => {
-  let finish = assert.async();
-  subscription.add(tester.update$.subscribe(([action, state]) => {
-    console.log(tester.queued$.queue.length, state.awaiting);
+function sequenceChecks(assert: Assert, checks: Function[]) {
+  if (checks.length === 0) return;
 
-    if (state.awaiting.length == 0 && tester.queued$.stack.length == 0) {
-      assert.equal(tester.state.authReady, true);
-      assert.equal(tester.state.indexesReady, true);
-      assert.equal(tester.state.syncAuthBad, true);
+  let finish = assert.async();
+
+  subscription.add(tester.update$.subscribe(() => {
+    let next = checks.shift();
+
+    if (next) {
+      if (next()) {
+        if (checks.length === 0) {
+          finish();
+        }
+      } else {
+        checks.unshift(next);
+      }
+    } else {
       finish();
     }
-  }));
+  }))
+}
 
-  tester.queued$.buffering = false;
-  tester.start();
-});
+function loadCredentialsAndNewData() {
+  let indexes = {...indexesInitialState};
+  let settings = {...newSettings};
 
+  settings.session = {...settings.session};
+  settings.session.accessToken = token;
+  settings.session.syncCursor = latestCursor;
+  settings.session.sessionExpiresAt = Infinity;
+
+  let factory = new IndexesFactory();
+
+  for (var i = 0; i < 100; ++i) {
+    let noteFactory = new NoteFactory();
+    factory.addFactory(noteFactory);
+
+    let termFactory = noteFactory.addTermFactory(new TermFactory());
+  }
+
+  indexes = factory.loaded(indexes);
+
+  tester.queued$.dispatch(requestLocalStoreUpdate({indexes, settings}));
+  return true;
+}
+
+function awaitInitialBadSync() {
+  if (tester.state.awaiting.length == 0 && tester.queued$.stack.length == 1) {
+    assert.equal(tester.state.authReady, true);
+    assert.equal(tester.state.indexesReady, true);
+    assert.equal(tester.state.syncAuthBad, true);
+
+
+    return true;
+  }
+  return false;
+}
+
+if (process.env.E2E_TEST) {
+// Test that we can start sync from 0 safely.
+  test("can start sync from 0 safely", (assert) => {
+    sequenceChecks(assert, [
+      awaitInitialBadSync
+    ]);
+
+    tester.queued$.buffering = false;
+    tester.start();
+  });
+}
 // Add a bunch of test data and verify
