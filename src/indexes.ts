@@ -8,25 +8,25 @@ export type NotesStore = {
   byHasLocalEdits: Index<Note>
 }
 
+export type TermsStore = {
+  byNoteIdReferenceAndMarker: Index<Term>
+  byLanguage: Index<Term>
+}
+
+export type ClozesStore = {
+  byNoteIdReferenceMarkerAndClozeIdx: Index<Cloze>
+  byLanguageAndNextDue: Index<Cloze>
+}
+
 export const notesIndexer = new Indexer<Note, NotesStore>("byPath");
 notesIndexer.addIndex("byPath", note => note.path.split("/"));
 notesIndexer.addIndex("byId", note => [note.id]);
 notesIndexer.addIndex("byLanguage", note => [note.attributes.language]);
 notesIndexer.addIndex("byHasLocalEdits", note => [note.localEdits]);
 
-export type TermsStore = {
-  byNoteIdReferenceAndMarker: Index<Term>
-  byLanguage: Index<Term>
-}
-
 export const termsIndexer = new Indexer<Term, TermsStore>("byNoteIdReferenceAndMarker");
 termsIndexer.addIndex("byNoteIdReferenceAndMarker", term => [term.noteId, term.attributes.reference, term.attributes.marker]);
 termsIndexer.addIndex("byLanguage", term => [term.language]);
-
-export type ClozesStore = {
-  byNoteIdReferenceMarkerAndClozeIdx: Index<Cloze>
-  byLanguageAndNextDue: Index<Cloze>
-}
 
 export const clozesIndexer = new Indexer<Cloze, ClozesStore>("byNoteIdReferenceMarkerAndClozeIdx");
 clozesIndexer.addIndex("byNoteIdReferenceMarkerAndClozeIdx", cloze => [cloze.noteId, cloze.reference, cloze.marker, cloze.clozeIdx]);

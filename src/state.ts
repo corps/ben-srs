@@ -1,5 +1,5 @@
 import {indexesInitialState} from "./indexes";
-import {Cloze, DenormalizedNoteParts, newSettings, NormalizedNote, Note, Term} from "./model";
+import {DenormalizedNoteParts, newSettings, NormalizedNote} from "./model";
 import {DropboxListFolderResponse} from "./reducers/sync-reducer";
 import {SideEffect} from "kamo-reducers/reducers";
 
@@ -16,10 +16,6 @@ export const initialState = {
 
   authReady: false,
   indexesReady: false,
-
-  notesToLoad: [] as Note[],
-  termsToLoad: [] as Term[],
-  clozesToLoad: [] as Cloze[],
 
   syncOffline: false,
   syncAuthBad: false,

@@ -20,8 +20,7 @@
     "file-loader": "^0.11.2",
     "hellojs": "^1.15.1",
     "history": "^4.6.3",
-    "kamo-reducers": "^1.4.0",
-    "lz-string": "^1.4.4",
+    "kamo-reducers": "^1.6.0",
     "pace-progress": "^1.0.2",
     "perfectionist": "^2.4.0",
     "postcss-conditionals": "^2.1.0",
@@ -37,7 +36,8 @@
     "tslib": "^1.7.1",
     "url-loader": "^0.5.9",
     "uuid": "^3.1.0",
-    "webpack": "^2.2.1"
+    "webpack": "^2.2.1",
+    "worker-loader": "^0.8.1"
   },
   "devDependencies": {
     "enzyme": "^2.9.1",
@@ -47,6 +47,7 @@
     "karma-jsdom-launcher": "^6.1.2",
     "karma-qunit": "^1.2.1",
     "karma-webpack": "^2.0.3",
+    "pseudo-worker": "^1.1.1",
     "qunitjs": "^2.3.3",
     "react-addons-test-utils": "^15.6.0",
     "webpack": "^3.0.0",

@@ -122,6 +122,13 @@ export  function animationCleared(name: string): AnimationCleared;
 export  function animationRequest(action: GlobalAction, name: string): AnimationRequest;
 export  function withiAnimationFrames(effect$: Subject<SideEffect>): Subscriber<GlobalAction>;
 }
+declare module "kamo-reducers/services/async-storage" {
+import { Subject, Subscriber } from "kamo-reducers/subject";
+import { GlobalAction, SideEffect } from "kamo-reducers/reducers";
+export  function withAsyncStorage(effect$: Subject<SideEffect>): Subscriber<GlobalAction>;
+}
+declare module "kamo-reducers/services/async-storage" {
+}
 declare module "kamo-reducers/services/debounce" {
 import { GlobalAction, SideEffect } from "kamo-reducers/reducers";
 import { Subject, Subscriber } from "kamo-reducers/subject";
@@ -163,16 +170,15 @@ export interface LoadLocalData {
 export interface ClearLocalData {
     effectType: "clear-local-data";
 }
+export interface CancelLocalLoad {
+    effectType: "cancel-local-load";
+    key: string;
+}
 export  const clearLocalData: ClearLocalData;
+export  function cancelLocalLoad(key: string): CancelLocalLoad;
 export  function storeLocalData(key: string, data: object): StoreLocalData;
 export  function loadLocalData(key: string, data: object): LoadLocalData;
 export  function requestLocalData(key: string): RequestLocalData;
-export interface SimpleStringStorage {
-    clear(): void;
-    getItem(key: string): string;
-    setItem(key: string, value: string): void;
-}
-export  function withStorage(storage?: SimpleStringStorage, inputFilter?: (s: any) => string, outputFiler?: (s: string | 0) => any): (effect$: any) => any;
 }
 declare module "kamo-reducers/services/navigation" {
 import { Subject, Subscriber } from "kamo-reducers/subject";
@@ -290,6 +296,16 @@ export  function reduceSizings<T extends SizeMap>(state: SizeMap, a: SizeUpdate<
 export  function sizeUpdate<T extends SizeMap>(name: keyof T, size: Sizing): SizeUpdate<SizeMap>;
 export  function withSizeCalculator(effect$: Subject<SideEffect>): Subscriber<GlobalAction>;
 }
+declare module "kamo-reducers/services/synchronous-storage" {
+import { Subject, Subscriber } from "kamo-reducers/subject";
+import { GlobalAction, SideEffect } from "kamo-reducers/reducers";
+export interface SimpleSynchronousStorage {
+    clear(): void;
+    getItem(key: string): any;
+    setItem(key: string, value: any): void;
+}
+export  function withSynchronousStorage(storage?: SimpleSynchronousStorage, inputFilter?: (s: any) => string, outputFiler?: (s: string | 0) => any): (effect$: Subject<SideEffect>) => Subscriber<GlobalAction>;
+}
 declare module "kamo-reducers/services/time" {
 import { Subject, Subscriber } from "kamo-reducers/subject";
 import { GlobalAction, IgnoredAction, ReductionWithEffect, SideEffect } from "kamo-reducers/reducers";
@@ -310,6 +326,38 @@ export  function requestTick(after: number): RequestTick;
 export  function updateTime(absoluteTime: number, relativeTime: number): UpdateTime;
 export  function reduceTime<T extends TimeState>(state: T, action: UpdateTime | IgnoredAction): ReductionWithEffect<T>;
 export  function withTime(start?: number): (effect$: Subject<SideEffect>) => Subscriber<GlobalAction>;
+}
+declare module "kamo-reducers/services/workers" {
+import { Subject } from "kamo-reducers/subject";
+import { GlobalAction, SideEffect } from "kamo-reducers/reducers";
+export interface RequestWork {
+    effectType: "request-work";
+    data: any;
+    name: string[];
+}
+export interface CancelWork {
+    effectType: "cancel-work";
+    name: string[];
+}
+export interface WorkComplete {
+    type: "work-complete";
+    result: any;
+    name: string[];
+}
+export interface WorkCanceled {
+    type: "work-canceled";
+    name: string[];
+}
+export  function requestWork(name: string[], data: any): RequestWork;
+export  function cancelWork(name: string[]): CancelWork;
+export  function workCanceled(name: string[]): WorkCanceled;
+export  function workComplete(name: string[], result: any): WorkComplete;
+export  function withWorkers(workerF: () => Worker): (effect$: Subject<SideEffect>) => {
+    subscribe: (dispatch: (action: GlobalAction) => void) => () => void;
+};
+export  function simpleWorkerFactory(worker: () => void): () => Worker;
+}
+declare module "kamo-reducers/services/worker" {
 }
 declare module "kamo-reducers/dom" {
 import { Subscriber } from "kamo-reducers/subject";
@@ -339,8 +387,8 @@ export  function memoizeByAllProperties<T extends Function>(t: T): T;
 export  function memoizeBySomeProperties<A, R>(a: A, f: (a: A) => R): (a: A) => R;
 }
 declare module "kamo-reducers/memory-storage" {
-import { SimpleStringStorage } from "kamo-reducers/services/local-storage";
-export  class MemoryStorage implements SimpleStringStorage {
+import { SimpleSynchronousStorage } from "kamo-reducers/services/synchronous-storage";
+export  class MemoryStorage implements SimpleSynchronousStorage {
     values: {
         [k: string]: string;
     };
