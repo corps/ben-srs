@@ -7,9 +7,8 @@ import {WindowFocus} from "../services/window";
 import {Initialization} from "../services/initialization";
 import {AuthAction} from "../services/login";
 import {indexesInitialState} from "../indexes";
-import {withUpdatedAwaiting} from "./awaiting-reducer";
 import {clearOtherSyncProcesses, startSync} from "./sync-reducer";
-import {cancelWork, requestWork, WorkCanceled, WorkComplete} from "kamo-reducers/services/workers";
+import {cancelWork, requestWork, WorkComplete} from "kamo-reducers/services/workers";
 
 export const localStoreKey = "settings";
 
@@ -17,7 +16,6 @@ export type LocalStoreAction =
     WindowFocus
     | LoadLocalData
     | Initialization
-    | WorkCanceled
     | WorkComplete
     | AuthAction;
 
@@ -46,18 +44,12 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
       state.settings = data.settings;
       state.newNotes = data.newNotes;
 
-      ({state, effect} = sequenceReduction(effect, withUpdatedAwaiting(state, true, "indexes")));
       state.clearSyncEffects = state.clearSyncEffects.concat([cancelWork([loadIndexesWorkerName])]);
       effect = sequence(effect, requestWork([loadIndexesWorkerName], data));
       break;
 
     case "auth-success":
       effect = sequence(effect, requestLocalStoreUpdate(state));
-      break;
-
-    case "work-canceled":
-      if (action.name[0] !== loadIndexesWorkerName) break;
-      ({state, effect} = sequenceReduction(effect, withUpdatedAwaiting(state, false, "indexes")));
       break;
 
     case "work-complete":
@@ -69,7 +61,6 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
       state.indexes = loadedIndexes;
       state.indexesReady = true;
 
-      ({state, effect} = sequenceReduction(effect, withUpdatedAwaiting(state, false, "indexes")));
       ({state, effect} = sequenceReduction(effect, startSync(state)));
   }
 
@@ -94,4 +85,4 @@ export const newLocalStore = {
   newNotes: [] as NormalizedNote[],
 };
 
-type LocalStore = typeof newLocalStore;
+export type LocalStore = typeof newLocalStore;

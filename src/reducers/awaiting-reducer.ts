@@ -2,6 +2,7 @@ import {State} from "../state";
 import {IgnoredAction, ReductionWithEffect} from "kamo-reducers/reducers";
 import {CompleteRequest} from "kamo-reducers/services/ajax";
 import {RequestStarted} from "../services/request-tracker";
+import {WorkCanceled, WorkComplete} from "kamo-reducers/services/workers";
 
 export function withUpdatedAwaiting(state: State, active: boolean, ...items: string[]): ReductionWithEffect<State> {
   let original = state;
@@ -16,7 +17,8 @@ export function withUpdatedAwaiting(state: State, active: boolean, ...items: str
         }
         state.awaiting.splice(index, 1);
       }
-    } else {
+    }
+    else {
       if (active) {
         if (state === original) {
           state = {...state};
@@ -30,9 +32,16 @@ export function withUpdatedAwaiting(state: State, active: boolean, ...items: str
   return {state};
 }
 
-export function reduceAwaiting(state: State, action: CompleteRequest | RequestStarted | IgnoredAction): ReductionWithEffect<State> {
+export function reduceAwaiting(state: State,
+                               action: CompleteRequest |
+                                   RequestStarted |
+                                   WorkComplete |
+                                   IgnoredAction |
+                                   WorkCanceled): ReductionWithEffect<State> {
   switch (action.type) {
     case "complete-request":
+    case "work-complete":
+    case "work-canceled":
       return withUpdatedAwaiting(state, false, action.name.join("-"));
 
     case "request-started":
