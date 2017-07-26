@@ -13,11 +13,11 @@ import {cancelWork, requestWork, WorkComplete} from "kamo-reducers/services/work
 export const localStoreKey = "settings";
 
 export type LocalStoreAction =
-    WindowFocus
-    | LoadLocalData
-    | Initialization
-    | WorkComplete
-    | AuthAction;
+  WindowFocus
+  | LoadLocalData
+  | Initialization
+  | WorkComplete
+  | AuthAction;
 
 export const loadIndexesWorkerName = "load-indexes";
 
@@ -67,7 +67,11 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
   return {state, effect};
 }
 
-export function requestLocalStoreUpdate(state: { indexes: typeof indexesInitialState, settings: Settings, newNotes: NormalizedNote[] }) {
+export function requestLocalStoreUpdate(state: {
+  indexes: typeof indexesInitialState,
+  settings: Settings,
+  newNotes: { [k: string]: NormalizedNote },
+}) {
   let localStore = {...newLocalStore};
   localStore.settings = state.settings;
   localStore.notes = state.indexes.notes.byId.map(k => k[1]);
@@ -82,7 +86,7 @@ export const newLocalStore = {
   notes: [] as Note[],
   terms: [] as Term[],
   clozes: [] as Cloze[],
-  newNotes: [] as NormalizedNote[],
+  newNotes: {} as { [k: string]: NormalizedNote },
 };
 
 export type LocalStore = typeof newLocalStore;

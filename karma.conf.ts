@@ -1,5 +1,5 @@
 import webpackConfig = require("./webpack.config");
-let PseudoWorker = require('pseudo-worker');
+// let PseudoWorker = require('pseudo-worker');
 
 // http://airbnb.io/enzyme/docs/guides/karma.html
 webpackConfig.externals = {
@@ -44,9 +44,8 @@ export = function (config: any) {
     jsdomLauncher: {
       jsdom: {
         beforeParse: function (window: Window) {
-          window.constructor.prototype.requestAnimationFrame = setImmediate;
-          window.constructor.prototype.cancelAnimationFrame = clearImmediate;
-          window.constructor.prototype.Worker = PseudoWorker;
+          // window.constructor.prototype.requestAnimationFrame = setImmediate;
+          // window.constructor.prototype.cancelAnimationFrame = clearImmediate;
         }
       }
     },

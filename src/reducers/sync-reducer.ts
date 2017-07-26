@@ -12,9 +12,9 @@ import {
   Note, denormalizedNote, normalizedNote, parseNote, stringifyNote, NormalizedNote,
   newNormalizedNote
 } from "../model";
-import {LoadNextIndexesBatch, requestLocalStoreUpdate} from "./local-store-reducer";
+import {requestLocalStoreUpdate} from "./local-store-reducer";
 
-export type DropboxAction = AuthSuccess | CompleteRequest | LoadNextIndexesBatch;
+export type DropboxAction = AuthSuccess | CompleteRequest;
 
 export function reduceSync(state: State, action: DropboxAction | IgnoredAction): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;
@@ -41,6 +41,20 @@ export function reduceSync(state: State, action: DropboxAction | IgnoredAction):
           state.remainingUploads.splice(idx, 1);
         }
 
+        if (action.name[2].slice(0, 3) === "id:") {
+          let note = Indexer.getFirstMatching(state.indexes.notes.byId, [action.name[2].slice(3)]);
+          if (note) {
+            note = {...note};
+            note.localEdits = false;
+            state.indexes = {...state.indexes};
+            state.indexes.notes = notesIndexer.update(state.indexes.notes, [note]);
+          }
+        } else {
+          state.newNotes = {...state.newNotes};
+          delete state.newNotes[action.name[2]];
+        }
+
+        effect = sequence(effect, requestLocalStoreUpdate(state));
         ({state, effect} = sequenceReduction(effect, checkUploadSyncComplete(state)));
       }
 
@@ -55,7 +69,7 @@ export function reduceSync(state: State, action: DropboxAction | IgnoredAction):
         try {
           downloadedNote = parseNote(action.response);
         } catch (e) {
-          if (process.env.NODE_ENV !== "production") {
+          if (process.env.NODE_ENV === "production") {
             downloadedNote = {...newNormalizedNote};
             downloadedNote.attributes = {...downloadedNote.attributes};
             downloadedNote.attributes.content = action.response;
@@ -131,7 +145,6 @@ export function requestFileDownload(accessToken: string, rev: string) {
   return requestAjax([filesDownloadRequestName, accessToken, rev], config);
 }
 
-// TODO: FIXME???  UPLOAD BY ID??
 export function requestFileUpload(accessToken: string,
                                   note: NormalizedNote,
                                   path: string,
@@ -290,7 +303,15 @@ function startSyncUpload(state: State): ReductionWithEffect<State> {
     let clozes = Indexer.getAllMatching(state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [note.id]);
     let normalized = normalizedNote(note, terms, clozes);
 
-    let request = requestFileUpload(state.settings.session.accessToken, normalized, note.path, note.version);
+    let request = requestFileUpload(state.settings.session.accessToken, normalized, "id:" + note.id, note.version);
+    state.clearSyncEffects.push(abortRequest(request.name));
+    state.remainingUploads.push(request.name);
+    effect = sequence(effect, request);
+  }
+
+  for (let key in state.newNotes) {
+    let normalized = state.newNotes[key];
+    let request = requestFileUpload(state.settings.session.accessToken, normalized, key, "");
     state.clearSyncEffects.push(abortRequest(request.name));
     state.remainingUploads.push(request.name);
     effect = sequence(effect, request);
@@ -320,7 +341,6 @@ export function startSync(state: State): ReductionWithEffect<State> {
   }
 
   ({state, effect} = sequenceReduction(effect, startSyncUpload(state)));
-  ({state, effect} = sequenceReduction(effect, checkUploadSyncComplete(state)));
 
   return {state, effect};
 }

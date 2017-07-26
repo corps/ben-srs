@@ -8,7 +8,7 @@ export const initialState = {
 
   indexes: indexesInitialState,
   settings: newSettings,
-  newNotes: [] as NormalizedNote[],
+  newNotes: {} as {[k: string]: NormalizedNote},
 
   pathParts: [] as string[],
   now: Date.now(),
@@ -16,12 +16,10 @@ export const initialState = {
 
   authReady: false,
   indexesReady: false,
-
   syncOffline: false,
   syncAuthBad: false,
 
   remainingUploads: [] as string[][],
-
   executingDownloads: [] as string[][],
   downloadedNotes: [] as DenormalizedNoteParts[],
   syncingListFolder: null as DropboxListFolderResponse | 0,

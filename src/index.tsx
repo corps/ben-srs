@@ -6,7 +6,6 @@ import {generateRootElement} from "kamo-reducers/dom";
 import {renderLoop} from "kamo-reducers/reducers";
 import {Action, reducer} from "./reducer";
 import {view} from "./view";
-import {trackMutations} from "kamo-reducers/track-mutations";
 import {getServices} from "./services";
 
 declare var require: any;
@@ -44,8 +43,6 @@ subscription.add(generateRootElement().subscribe((element: HTMLElement) => {
       root.setState(state, next);
     }
   };
-
-  renderer = trackMutations(renderer);
 
   subscription.add(renderLoop<State, Action>(renderer, reducer, getServices(), initialState).subscribe(e => {
     switch (e[0]) {
