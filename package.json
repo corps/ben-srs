@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "test": "tsc && karma start karma.conf.js --browsers jsdom --single-run"
+    "test": "tsc && karma start karma.conf.js --single-run"
   },
   "dependencies": {
     "@types/history": "^4.6.0",
@@ -41,13 +41,10 @@
   },
   "devDependencies": {
     "enzyme": "^2.9.1",
-    "jsdom": "^11.0.0",
     "karma": "^1.7.0",
     "karma-chrome-launcher": "^2.2.0",
-    "karma-jsdom-launcher": "^6.1.2",
     "karma-qunit": "^1.2.1",
     "karma-webpack": "^2.0.3",
-    "pseudo-worker": "^1.1.1",
     "qunitjs": "^2.3.3",
     "react-addons-test-utils": "^15.6.0",
     "webpack": "^3.0.0",

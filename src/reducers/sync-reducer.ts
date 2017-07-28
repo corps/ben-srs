@@ -317,6 +317,8 @@ function startSyncUpload(state: State): ReductionWithEffect<State> {
     effect = sequence(effect, request);
   }
 
+  console.debug("started upload for ", state.remainingUploads.length, "files");
+
   ({state, effect} = sequenceReduction(effect, checkUploadSyncComplete(state)));
 
   return {state, effect};
@@ -325,17 +327,21 @@ function startSyncUpload(state: State): ReductionWithEffect<State> {
 export function startSync(state: State): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;
 
+  console.debug("startSync called");
   if (!state.authReady || !state.indexesReady) {
+    console.debug("sync stopped", state.authReady, state.indexesReady);
     return {state, effect};
   }
 
   ({state, effect} = sequenceReduction(effect, clearOtherSyncProcesses(state)));
 
   state = {...state};
+  state.startedSyncCount += 1;
   state.syncOffline = false;
   state.syncAuthBad = false;
 
   if (!state.settings.session.accessToken || (state.now / 1000) > state.settings.session.sessionExpiresAt) {
+    console.debug("session bad?", state.settings.session);
     state.syncAuthBad = true;
     return {state, effect};
   }

@@ -11,7 +11,7 @@ var config: any = {
   },
   output: {
     filename: '[name].js',
-    path: path.join(__dirname, "build/index.js"),
+    path: path.join(__dirname, "build/"),
     pathinfo: true
   },
 
@@ -70,6 +70,10 @@ var config: any = {
 };
 
 if (process.env.NODE_ENV === "production") {
+  config.plugins.push(new webpack.DefinePlugin({
+    "console.debug(": "// console.debug("
+  }));
+
   config.plugins.push(new webpack.LoaderOptionsPlugin({
     minimize: true
   }));

@@ -3,21 +3,7 @@ import {
   NormalizedCloze, NormalizedNote, NormalizedTerm
 } from "../../src/model";
 import {clozesIndexer, indexesInitialState, notesIndexer, termsIndexer} from "../../src/indexes";
-// import * as uuid from "uuid";
-
-let lastId = 0;
-function genId() {
-  return (++lastId) + "";
-}
-
-function genSomeText() {
-  let amount = Math.floor(Math.random() * 4) * 10;
-  var result = "";
-  for (var i = 0; i < amount; ++i) {
-    result += String.fromCharCode("a".charCodeAt(0) + Math.floor(Math.random() * 26))
-  }
-  return result;
-}
+import {genId, genNum, genSomeText} from "./general-factories";
 
 export function loadNote(indexes: typeof indexesInitialState,
                          denormalized: DenormalizedNoteParts) {
@@ -43,9 +29,12 @@ export class NoteFactory {
 
     this.note.attributes.content += factory.term.attributes.reference + "[" + factory.term.attributes.marker + "]";
     this.note.attributes.content += genSomeText();
+    this.note.attributes.terms.push(factory.term);
 
     return factory;
   }
+
+
 }
 
 
@@ -74,7 +63,7 @@ export class ClozeFactory {
     ...newNormalizeCloze,
     attributes: {
       ...newNormalizeCloze.attributes,
-      schedule: {...newSchedule, lastAnsweredMinutes: ++lastId},
+      schedule: {...newSchedule, lastAnsweredMinutes: genNum()},
     },
   }));
 }

@@ -1,7 +1,7 @@
 import {initialState, State} from "../state";
 import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
-import {Cloze, Settings, newSettings, Note, Term, NormalizedNote} from "../model";
+import {Cloze, newSettings, Note, Term, NormalizedNote} from "../model";
 import {LoadLocalData, requestLocalData, storeLocalData} from "kamo-reducers/services/local-storage";
 import {WindowFocus} from "../services/window";
 import {Initialization} from "../services/initialization";
@@ -43,6 +43,7 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
       let data = action.data as LocalStore || newLocalStore;
       state.settings = data.settings;
       state.newNotes = data.newNotes;
+      state.loadingStore = data;
 
       state.clearSyncEffects = state.clearSyncEffects.concat([cancelWork([loadIndexesWorkerName])]);
       effect = sequence(effect, requestWork([loadIndexesWorkerName], data));
@@ -67,16 +68,19 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
   return {state, effect};
 }
 
-export function requestLocalStoreUpdate(state: {
-  indexes: typeof indexesInitialState,
-  settings: Settings,
-  newNotes: { [k: string]: NormalizedNote },
-}) {
+export function requestLocalStoreUpdate(state: State) {
   let localStore = {...newLocalStore};
   localStore.settings = state.settings;
-  localStore.notes = state.indexes.notes.byId.map(k => k[1]);
-  localStore.terms = state.indexes.terms.byNoteIdReferenceAndMarker.map(k => k[1]);
-  localStore.clozes = state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx.map(k => k[1]);
+
+  if(state.indexesReady || !state.loadingStore) {
+    localStore.notes = state.indexes.notes.byId.map(k => k[1]);
+    localStore.terms = state.indexes.terms.byNoteIdReferenceAndMarker.map(k => k[1]);
+    localStore.clozes = state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx.map(k => k[1]);
+  } else {
+    localStore.notes = state.loadingStore.notes;
+    localStore.terms = state.loadingStore.terms;
+    localStore.clozes = state.loadingStore.clozes;
+  }
   localStore.newNotes = state.newNotes;
   return storeLocalData(localStoreKey, localStore);
 }

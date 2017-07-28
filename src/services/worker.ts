@@ -9,5 +9,5 @@ self.onmessage = (ev) => {
   indexes.notes = notesIndexer.update(indexes.notes, data.notes);
   indexes.terms = termsIndexer.update(indexes.terms, data.terms);
 
-  (self.postMessage as any)(null);
+  (self.postMessage as any)(indexes);
 }

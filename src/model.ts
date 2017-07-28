@@ -120,14 +120,18 @@ export const newNormalizeCloze = {
 
 export type NormalizedCloze = typeof newNormalizeCloze;
 
+export const newSession = {
+  accessToken: "",
+  login: "",
+  sessionExpiresAt: 0,
+  syncCursor: "",
+};
+
+export type Session = typeof newSession;
+
 export const newSettings = {
   pronounce: newByLangPronunciationOverrides,
-  session: {
-    accessToken: "",
-    login: "",
-    sessionExpiresAt: 0,
-    syncCursor: "",
-  }
+  session: newSession
 };
 
 export type Settings = typeof newSettings;

@@ -1,5 +1,4 @@
 import webpackConfig = require("./webpack.config");
-// let PseudoWorker = require('pseudo-worker');
 
 // http://airbnb.io/enzyme/docs/guides/karma.html
 webpackConfig.externals = {
@@ -24,7 +23,6 @@ export = function (config: any) {
     plugins: [
       'karma-qunit',
       'karma-webpack',
-      'karma-jsdom-launcher',
       'karma-chrome-launcher',
     ],
 
@@ -40,15 +38,6 @@ export = function (config: any) {
     files: [
       'tests/index.js',
     ],
-
-    jsdomLauncher: {
-      jsdom: {
-        beforeParse: function (window: Window) {
-          // window.constructor.prototype.requestAnimationFrame = setImmediate;
-          // window.constructor.prototype.cancelAnimationFrame = clearImmediate;
-        }
-      }
-    },
 
     // list of files to exclude
     exclude: [],
@@ -87,7 +76,7 @@ export = function (config: any) {
 
     // start these browsers
     // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-    browsers: ['jsdom'],
+    browsers: ['Chrome'],
 
     // Continuous Integration mode
     // if true, Karma captures browsers, runs the tests and exits

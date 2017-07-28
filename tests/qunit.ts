@@ -114,6 +114,8 @@ export interface Assert {
    */
   expect(amount: number): void;
 
+  timeout(time: number): void;
+
   /**
    * An inverted deep recursive comparison, working on primitive types,
    * arrays, objects, regular expressions, dates and functions.
