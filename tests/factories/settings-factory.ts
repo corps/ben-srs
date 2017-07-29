@@ -3,7 +3,7 @@ import {
   Session,
   Settings, Term
 } from "../../src/model";
-import {genId, genNum, genSomeText, pick} from "./general-factories";
+import {genFutureTime, genId, genSomeText, pick} from "./general-factories";
 import {LocalStore} from "../../src/reducers/local-store-reducer";
 import {NoteFactory} from "./notes-factories";
 
@@ -70,7 +70,7 @@ export function genSession(): Session {
   return {
     login: genSomeText(),
     accessToken: genSomeText(),
-    sessionExpiresAt: genNum(),
+    sessionExpiresAt: genFutureTime(),
     syncCursor: genSomeText(),
   }
 }

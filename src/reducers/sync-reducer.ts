@@ -4,7 +4,6 @@ import {
   RequestAjax
 } from "kamo-reducers/services/ajax";
 import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
-import {AuthSuccess} from "../services/login";
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
 import {Indexer} from "redux-indexers";
 import {clozesIndexer, notesIndexer, termsIndexer} from "../indexes";
@@ -14,9 +13,7 @@ import {
 } from "../model";
 import {requestLocalStoreUpdate} from "./local-store-reducer";
 
-export type DropboxAction = AuthSuccess | CompleteRequest;
-
-export function reduceSync(state: State, action: DropboxAction | IgnoredAction): ReductionWithEffect<State> {
+export function reduceSync(state: State, action: CompleteRequest | IgnoredAction): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;
 
   switch (action.type) {
@@ -243,7 +240,7 @@ function checkUploadSyncComplete(state: State): ReductionWithEffect<State> {
   state = {...state};
 
   let listFolderRequest = requestListFolder(state.settings.session.accessToken, state.settings.session.syncCursor);
-  state.clearSyncEffects = state.clearSyncEffects.concat([abortRequest(listFolderRequest.name)]);
+  state.clearSyncEffects = sequence(state.clearSyncEffects, abortRequest(listFolderRequest.name));
   effect = sequence(effect, listFolderRequest);
 
   return {state, effect};
@@ -254,17 +251,16 @@ export function clearOtherSyncProcesses(state: State): ReductionWithEffect<State
 
   state = {...state};
 
-  for (let nextEffect of state.clearSyncEffects) {
-    effect = sequence(effect, nextEffect);
-  }
-
-  state.clearSyncEffects = [];
+  effect = sequence(effect, state.clearSyncEffects);
+  state.clearSyncEffects = null;
 
   return {state, effect};
 }
 
 function startSyncDownload(state: State, response: DropboxListFolderResponse): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;
+
+  state = {...state};
 
   if (!state.settings.session.accessToken || (state.now / 1000) > state.settings.session.sessionExpiresAt) {
     state.syncAuthBad = true;
@@ -276,13 +272,12 @@ function startSyncDownload(state: State, response: DropboxListFolderResponse): R
   state.syncingListFolder = response;
   state.downloadedNotes = [];
   state.executingDownloads = [];
-  state.clearSyncEffects = state.clearSyncEffects.slice();
 
 
   for (let entry of response.entries) {
     if (entry[".tag"] === "file") {
       let request = requestFileDownload(token, (entry as DropboxFileEntry).rev);
-      state.clearSyncEffects.push(abortRequest(request.name));
+      state.clearSyncEffects = sequence(state.clearSyncEffects, abortRequest(request.name));
       effect = sequence(effect, request);
       state.executingDownloads.push(request.name);
     }
@@ -294,8 +289,9 @@ function startSyncDownload(state: State, response: DropboxListFolderResponse): R
 function startSyncUpload(state: State): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;
 
+  state = {...state};
+
   let hasEdits = Indexer.getAllMatching(state.indexes.notes.byHasLocalEdits, [true]);
-  state.clearSyncEffects = state.clearSyncEffects.slice();
   state.remainingUploads = [];
 
   for (let note of hasEdits) {
@@ -304,7 +300,7 @@ function startSyncUpload(state: State): ReductionWithEffect<State> {
     let normalized = normalizedNote(note, terms, clozes);
 
     let request = requestFileUpload(state.settings.session.accessToken, normalized, "id:" + note.id, note.version);
-    state.clearSyncEffects.push(abortRequest(request.name));
+    state.clearSyncEffects = sequence(state.clearSyncEffects, abortRequest(request.name));
     state.remainingUploads.push(request.name);
     effect = sequence(effect, request);
   }
@@ -312,7 +308,7 @@ function startSyncUpload(state: State): ReductionWithEffect<State> {
   for (let key in state.newNotes) {
     let normalized = state.newNotes[key];
     let request = requestFileUpload(state.settings.session.accessToken, normalized, key, "");
-    state.clearSyncEffects.push(abortRequest(request.name));
+    state.clearSyncEffects = sequence(state.clearSyncEffects, abortRequest(request.name));
     state.remainingUploads.push(request.name);
     effect = sequence(effect, request);
   }

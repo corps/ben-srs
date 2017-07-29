@@ -45,7 +45,7 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
       state.newNotes = data.newNotes;
       state.loadingStore = data;
 
-      state.clearSyncEffects = state.clearSyncEffects.concat([cancelWork([loadIndexesWorkerName])]);
+      state.clearSyncEffects = sequence(state.clearSyncEffects, cancelWork([loadIndexesWorkerName]));
       effect = sequence(effect, requestWork([loadIndexesWorkerName], data));
       break;
 

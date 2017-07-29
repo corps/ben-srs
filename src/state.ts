@@ -28,7 +28,7 @@ export const initialState = {
   executingDownloads: [] as string[][],
   downloadedNotes: [] as DenormalizedNoteParts[],
   syncingListFolder: null as DropboxListFolderResponse | 0,
-  clearSyncEffects: [] as SideEffect[],
+  clearSyncEffects: null as SideEffect | 0,
 };
 
 export type State = typeof initialState;

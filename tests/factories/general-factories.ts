@@ -19,3 +19,8 @@ export function genSomeText() {
 export function pick<V>(...v: V[]): V {
   return v[Math.floor(Math.random() * v.length)];
 }
+
+const start = Date.now();
+export function genFutureTime() {
+  return start + (1000 * 60 * 5) + genNum() * 100;
+}
