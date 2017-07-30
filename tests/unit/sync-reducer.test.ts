@@ -86,14 +86,16 @@ test("starting sync first cancels other sync actions", (assert) => {
   assert.equal(tester.findEffects("b", [tester.state.clearSyncEffects]).length, 0);
   assert.equal(tester.findEffects("c", [tester.state.clearSyncEffects]).length, 0);
 
-  let head = tester.queued$.queue[0];
   let effectNames: string[] = [];
-  while (head && (!isSideEffect(head) || head.effectType !== "request-ajax")) {
+  while (!tester.queued$.isEmpty()) {
+    let head = tester.queued$.peek();
+
     if (isSideEffect(head)) {
+      if (head.effectType === "request-ajax") break;
       effectNames.push(head.effectType);
     }
+
     tester.queued$.flushNext();
-    head = tester.queued$.queue[0];
   }
 
   assert.notEqual(effectNames.indexOf("a"), -1);

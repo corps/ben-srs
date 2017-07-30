@@ -327,6 +327,8 @@ export  function updateTime(absoluteTime: number, relativeTime: number): UpdateT
 export  function reduceTime<T extends TimeState>(state: T, action: UpdateTime | IgnoredAction): ReductionWithEffect<T>;
 export  function withTime(start?: number): (effect$: Subject<SideEffect>) => Subscriber<GlobalAction>;
 }
+declare module "kamo-reducers/services/worker" {
+}
 declare module "kamo-reducers/services/workers" {
 import { Subject } from "kamo-reducers/subject";
 import { GlobalAction, SideEffect } from "kamo-reducers/reducers";
@@ -356,8 +358,6 @@ export  function withWorkers(workerF: () => Worker): (effect$: Subject<SideEffec
     subscribe: (dispatch: (action: GlobalAction) => void) => () => void;
 };
 export  function simpleWorkerFactory(worker: () => void): () => Worker;
-}
-declare module "kamo-reducers/services/worker" {
 }
 declare module "kamo-reducers/dom" {
 import { Subscriber } from "kamo-reducers/subject";
@@ -421,7 +421,7 @@ export  type Service = (sideEffect$: Subject<SideEffect>) => Subscriber<GlobalAc
 export  function isSideEffect(ae: SideEffect | GlobalAction): ae is SideEffect;
 export  type RenderUpdate<State, Action extends GlobalAction> = ["a", Action] | ["s", State] | ["e", SideEffect] | ["r"] | ["c"];
 export  function renderLoop<State, Action extends GlobalAction>(renderer: Renderer<State, Action>, reducer: Reducer<State>, services: Service[], initialState?: State): Subscriber<RenderUpdate<State, Action>>;
-export  function serviceActions(effect$: Subscriber<SideEffect>, services: Service[]): Subscriber<GlobalAction>;
+export  function serviceOutputs(effect$: Subscriber<SideEffect>, services: Service[]): Subscriber<GlobalAction | SideEffect>;
 export interface ReducerChain<S> {
     result: () => {
         state: S;
@@ -447,16 +447,22 @@ export  class Subject<T> implements Subscriber<T>, Dispatcher<T> {
 }
 export  function delayedValue<T>(timeout: number, v: T): Subscriber<T>;
 export  class BufferedSubject<T> implements Subject<T> {
-    queue: T[];
-    stack: T[];
     buffering: boolean;
+    readonly buffer: ReadonlyArray<T>;
+    readonly stack: ReadonlyArray<number>;
+    private _buffer;
+    private _stack;
     private flush$;
+    peek(): T;
+    isEmpty(): boolean;
+    clear(): void;
+    getRightOffset(): number;
     dispatch: (t: T) => void;
     subscribe: (dispatch: (t: T) => void) => () => void;
     flushNext: () => T;
-    flushCurrent: () => T[];
     flushUntilEmpty: () => T[];
-    executeFlush(t: T): void;
+    private takeNext();
+    private executeFlush(t);
 }
 export  class Subscription {
     private subscriptions;
@@ -480,9 +486,13 @@ export  class Tester<State> {
     private queuedAction$;
     private flushedDispatch;
     dispatch: (action: GlobalAction, clearQueue?: boolean) => void;
-    findEffects(type: string, ea?: (SideEffect | GlobalAction)[]): SideEffect[];
-    findActions(type: string, ea?: (SideEffect | GlobalAction)[]): GlobalAction[];
+    findEffects(type: string, ea?: ReadonlyArray<SideEffect | GlobalAction>): SideEffect[];
+    findActions(type: string, ea?: ReadonlyArray<SideEffect | GlobalAction>): GlobalAction[];
 }
+}
+declare module "kamo-reducers/tests" {
+ var require: any;
+ let testsContext: any;
 }
 declare module "kamo-reducers/track-mutations" {
 export  type ObjectTrace = {
