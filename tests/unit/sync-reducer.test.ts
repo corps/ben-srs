@@ -1,6 +1,6 @@
 import {BensrsTester} from "../tester";
 import {Subscription} from "kamo-reducers/subject";
-import {test, testModule} from "../qunit";
+import {assert, test, testModule} from "../qunit";
 import {loadIndexesWorkerName, localStoreKey} from "../../src/reducers/local-store-reducer";
 import {genLocalStore} from "../factories/settings-factory";
 import {loadLocalData} from "kamo-reducers/services/local-storage";
@@ -9,10 +9,13 @@ import {State} from "../../src/state";
 import {workComplete} from "kamo-reducers/services/workers";
 import {doIndexesLoadingWork} from "../../src/services/worker";
 import {Indexer} from "redux-indexers";
-import {RequestAjax} from "kamo-reducers/services/ajax";
+import {RequestAjax, AbortRequest} from "kamo-reducers/services/ajax";
 import {authInitialized} from "../../src/services/login";
 import {isSideEffect, SideEffect} from "kamo-reducers/reducers";
 import {sequence} from "kamo-reducers/services/sequence";
+import {NoteFactory} from "../factories/notes-factories";
+import {denormalizedNote, NormalizedNote} from "../../src/model";
+import {genSomeText} from "../factories/general-factories";
 
 let tester: BensrsTester;
 let subscription = new Subscription();
@@ -53,6 +56,31 @@ class SyncTestSetup {
     tester.state = {...tester.state, ...this.stateOverwrite};
   });
 
+  prepareWithEdited = runOnce(() => {
+    setup.addEditedNote();
+    setup.addEditedNote();
+    setup.prepareState();
+
+    assert.ok(Indexer.getFirstMatching(tester.state.indexes.notes.byHasLocalEdits, [true]));
+    assert.ok(Object.keys(tester.state.newNotes).length);
+  });
+
+  editedNotes: NormalizedNote[] = [];
+  addEditedNote = () => {
+    let factory = new NoteFactory();
+    let term = factory.addTerm();
+    term.addCloze();
+
+    this.editedNotes.push(factory.note);
+
+    let denormalized = denormalizedNote(factory.note, genSomeText(), genSomeText(), genSomeText());
+    denormalized.note.localEdits = true;
+    this.store.notes.push(denormalized.note);
+    this.store.terms = this.store.terms.concat(denormalized.terms);
+    this.store.clozes = this.store.clozes.concat(denormalized.clozes);
+
+    return factory.note;
+  }
 
   startSync = runOnce(() => {
     this.prepareState();
@@ -101,6 +129,22 @@ test("starting sync first cancels other sync actions", (assert) => {
   assert.notEqual(effectNames.indexOf("a"), -1);
   assert.notEqual(effectNames.indexOf("b"), -1);
   assert.notEqual(effectNames.indexOf("c"), -1);
+});
+
+test("syncing with newNotes and localEdits requests writes for each of those that are added to clearSyncEffects", (assert) => {
+  setup.prepareWithEdited();
+  setup.startSync();
+
+  let ajaxes: RequestAjax[] = tester.findEffects("request-ajax") as any[];
+
+  assert.equal(tester.state.startedSyncCount, 1);
+  assert.ok(ajaxes.length);
+
+  assert.equal(ajaxes.filter(a => a.name[0] === filesUploadRequestName).length, ajaxes.length);
+  assert.equal(ajaxes.length, setup.editedNotes.length + Object.keys(tester.state.newNotes).length);
+
+  let aborts: AbortRequest[] = tester.state.clearSyncEffects && tester.findEffects("abort-request", [tester.state.clearSyncEffects]) as any[];
+  assert.deepEqual(ajaxes.map(a => a.name), aborts.map(a => a.name));
 });
 
 test("syncing without any newNotes or localEdits = true notes immediately starts the downloadSync", (assert) => {
