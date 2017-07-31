@@ -86,6 +86,7 @@ export interface CompleteRequest {
 }
 export  function completeRequest(requestEffect: RequestAjax, status: number, response: string, headers: string, when?: number): CompleteRequest;
 export  function withAjax(effect$: Subject<SideEffect>): Subscriber<GlobalAction>;
+export  function executeXhrWithConfig(config: AjaxConfig, xhr: XMLHttpRequest): void;
 export  function getAjaxUrl(config: AjaxConfig): string;
 export  function getAjaxBody(config: AjaxConfig): string;
 export  function parseResponseHeaders(headerStr: string): {
@@ -183,6 +184,12 @@ export  function requestLocalData(key: string): RequestLocalData;
 declare module "kamo-reducers/services/navigation" {
 import { Subject, Subscriber } from "kamo-reducers/subject";
 import { GlobalAction, ReductionWithEffect, SideEffect } from "kamo-reducers/reducers";
+export interface History {
+    listen: (listener: (location: PathLocation, action: string) => void) => () => void;
+    push: (location: PathLocation) => void;
+    replace: (location: PathLocation) => void;
+    location: PathLocation;
+}
 export interface PathLocation {
     pathname: string;
     search: string;
@@ -192,38 +199,32 @@ export interface HistoryPush {
     effectType: 'history-push';
     location: PathLocation;
 }
-export interface SetBaseHref {
-    effectType: 'set-base-href';
-    href: string;
-}
-export  function setBaseHref(href: string): SetBaseHref;
 export  function historyPush(location: PathLocation): HistoryPush;
-export interface LoadPage {
-    type: 'load-page';
-    location: PathLocation;
-}
-export  function loadPage(location: PathLocation): LoadPage;
-export  const emptyLocation: PathLocation;
-export  function withHistory(history: {
-    listen: (listener: (location: PathLocation, action: string) => void) => () => void;
-    push: (location: PathLocation) => void;
-}, leaveBaseTag?: boolean): (effect$: Subject<SideEffect>) => Subscriber<GlobalAction>;
 export interface Visit {
     type: 'visit';
     noHistory?: boolean;
     location: PathLocation;
 }
-export  function visit(location: PathLocation, noHistory?: boolean): Visit;
-export interface RequestBrowseToAppLocation {
-    effectType: "request-browse-to-app-location";
+export  function visit(location: PathLocation): Visit;
+export interface LinkClick {
+    type: 'link-click';
     location: PathLocation;
 }
-export  function requestBrowseToAppLocation(location: PathLocation): RequestBrowseToAppLocation;
-export  type NavigationAction = Visit | LoadPage;
+export  function linkClick(location: PathLocation): LinkClick;
+export interface SetOnUnloadMessage {
+    effectType: 'set-on-unload-message';
+    enable: boolean;
+}
+export  function setOnUnloadMessage(enable: boolean): SetOnUnloadMessage;
+export  function clearOnUnloadMessage(): SetOnUnloadMessage;
+export  const emptyLocation: PathLocation;
+export  function withHistory(history: History): (effect$: Subject<SideEffect>) => Subscriber<GlobalAction>;
+export  type NavigationAction = Visit | LinkClick;
 export  function navigationReducer<State extends Object>(route: (state: State, pathLocation: PathLocation) => ReductionWithEffect<State>): (state: State, action: NavigationAction) => ReductionWithEffect<State>;
-export  function visitDispatcher(dispatch: (a: Visit) => void): (event: {
-    target: HTMLElement;
-    preventDefault: () => void;
+export  function inferBasePath(): string;
+export  function visitDispatcher(dispatch: (a: GlobalAction) => void): (event: {
+    preventDefault(): void;
+    target: any;
 }) => void;
 }
 declare module "kamo-reducers/services/notification" {
@@ -327,8 +328,6 @@ export  function updateTime(absoluteTime: number, relativeTime: number): UpdateT
 export  function reduceTime<T extends TimeState>(state: T, action: UpdateTime | IgnoredAction): ReductionWithEffect<T>;
 export  function withTime(start?: number): (effect$: Subject<SideEffect>) => Subscriber<GlobalAction>;
 }
-declare module "kamo-reducers/services/worker" {
-}
 declare module "kamo-reducers/services/workers" {
 import { Subject } from "kamo-reducers/subject";
 import { GlobalAction, SideEffect } from "kamo-reducers/reducers";
@@ -358,6 +357,8 @@ export  function withWorkers(workerF: () => Worker): (effect$: Subject<SideEffec
     subscribe: (dispatch: (action: GlobalAction) => void) => () => void;
 };
 export  function simpleWorkerFactory(worker: () => void): () => Worker;
+}
+declare module "kamo-reducers/services/worker" {
 }
 declare module "kamo-reducers/dom" {
 import { Subscriber } from "kamo-reducers/subject";
