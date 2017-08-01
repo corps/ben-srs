@@ -46,7 +46,8 @@ export function reduceSync(state: State, action: CompleteRequest | IgnoredAction
             state.indexes = {...state.indexes};
             state.indexes.notes = notesIndexer.update(state.indexes.notes, [note]);
           }
-        } else {
+        }
+        else {
           state.newNotes = {...state.newNotes};
           delete state.newNotes[action.name[2]];
         }
@@ -70,7 +71,8 @@ export function reduceSync(state: State, action: CompleteRequest | IgnoredAction
             downloadedNote = {...newNormalizedNote};
             downloadedNote.attributes = {...downloadedNote.attributes};
             downloadedNote.attributes.content = action.response;
-          } else {
+          }
+          else {
             throw e;
           }
         }
@@ -99,7 +101,8 @@ export function dropboxBaseHeaders(accessToken: string): AjaxConfig["headers"] {
   }
 }
 
-export function dropboxHeadersWithArgs(accessToken: string, args: { [k: string]: object | string | number }): AjaxConfig["headers"] {
+export function dropboxHeadersWithArgs(accessToken: string,
+                                       args: { [k: string]: object | string | number }): AjaxConfig["headers"] {
   return {
     ...dropboxBaseHeaders(accessToken),
     "Dropbox-API-Arg": JSON.stringify(args),
@@ -173,13 +176,12 @@ function removeNote(indexes: State["indexes"], note: Note) {
 
   for (let term of terms) {
     let clozes = Indexer.getAllMatching(
-      indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx,
-      [note.id, term.attributes.reference, term.attributes.marker]);
+        indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx,
+        [note.id, term.attributes.reference, term.attributes.marker]);
 
     indexes.clozes = clozesIndexer.removeAll(indexes.clozes, clozes);
   }
 }
-
 
 function checkSyncDownloadComplete(state: State): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;
@@ -193,6 +195,8 @@ function checkSyncDownloadComplete(state: State): ReductionWithEffect<State> {
     return {state, effect};
   }
 
+  let downloadedNoteIds = state.downloadedNotes.map(n => n.note.id);
+
   state.indexes = {...state.indexes};
   state.syncingListFolder.entries.forEach(entry => {
     if (entry[".tag"] === "deleted") {
@@ -201,11 +205,12 @@ function checkSyncDownloadComplete(state: State): ReductionWithEffect<State> {
       for (let note of notes) {
         removeNote(state.indexes, note);
       }
-    } else if (entry[".tag"] === "file") {
+    }
+    else if (entry[".tag"] === "file") {
       let file = entry as DropboxFileEntry;
-      for (var downloaded of state.downloadedNotes) {
-        if (downloaded.note.id === file.id) break;
-      }
+
+      let idx = downloadedNoteIds.indexOf(file.id);
+      let downloaded = state.downloadedNotes[idx];
 
       let existing = Indexer.getFirstMatching(state.indexes.notes.byId, [downloaded.note.id]);
       if (existing) return;
@@ -231,7 +236,6 @@ function checkSyncDownloadComplete(state: State): ReductionWithEffect<State> {
 
   return {state, effect};
 }
-
 
 function checkUploadSyncComplete(state: State): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;
@@ -273,7 +277,6 @@ function startSyncDownload(state: State, response: DropboxListFolderResponse): R
   state.syncingListFolder = response;
   state.downloadedNotes = [];
   state.executingDownloads = [];
-
 
   for (let entry of response.entries) {
     if (entry[".tag"] === "file") {

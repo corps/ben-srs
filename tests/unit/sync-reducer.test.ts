@@ -124,8 +124,8 @@ class SyncTestSetup {
 
   addDeletedNote = (edited = false): [Note, DropboxDeleteEntry] => {
     let deleteEntry = genDeleteEntry();
-    let parentFolder = deleteEntry.path_lower.split("/")[0] + genSomeText();
-    let note = setup.addNote(false, parentFolder + "/" + genSomeText());
+    let parentFolder = deleteEntry.path_lower.split("/")[0];
+    let note = setup.addNote(edited, parentFolder + "/" + genSomeText());
     return [note, deleteEntry];
   };
 
@@ -248,7 +248,7 @@ test("applies deletes and updated notes after all requests complete, storing the
   assert.notOk(Indexer.getFirstMatching(tester.state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [deletedNote.id]));
 
   let note1 = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [newFileEntry1.id]);
-  let note2 = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [newFileEntry1.id]);
+  let note2 = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [newFileEntry2.id]);
 
   assert.ok(note1);
   assert.ok(note2);
