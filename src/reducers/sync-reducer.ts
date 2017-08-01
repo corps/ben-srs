@@ -75,7 +75,8 @@ export function reduceSync(state: State, action: CompleteRequest | IgnoredAction
           }
         }
 
-        let response = JSON.parse(parseResponseHeaders(action.headers)["Dropbox-API-Result"]) as DropboxDownloadResponse;
+        let headers = parseResponseHeaders(action.headers);
+        let response = JSON.parse(headers["dropbox-api-result"]) as DropboxDownloadResponse;
 
         let denormalized = denormalizedNote(downloadedNote, response.id, response.rev, response.path_lower);
         state.downloadedNotes = state.downloadedNotes.concat([denormalized]);
