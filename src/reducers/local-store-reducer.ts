@@ -35,6 +35,7 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
     case "load-local-data":
       if (action.key !== localStoreKey) break;
 
+      console.log("load local data");
       ({state, effect} = sequenceReduction(effect, clearOtherSyncProcesses(state)));
 
       state = {...state};

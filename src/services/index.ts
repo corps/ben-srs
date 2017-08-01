@@ -12,14 +12,16 @@ import {withWorkers} from "kamo-reducers/services/workers";
 
 export const newServiceConfig = {
   storageService: withAsyncStorage as Service,
+  history: createHashHistory(),
+  windowFocus: withWindowFocus,
 };
 
 export function getServices(config = newServiceConfig): Service[] {
   let services = [] as Service[];
-  services.push(withWindowFocus);
+  if (config.windowFocus) services.push(config.windowFocus);
   services.push(withAjax);
   services.push(withRequestTracking);
-  services.push(withHistory(createHashHistory()));
+  services.push(withHistory(config.history));
   services.push(withSequenced);
   services.push(withLogin);
   services.push(config.storageService);

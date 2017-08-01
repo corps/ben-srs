@@ -7,7 +7,8 @@ import {loadLocalData} from "kamo-reducers/services/local-storage";
 import {
   DropboxDeleteEntry, DropboxFileEntry,
   DropboxListFolderResponse,
-  filesDownloadRequestName, filesUploadRequestName, listFolderRequestName, requestFileDownload, requestListFolder,
+  filesDownloadRequestName, filesUploadRequestName, listFolderRequestName, requestFileDownload, requestFileUpload,
+  requestListFolder,
   startSync
 } from "../../src/reducers/sync-reducer";
 import {State} from "../../src/state";
@@ -22,7 +23,7 @@ import {authInitialized} from "../../src/services/login";
 import {isSideEffect, SideEffect} from "kamo-reducers/reducers";
 import {sequence} from "kamo-reducers/services/sequence";
 import {NoteFactory} from "../factories/notes-factories";
-import {denormalizedNote, NormalizedNote, Note, Session, stringifyNote} from "../../src/model";
+import {denormalizedNote, NormalizedNote, normalizedNote, Note, Session, stringifyNote} from "../../src/model";
 import {genSomeText} from "../factories/general-factories";
 import {
   genDeleteEntry, genDownloadResponse, genDropboxListFolderResponse,
@@ -72,6 +73,13 @@ class SyncTestSetup {
 
   });
 
+  completeFileUploadRequest(normalized: NormalizedNote, path = genSomeText(), version = "") {
+    let session = tester.state.settings.session;
+
+    tester.dispatch(completeRequest(requestFileUpload(
+      session.accessToken, normalized, path, version), 200, "", ""));
+  }
+
   completeListFolderRequest(listFolderResponse: DropboxListFolderResponse) {
     let session = tester.state.settings.session;
 
@@ -94,6 +102,8 @@ class SyncTestSetup {
       stringifyNote(normalized), encodeResponseHeaders({
         "Dropbox-API-Result": JSON.stringify(genDownloadResponse(fileEntry))
       })));
+
+    return normalized;
   }
 
   prepareWithEdited = runOnce(() => {
@@ -106,7 +116,7 @@ class SyncTestSetup {
   });
 
   editedNotes: NormalizedNote[] = [];
-  addNote = (edited = false, path = genSomeText()) => {
+  addNote = (edited = false, path = genSomeText()): [Note, NormalizedNote] => {
     let factory = new NoteFactory();
     let term = factory.addTerm();
     term.addCloze();
@@ -119,13 +129,13 @@ class SyncTestSetup {
     this.store.terms = this.store.terms.concat(denormalized.terms);
     this.store.clozes = this.store.clozes.concat(denormalized.clozes);
 
-    return denormalized.note;
+    return [denormalized.note, factory.note];
   };
 
-  addDeletedNote = (edited = false): [Note, DropboxDeleteEntry] => {
+  addDeletedNote = (): [Note, DropboxDeleteEntry] => {
     let deleteEntry = genDeleteEntry();
     let parentFolder = deleteEntry.path_lower.split("/")[0];
-    let note = setup.addNote(edited, parentFolder + "/" + genSomeText());
+    let [note] = setup.addNote(false, parentFolder + "/" + genSomeText());
     return [note, deleteEntry];
   };
 
@@ -191,6 +201,24 @@ test(`failing other requests does not bother the sync`, (assert) => {
   assert.equal(tester.state.syncOffline, false);
 });
 
+test("completing a file upload clears localEdits of existing file", (assert) => {
+  let [note, normalized] = setup.addNote(true);
+  setup.prepareState();
+
+  assert.ok(note.localEdits);
+  assert.ok(Indexer.getFirstMatching(tester.state.indexes.notes.byId, [note.id]));
+
+  setup.startSync();
+  setup.completeFileUploadRequest(normalized, "id:" + note.id, note.version);
+
+  let updatedNote = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [note.id]);
+  assert.ok(updatedNote);
+  if (updatedNote) {
+    assert.notOk(updatedNote.localEdits);
+    assert.deepEqual(updatedNote.attributes, note.attributes);
+  }
+});
+
 test("a list folder response issues requests for each file entry, which is aborted on sync reset", (assert) => {
   setup.prepareState();
 
@@ -212,6 +240,50 @@ test("a list folder response issues requests for each file entry, which is abort
 
     assert.equal(aborts.filter(abort => ajaxNames.indexOf(abort.name.join("-")) !== -1).length, ajaxes.length);
     assert.equal(ajaxes.length, 2);
+  }
+});
+
+test("syncedNotes don't override local edits", (assert) => {
+  let [note1] = setup.addNote(true);
+  let newFileEntry1 = genFileEntry();
+  newFileEntry1.id = note1.id;
+
+  let [note2] = setup.addNote(false);
+  let newFileEntry2 = genFileEntry();
+  newFileEntry2.id = note2.id;
+
+  setup.prepareState();
+
+  assert.ok(Indexer.getFirstMatching(tester.state.indexes.notes.byId, [note1.id]));
+  assert.ok(Indexer.getFirstMatching(tester.state.indexes.notes.byId, [note2.id]));
+
+  let listFolderResponse = genDropboxListFolderResponse();
+  listFolderResponse.entries.push(newFileEntry1);
+  listFolderResponse.entries.push(newFileEntry2);
+  setup.completeListFolderRequest(listFolderResponse);
+
+  setup.completeFileDownloadRequest(newFileEntry1);
+  let normalized2 = setup.completeFileDownloadRequest(newFileEntry2);
+
+  let newNote1 = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [newFileEntry1.id]);
+  let newNote2 = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [newFileEntry2.id]);
+
+  assert.ok(newNote1);
+  assert.ok(newNote2);
+
+  if (newNote1 && newNote2) {
+    assert.strictEqual(newNote1, note1);
+
+    assert.equal(newNote2.version, newFileEntry2.rev);
+    assert.equal(newNote2.path, newFileEntry2.path_lower);
+
+    let normalizedNewNote2 = normalizedNote(
+      newNote2,
+      Indexer.getAllMatching(tester.state.indexes.terms.byNoteIdReferenceAndMarker, [newNote2.id]),
+      Indexer.getAllMatching(tester.state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [newNote2.id]),
+    );
+
+    assert.deepEqual(normalized2, JSON.parse(JSON.stringify(normalizedNewNote2)));
   }
 });
 
@@ -277,7 +349,7 @@ test("a list folder response with no downloads just completes the sync and updat
   assert.deepEqual(tester.state.awaiting, []);
   assert.equal(tester.state.syncAuthBad, false);
   assert.equal(tester.state.syncOffline, false);
-})
+});
 
 test("starting sync first cancels other sync actions", (assert) => {
   setup.prepareState();

@@ -9,8 +9,9 @@ import uuid = require("uuid");
 import {storeLocalData} from "kamo-reducers/services/local-storage";
 import {windowFocus} from "../../src/services/window";
 import {Indexer} from "redux-indexers";
+import {isSideEffect} from "kamo-reducers/reducers";
+import {setImmediate} from "timers";
 
-let latestCursor = "";
 let subscription = new Subscription();
 let token = process.env.DROPBOX_TEST_ACCESS_TOKEN as string;
 let tester: BensrsTester;
@@ -20,8 +21,7 @@ const testLocalStore = {...newLocalStore};
 let settings = testLocalStore.settings = {...newSettings};
 settings.session = {...settings.session};
 settings.session.accessToken = token;
-settings.session.syncCursor = latestCursor;
-settings.session.sessionExpiresAt = Infinity;
+settings.session.sessionExpiresAt = Date.now() * 10;
 
 testLocalStore.newNotes = {};
 for (var i = 0; i < 100; ++i) {
@@ -39,7 +39,7 @@ for (var i = 0; i < 100; ++i) {
   termFactory.addCloze();
   termFactory.addCloze();
 
-  testLocalStore.newNotes["test/" + uuid.v4()] = JSON.parse(JSON.stringify(noteFactory.note));
+  testLocalStore.newNotes["/test/" + uuid.v4()] = JSON.parse(JSON.stringify(noteFactory.note));
 }
 
 testModule("e2e/sync", {
@@ -52,8 +52,7 @@ testModule("e2e/sync", {
     let finish = assert.async();
     setupDropbox(token, (err: any, cursor: string) => {
       assert.ok(!err, "Got error setting up dropbox");
-      latestCursor = cursor;
-
+      settings.session.syncCursor = cursor;
       finish();
     });
   },
@@ -68,11 +67,26 @@ function sequenceChecks(assert: Assert, checks: Function[]) {
 
   let finish = assert.async();
 
-  subscription.add(tester.update$.subscribe(() => {
+  let inCheck = false;
+
+  subscription.add(tester.queued$.subscribe(ea => {
+    if (isSideEffect(ea)) {
+      console.log("effect", ea);
+    } else {
+      console.log("action", ea);
+    }
+  }))
+
+  subscription.add(tester.update$.subscribe((u) => {
+    if (inCheck) return;
+
     let next = checks.shift();
 
     if (next) {
-      if (next()) {
+      inCheck = true;
+      let result = next();
+      inCheck = false;
+      if (result) {
         if (checks.length === 0) {
           finish();
         }
@@ -88,7 +102,6 @@ function sequenceChecks(assert: Assert, checks: Function[]) {
 function loadCredentialsAndNewData() {
   tester.queued$.dispatch(storeLocalData(localStoreKey, testLocalStore));
   tester.queued$.dispatch(windowFocus);
-  return true;
 }
 
 function awaitInitialBadSync() {
@@ -96,12 +109,13 @@ function awaitInitialBadSync() {
     assert.equal(tester.state.indexesReady, false);
   }
 
-  if (tester.state.awaiting.length == 0 && tester.queued$.stack.length == 1) {
-    assert.equal(tester.state.authReady, true);
-    assert.equal(tester.state.indexesReady, true);
-    assert.equal(tester.state.syncAuthBad, true);
-    assert.equal(tester.state.syncOffline, false);
+  if (tester.state.awaiting.length == 0) {
+    assert.equal(tester.state.authReady, true, "authReady");
+    assert.equal(tester.state.indexesReady, true, "indexesReady");
+    assert.equal(tester.state.syncAuthBad, true, "syncAuthBad");
+    assert.equal(tester.state.syncOffline, false, "syncOffline");
 
+    setImmediate(loadCredentialsAndNewData);
 
     return true;
   }
@@ -109,13 +123,13 @@ function awaitInitialBadSync() {
 }
 
 function awaitNewSyncComplete() {
-  if (tester.state.awaiting.length == 0) {
-    assert.equal(tester.state.authReady, true);
-    assert.equal(tester.state.indexesReady, true);
-    assert.equal(tester.state.syncAuthBad, false);
-    assert.equal(tester.state.syncOffline, false);
+  if (tester.state.awaiting.length == 0 && tester.state.startedSyncCount > 1) {
+    assert.equal(tester.state.authReady, true, "authReady");
+    assert.equal(tester.state.indexesReady, true, "indexesReady");
+    assert.equal(tester.state.syncAuthBad, false, "syncAuthBad");
+    assert.equal(tester.state.syncOffline, false, "syncOffline");
 
-    assert.deepEqual(tester.state.newNotes, {});
+    assert.deepEqual(tester.state.newNotes, {}, "newNotes");
     assert.equal(tester.state.indexes.notes.byPath.length, 100);
 
     for (var path in testLocalStore.newNotes) {
@@ -144,12 +158,12 @@ if (process.env.E2E_TEST) {
   test("can start sync from 0 safely", (assert) => {
     sequenceChecks(assert, [
       awaitInitialBadSync,
-      loadCredentialsAndNewData,
       awaitNewSyncComplete,
     ]);
 
     tester.queued$.buffering = false;
     tester.start();
+    // tester.dispatch({type: "no-op"})
   });
 }
 // Add a bunch of test data and verify

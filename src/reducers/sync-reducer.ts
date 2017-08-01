@@ -27,6 +27,7 @@ export function reduceSync(state: State, action: CompleteRequest | IgnoredAction
 
       if (!action.success) {
         state.syncOffline = true;
+        console.log("failed request here");
         ({state, effect} = sequenceReduction(effect, clearOtherSyncProcesses(state)));
         break;
       }
@@ -80,7 +81,7 @@ export function reduceSync(state: State, action: CompleteRequest | IgnoredAction
         let headers = parseResponseHeaders(action.headers);
         let response = JSON.parse(headers["dropbox-api-result"]) as DropboxDownloadResponse;
 
-        let denormalized = denormalizedNote(downloadedNote, response.id, response.rev, response.path_lower);
+        let denormalized = denormalizedNote(downloadedNote, response.id, response.path_lower, response.rev);
         state.downloadedNotes = state.downloadedNotes.concat([denormalized]);
 
         ({state, effect} = sequenceReduction(effect, checkSyncDownloadComplete(state)));
@@ -213,9 +214,9 @@ function checkSyncDownloadComplete(state: State): ReductionWithEffect<State> {
       let downloaded = state.downloadedNotes[idx];
 
       let existing = Indexer.getFirstMatching(state.indexes.notes.byId, [downloaded.note.id]);
-      if (existing) return;
 
       if (existing) {
+        if (existing.localEdits) return;
         removeNote(state.indexes, existing);
       }
 
@@ -327,9 +328,9 @@ function startSyncUpload(state: State): ReductionWithEffect<State> {
 export function startSync(state: State): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;
 
-  console.debug("startSync called");
+  console.log("startSync called");
   if (!state.authReady || !state.indexesReady) {
-    console.debug("sync stopped", state.authReady, state.indexesReady);
+    console.log("sync stopped", state.authReady, state.indexesReady);
     return {state, effect};
   }
 
@@ -341,7 +342,6 @@ export function startSync(state: State): ReductionWithEffect<State> {
   state.syncAuthBad = false;
 
   if (!state.settings.session.accessToken || (state.now / 1000) > state.settings.session.sessionExpiresAt) {
-    console.debug("session bad?", state.settings.session);
     state.syncAuthBad = true;
     return {state, effect};
   }
