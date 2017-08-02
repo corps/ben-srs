@@ -24,11 +24,11 @@ export class NoteFactory {
     }
   }));
 
-  addTerm() {
-    let factory = new TermFactory();
+  addTerm(reference = genId(), postContent = " " + genSomeText() + " ") {
+    let factory = new TermFactory(reference);
 
     this.note.attributes.content += factory.term.attributes.reference + "[" + factory.term.attributes.marker + "]";
-    this.note.attributes.content += genSomeText();
+    this.note.attributes.content += postContent;
     this.note.attributes.terms.push(factory.term);
 
     return factory;
@@ -39,12 +39,14 @@ export class NoteFactory {
 
 
 export class TermFactory {
+  constructor(public reference = genId()) {}
+
   term: NormalizedTerm = JSON.parse(JSON.stringify({
     ...newNormalizedTerm,
     attributes: {
       ...newNormalizedTerm.attributes,
       marker: genId(),
-      reference: genId(),
+      reference: this.reference,
       pronounce: genId(),
       definition: genSomeText(),
       hint: genSomeText(),

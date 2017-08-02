@@ -67,7 +67,7 @@ export function withSpeech(effect$: Subject<SideEffect>): Subscriber<GlobalActio
             speechSynthesis.cancel();
             let utterance = new SpeechSynthesisUtterance();
             utterance.text = effect.text;
-            utterance.voice = effect.voice;
+            // utterance.voice = effect.voice;
             // IOS
             (utterance as any).voiceURI = effect.voice.voiceURI;
             utterance.lang = effect.voice.lang;

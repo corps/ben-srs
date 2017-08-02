@@ -45,7 +45,7 @@
     "karma-chrome-launcher": "^2.2.0",
     "karma-qunit": "^1.2.1",
     "karma-webpack": "^2.0.3",
-    "qunitjs": "^2.3.3",
+    "qunitjs": "^2.4.0",
     "react-addons-test-utils": "^15.6.0",
     "webpack": "^3.0.0",
     "webpack-dev-server": "^2.5.0"

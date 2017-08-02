@@ -1,4 +1,4 @@
-import {Cloze, Language, Note, Term} from "./model";
+import {Cloze, Language, Note} from "./model";
 import {Indexer, IndexIterator} from "redux-indexers";
 import {State} from "./state";
 
@@ -16,9 +16,9 @@ const divisible = [
   "᠃", "᠉", "⳹", "⳾", "⸼", "。", "꓿", "꘎", "꛳", "︒", "﹒", "．", "｡", "𖫵",
   "𛲟", ".", "։", "۔", "܁", "܂", "።", "᙮", "\n", "?", "!", "¿", ";", "՞", "؟", "፧", "፨",
   "᥅", "⁇", "⁈", "⁉", "⳺", "⳻", "⸮", "꘏", "꛷", "︖", "﹖", "？", "𑅃", "¡", "՜", "߹", "᥄",
-  "‼", "︕", "﹗", "！", "、", ","
+  "‼", "︕", "﹗", "！", "、", ",", "."
 ];
-const divisibleRegex = new RegExp(divisible.map(stop => "\\" + stop).join("|") + "|\s");
+const divisibleRegex = new RegExp(divisible.map(stop => "\\" + stop).join("|") + "|\\s");
 const allNotDivisibleRegex = new RegExp("[^" + divisibleRegex.source + "]*");
 const allNotDivisibleTailRegex = new RegExp(allNotDivisibleRegex.source + "$");
 const allNotDivisibleHeadRegex = new RegExp("^" + allNotDivisibleRegex.source);
@@ -65,7 +65,7 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: State["indexes"]): S
   }
 }
 
-export function findTermRange(term: Term, text: string) {
+export function findTermRange(term: { attributes: { reference: string, marker: string } }, text: string) {
   let fullMarker = term.attributes.reference + "[" + term.attributes.marker + "]";
   let start = text.indexOf(fullMarker);
 
@@ -110,18 +110,20 @@ export function findNextUniqueMarker(note: Note): string {
   }
 }
 
-export function findContentRange(term: Term, content: string, grabCharsMax = 30): [number, number] {
+export function findContentRange(term: { attributes: { marker: string, reference: string } }, content: string, grabCharsMax = 30): [number, number] {
   let [termStart, termEnd] = findTermRange(term, content);
+  if (termStart === -1) return [-1, -1];
+
   let leftSide = content.slice(0, termStart);
 
   let partialLeftSide = leftSide.slice(-grabCharsMax);
   let unusedLeft = leftSide.slice(0, leftSide.length - partialLeftSide.length);
-  let leftSideIdx = unusedLeft.match(allNotDivisibleTailRegex)[0].length;
+  let leftSideIdx = unusedLeft.match(allNotDivisibleTailRegex).index;
 
   let rightSide = content.slice(termEnd);
   let unusedRight = rightSide.slice(grabCharsMax);
 
-  let rightSideIdx = grabCharsMax + unusedRight.match(allNotDivisibleHeadRegex)[0].length;
+  let rightSideIdx = Math.min(termEnd + grabCharsMax + unusedRight.match(allNotDivisibleHeadRegex)[0].length, content.length);
   // return [leftSide.replace(/^\s*/, ""), content.slice(termStart, termEnd), rightSide.replace(/\s*$/, "")];
 
   return [leftSideIdx, rightSideIdx];
