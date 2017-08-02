@@ -24,7 +24,7 @@ settings.session.accessToken = token;
 settings.session.sessionExpiresAt = Date.now() * 10;
 
 testLocalStore.newNotes = {};
-for (var i = 0; i < 100; ++i) {
+for (var i = 0; i < 10; ++i) {
   let noteFactory = new NoteFactory();
 
   let termFactory = noteFactory.addTerm();
@@ -105,52 +105,56 @@ function loadCredentialsAndNewData() {
 }
 
 function awaitInitialBadSync() {
-  if (tester.state.awaiting.length > 0) {
-    assert.equal(tester.state.indexesReady, false);
+  if (!tester.state.indexesReady ||
+    tester.state.startedSyncCount < 1 ||
+    tester.state.awaiting.length) {
+    return false;
   }
 
-  if (tester.state.awaiting.length == 0) {
-    assert.equal(tester.state.authReady, true, "authReady");
-    assert.equal(tester.state.indexesReady, true, "indexesReady");
-    assert.equal(tester.state.syncAuthBad, true, "syncAuthBad");
-    assert.equal(tester.state.syncOffline, false, "syncOffline");
+  assert.equal(tester.state.authReady, true, "authReady");
+  assert.equal(tester.state.indexesReady, true, "indexesReady");
+  assert.equal(tester.state.syncAuthBad, true, "syncAuthBad");
+  assert.equal(tester.state.syncOffline, false, "syncOffline");
 
-    setImmediate(loadCredentialsAndNewData);
+  setImmediate(loadCredentialsAndNewData);
 
-    return true;
-  }
-  return false;
+  return true;
 }
 
 function awaitNewSyncComplete() {
-  if (tester.state.awaiting.length == 0 && tester.state.startedSyncCount > 1) {
-    assert.equal(tester.state.authReady, true, "authReady");
-    assert.equal(tester.state.indexesReady, true, "indexesReady");
-    assert.equal(tester.state.syncAuthBad, false, "syncAuthBad");
-    assert.equal(tester.state.syncOffline, false, "syncOffline");
-
-    assert.deepEqual(tester.state.newNotes, {}, "newNotes");
-    assert.equal(tester.state.indexes.notes.byPath.length, 100);
-
-    for (var path in testLocalStore.newNotes) {
-      let indexed = Indexer.getFirstMatching(tester.state.indexes.notes.byPath, [path]);
-      let newNote = testLocalStore.newNotes[path];
-
-      assert.notEqual(indexed, null);
-
-      if (indexed) {
-        assert.notEqual(indexed.version, "");
-        assert.notEqual(indexed.id, "");
-        assert.notEqual(indexed.localEdits, false);
-        let terms = Indexer.getAllMatching(tester.state.indexes.terms.byNoteIdReferenceAndMarker, [indexed.id]);
-        let clozes = Indexer.getAllMatching(tester.state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [indexed.id]);
-        assert.deepEqual(normalizedNote(indexed, terms, clozes), newNote);
-      }
-    }
-
-    return true;
+  for (var k in tester.state.newNotes) {
+    k;
+    return false;
   }
-  return false;
+
+  if (tester.state.awaiting.length) return false;
+  if (tester.state.startedSyncCount < 2) return false;
+
+  assert.equal(tester.state.authReady, true, "authReady");
+  assert.equal(tester.state.indexesReady, true, "indexesReady");
+  assert.equal(tester.state.syncAuthBad, false, "syncAuthBad");
+  assert.equal(tester.state.syncOffline, false, "syncOffline");
+
+  assert.deepEqual(tester.state.newNotes, {}, "newNotes");
+  assert.equal(tester.state.indexes.notes.byPath.length, 100);
+
+  for (var path in testLocalStore.newNotes) {
+    let indexed = Indexer.getFirstMatching(tester.state.indexes.notes.byPath, [path]);
+    let newNote = testLocalStore.newNotes[path];
+
+    assert.notEqual(indexed, null);
+
+    if (indexed) {
+      assert.notEqual(indexed.version, "");
+      assert.notEqual(indexed.id, "");
+      assert.notEqual(indexed.localEdits, false);
+      let terms = Indexer.getAllMatching(tester.state.indexes.terms.byNoteIdReferenceAndMarker, [indexed.id]);
+      let clozes = Indexer.getAllMatching(tester.state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [indexed.id]);
+      assert.deepEqual(normalizedNote(indexed, terms, clozes), newNote);
+    }
+  }
+
+  return true;
 }
 
 if (process.env.E2E_TEST) {
