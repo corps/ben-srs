@@ -1,0 +1,16 @@
+.transition {
+    transition: all .4s;
+}
+
+.elongate:hover {
+    width: 150%;
+}
+
+.elongate-child .child {
+    margin-left: 0px;
+}
+
+.elongate-child:hover .child {
+    width: 150%;
+    margin-left: -25%;
+}

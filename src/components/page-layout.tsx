@@ -14,11 +14,11 @@ interface NavContainerProps {
 }
 
 const pageLayoutClassNames = classNamesGeneratorFor<PageLayoutProps>(add => {
-  add("dark", <div className="bg-black-80 near-white"/>);
+  add("dark", <div className=""/>);
 }, <div className="overflow-y-hidden kokoro"/>);
 
 const navContainerClassNames = classNamesGeneratorFor<PageLayoutProps & NavContainerProps>(add => {
-  add("dark", <div className="bg-mid-gray"/>);
+  add("dark", <div className=""/>);
   add("columnStyle",
     <div className="pa4-m"/>,
     <div className="dn-ns h3 pa3"/>);
@@ -40,7 +40,9 @@ export function PageLayout(props: PageLayoutProps & ClassAndChildren) {
           </div>
         </Column>
         <Column fixedColumn className={navContainerClassNames({...props, columnStyle: true})}>
-          {props.nav}
+          <div className="dn db-ns h-100">
+            {props.nav}
+          </div>
         </Column>
       </FlexContainer>
     </Row>

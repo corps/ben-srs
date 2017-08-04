@@ -115,8 +115,9 @@ export function findContentRange(term: { attributes: { marker: string, reference
   if (termStart === -1) return [-1, -1];
 
   let leftSide = content.slice(0, termStart);
+  let leftSideGrab = Math.min(grabCharsMax, leftSide.length);
 
-  let partialLeftSide = leftSide.slice(-grabCharsMax);
+  let partialLeftSide = leftSide.slice(leftSide.length - leftSideGrab);
   let unusedLeft = leftSide.slice(0, leftSide.length - partialLeftSide.length);
   let leftSideIdx = unusedLeft.match(allNotDivisibleTailRegex).index;
 
@@ -124,7 +125,6 @@ export function findContentRange(term: { attributes: { marker: string, reference
   let unusedRight = rightSide.slice(grabCharsMax);
 
   let rightSideIdx = Math.min(termEnd + grabCharsMax + unusedRight.match(allNotDivisibleHeadRegex)[0].length, content.length);
-  // return [leftSide.replace(/^\s*/, ""), content.slice(termStart, termEnd), rightSide.replace(/\s*$/, "")];
 
   return [leftSideIdx, rightSideIdx];
 }

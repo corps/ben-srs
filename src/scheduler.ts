@@ -54,3 +54,6 @@ export function delayScheduleBy(schedule: Schedule, minutes: number, answeredMin
 
   return schedule;
 }
+
+export type DelayAnswer = [number, "d", number];
+export type Answer = [number, "d", number];

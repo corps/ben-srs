@@ -1,40 +1,52 @@
 import * as React from "react";
 import {Action} from "./reducer";
 import {State} from "./state";
-import {loggedOutContent, loggedOutNavigation} from "./views/logged-out";
-import {PageLayout} from "./components/page-layout";
+import {loggedOutContent} from "./views/logged-out";
 
 export function view(dispatch: (action: Action) => void) {
-  const Nav = nav(dispatch);
   const LoggedOutContent = loggedOutContent(dispatch);
 
   return (state: State) => {
-    return <PageLayout nav={Nav(state)} awaiting={state.awaiting.length} dark>
-      {(function () {
-        if (!state.authReady) return null;
+    // if (!state.authReady) return <div></div>;
+    // if (!state.settings.session.login) return LoggedOutContent(state);
 
-        switch (state.pathParts[0]) {
-          default:
-            return LoggedOutContent(state);
-        }
-      })()}
-    </PageLayout>
-  }
-}
+    return <div className="wf-mplus1p">
+      <div className="tc f1 pt5-ns fw5 mb3">
+        こんにちは, Zach
+      </div>
 
-export function nav(dispatch: (action: Action) => void) {
-  const LoggedOutNav = loggedOutNavigation(dispatch);
+      <div className="tc f3 fw2 mb1">
+        <span className="mr2">実績:</span>
+        <span className="f5 ml1">日</span>120
+        <span className="f5 ml1">週</span>200
+        <span className="f5 ml1">月</span>300
+      </div>
 
-  return (state: State) => {
-    return <div className="h-100 w5-l w4-m">
-      {(function () {
-        if (!state.authReady) return null;
+      <div className="tc f3 fw2 mb1">
+        <span className="mr2">予定:</span>
+        <span className="f5 ml1">日</span>120
+        <span className="f5 ml1">週</span>200
+        <span className="f5 ml1">月</span>300
+      </div>
 
-        switch (state.pathParts[0]) {
-          default:
-            return LoggedOutNav(state);
-        }
-      })()}
+      <div className="tc f4 fw4 mb3 red">
+        <span className="red mr1">オフライン</span>
+        <span className="black-70">未保存変更あり</span>
+      </div>
+
+      <div className="tc">
+        <div className="br-100 bg-red dib f2 shadow-1">
+          <div className="dt w4 h4">
+            <div className="dtc v-mid tc white">
+              <span className="fw6">訓</span>
+              <span className="fw3">練</span>
+              <br/>
+              <span className="fw1">開</span>
+              <span className="fw4">始</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   }
 }

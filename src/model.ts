@@ -101,6 +101,7 @@ export const newCloze = {
     type: "produce" as ClozeType,
     clozed: "",
     schedule: newSchedule,
+    answers: [] as
   },
 };
 
