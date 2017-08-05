@@ -1,8 +1,8 @@
 import {test, testModule} from "../qunit";
-import {denormalizedNote, newNote, newTerm} from "../../src/model";
+import {newNote, newTerm} from "../../src/model";
 import {findContentRange, findNextUniqueMarker, findTermRange, studyDetailsForCloze} from "../../src/study";
 import {NoteFactory} from "../factories/notes-factories";
-import {clozesIndexer, indexesInitialState, notesIndexer, termsIndexer} from "../../src/indexes";
+import {denormalizedNote, indexesInitialState, loadIndexables} from "../../src/indexes";
 import {genSomeText} from "../factories/general-factories";
 import {Indexer} from "redux-indexers";
 
@@ -81,9 +81,7 @@ test("studyDetailsForCloze", (assert) => {
   termFactory.addCloze();
 
   let denormalized = denormalizedNote(factory.note, genSomeText(), genSomeText(), "");
-  indexes.notes = notesIndexer.update(indexes.notes, [denormalized.note]);
-  indexes.terms = termsIndexer.update(indexes.terms, denormalized.terms);
-  indexes.clozes = clozesIndexer.update(indexes.clozes, denormalized.clozes);
+  indexes = loadIndexables(indexes, [denormalized]);
 
   factory = new NoteFactory();
   termFactory = factory.addTerm();
@@ -101,9 +99,7 @@ test("studyDetailsForCloze", (assert) => {
   termFactory.addCloze();
 
   denormalized = denormalizedNote(factory.note, genSomeText(), genSomeText(), "");
-  indexes.notes = notesIndexer.update(indexes.notes, [denormalized.note]);
-  indexes.terms = termsIndexer.update(indexes.terms, denormalized.terms);
-  indexes.clozes = clozesIndexer.update(indexes.clozes, denormalized.clozes);
+  indexes = loadIndexables(indexes, [denormalized]);
 
   let terms = factory.note.attributes.terms;
   let targetTerm = terms[1];

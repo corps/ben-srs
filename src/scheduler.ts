@@ -45,6 +45,8 @@ export function configuredScheduler(random = () => Math.random()) {
   }
 }
 
+export const defaultFactorScheduler = configuredScheduler();
+
 export function delayScheduleBy(schedule: Schedule, minutes: number, answeredMinutes: number) {
   answeredMinutes = Math.floor(answeredMinutes);
 
@@ -55,5 +57,20 @@ export function delayScheduleBy(schedule: Schedule, minutes: number, answeredMin
   return schedule;
 }
 
-export type DelayAnswer = [number, "d", number];
-export type Answer = [number, "d", number];
+export type DelayDetails = ["d", number];
+export type FactorDetails = ["f", number];
+export type AnswerDetails = DelayDetails | FactorDetails;
+export type Answer = [number, AnswerDetails];
+
+export function isDelayDetails(answer: AnswerDetails): answer is DelayDetails {
+  return answer[0] === "d";
+}
+
+export function scheduledBy(schedule: Schedule, answer: Answer): Schedule {
+  let details = answer[1];
+  if (isDelayDetails(details)) {
+    return delayScheduleBy(schedule, details[1], answer[0]);
+  } else {
+    return defaultFactorScheduler(schedule, details[1], answer[0]);
+  }
+}

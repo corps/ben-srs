@@ -39,4 +39,4 @@ export function SelectSingle(props: SelectSingleProps & { className?: string }) 
       return <option key={idx + ""} value={idx + ""} label={labeler(value)}>{labeler(value)}</option>
     }) }
   </select>
-
+}

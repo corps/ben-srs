@@ -1,3 +1,4 @@
+import {Answer} from "./scheduler";
 export const LanguageSettings = {
   "Japanese": {
     codes: ["ja-JP"],
@@ -30,7 +31,6 @@ export const newByLangPronunciationOverrides = {} as { [k: string]: Pronunciatio
 export type ByLangPronunciationOverrides = typeof newByLangPronunciationOverrides;
 
 export const newNote = {
-  // On the note itself
   attributes: {
     content: "",
     language: "" as Language,
@@ -42,6 +42,7 @@ export const newNote = {
   path: "",
   version: "",
   localEdits: false,
+  hasConflicts: false,
 };
 
 export type Note = typeof newNote;
@@ -55,7 +56,8 @@ export const newNormalizedNote = {
   id: undefined as void,
   path: undefined as void,
   version: undefined as void,
-  localEdits: undefined as void
+  localEdits: undefined as void,
+  hasConflicts: undefined as void,
 };
 
 export type NormalizedNote = typeof newNormalizedNote;
@@ -101,16 +103,28 @@ export const newCloze = {
     type: "produce" as ClozeType,
     clozed: "",
     schedule: newSchedule,
-    answers: [] as
   },
 };
 
 export type Cloze = typeof newCloze;
 
+export const newClozeAnswer = {
+  noteId: "",
+  reference: "",
+  marker: "",
+  clozeIdx: -1,
+  language: "" as Language,
+  answerIdx: -1,
+  answer: [0, ["d", 0]] as Answer
+};
+
+export type ClozeAnswer = typeof newClozeAnswer;
+
 export const newNormalizeCloze = {
   ...newCloze,
   attributes: {
-    ...newCloze.attributes
+    ...newCloze.attributes,
+    answers: [] as Answer[]
   },
   noteId: undefined as void,
   reference: undefined as void,
@@ -136,110 +150,6 @@ export const newSettings = {
 };
 
 export type Settings = typeof newSettings;
-
-function denormalizeCloze(normalizedCloze: NormalizedCloze, clozeIdx: number, term: Term, note: Note): Cloze {
-  return {
-    ...normalizedCloze,
-    clozeIdx,
-    marker: term.attributes.marker,
-    reference: term.attributes.reference,
-    language: note.attributes.language,
-    noteId: note.id
-  }
-}
-
-function denormalizeTerm(normalizedTerm: NormalizedTerm, note: Note): { clozes: Cloze[], term: Term } {
-  let term = {
-    ...normalizedTerm,
-    attributes: {
-      ...normalizedTerm.attributes,
-      clozes: undefined as void
-    },
-    language: note.attributes.language,
-    noteId: note.id
-  };
-
-  return {
-    term: term,
-    clozes: normalizedTerm.attributes.clozes.map((c, idx) => denormalizeCloze(c, idx, term, note))
-  }
-}
-
-export type DenormalizedNoteParts = { note: Note, terms: Term[], clozes: Cloze[] }
-export function denormalizedNote(normalizedNote: NormalizedNote,
-                                 id: string, path: string,
-                                 version: string): DenormalizedNoteParts {
-  let note: Note = {
-    ...normalizedNote,
-    attributes: {
-      ...normalizedNote.attributes,
-      terms: undefined as void
-    },
-    id, path, version, localEdits: false
-  };
-
-  let clozes = [] as Cloze[];
-
-  let terms = normalizedNote.attributes.terms.map(term => {
-    let denormalized = denormalizeTerm(term, note);
-    clozes = clozes.concat(denormalized.clozes);
-    return denormalized.term;
-  });
-
-  return {
-    note, terms, clozes
-  }
-}
-
-export function normalizedNote(note: Note, terms: Term[], clozes: Cloze[]): NormalizedNote {
-  let normalizedNote: NormalizedNote = {
-    ...note,
-    attributes: {
-      ...note.attributes,
-      terms: [] as NormalizedTerm[]
-    },
-    id: undefined as void,
-    version: undefined as void,
-    localEdits: undefined as void,
-    path: undefined as void
-  };
-
-  var idxOfClozes = 0;
-  for (var term of terms) {
-    let normalizedTerm: NormalizedTerm = {
-      ...term,
-      attributes: {
-        ...term.attributes,
-        clozes: [] as NormalizedCloze[]
-      },
-      noteId: undefined as void,
-      language: undefined as void
-    };
-
-    normalizedNote.attributes.terms.push(normalizedTerm);
-
-    for (; idxOfClozes < clozes.length; ++idxOfClozes) {
-      var cloze = clozes[idxOfClozes];
-      if (cloze.reference !== term.attributes.reference ||
-        cloze.marker !== term.attributes.marker) {
-        break;
-      }
-
-      let normalizedCloze: NormalizedCloze = {
-        ...cloze,
-        noteId: undefined as void,
-        reference: undefined as void,
-        marker: undefined as void,
-        clozeIdx: undefined as void,
-        language: undefined as void,
-      };
-
-      normalizedTerm.attributes.clozes.push(normalizedCloze);
-    }
-  }
-
-  return normalizedNote;
-}
 
 const divisor = "\n===\n";
 export function parseNote(text: string): NormalizedNote {

@@ -1,12 +1,12 @@
 import {initialState, State} from "../state";
 import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
-import {Cloze, newSettings, Note, Term, NormalizedNote} from "../model";
+import {newSettings, NormalizedNote} from "../model";
 import {LoadLocalData, requestLocalData, storeLocalData} from "kamo-reducers/services/local-storage";
 import {WindowFocus} from "../services/window";
 import {Initialization} from "../services/initialization";
 import {AuthAction} from "../services/login";
-import {indexesInitialState} from "../indexes";
+import {Indexable, indexesInitialState} from "../indexes";
 import {clearOtherSyncProcesses, startSync} from "./sync-reducer";
 import {cancelWork, requestWork, WorkComplete} from "kamo-reducers/services/workers";
 
@@ -73,14 +73,17 @@ export function requestLocalStoreUpdate(state: State) {
   let localStore = {...newLocalStore};
   localStore.settings = state.settings;
 
-  if(state.indexesReady || !state.loadingStore) {
-    localStore.notes = state.indexes.notes.byId.map(k => k[1]);
-    localStore.terms = state.indexes.terms.byNoteIdReferenceAndMarker.map(k => k[1]);
-    localStore.clozes = state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx.map(k => k[1]);
+  if (state.indexesReady || !state.loadingStore) {
+    localStore.indexables = [
+      {
+        notes: state.indexes.notes.byId.map(k => k[1]),
+        terms: state.indexes.terms.byNoteIdReferenceAndMarker.map(k => k[1]),
+        clozes: state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx.map(k => k[1]),
+        clozeAnswers: state.indexes.clozeAnswers.byLanguageAndAnswered.map(k => k[1]),
+      }
+    ];
   } else {
-    localStore.notes = state.loadingStore.notes;
-    localStore.terms = state.loadingStore.terms;
-    localStore.clozes = state.loadingStore.clozes;
+    localStore.indexables = state.loadingStore.indexables;
   }
   localStore.newNotes = state.newNotes;
   return storeLocalData(localStoreKey, localStore);
@@ -88,9 +91,7 @@ export function requestLocalStoreUpdate(state: State) {
 
 export const newLocalStore = {
   settings: newSettings,
-  notes: [] as Note[],
-  terms: [] as Term[],
-  clozes: [] as Cloze[],
+  indexables: [] as Indexable[],
   newNotes: {} as { [k: string]: NormalizedNote },
 };
 

@@ -1,44 +1,39 @@
 import {
-  ByLangPronunciationOverrides, Cloze, denormalizedNote, Language, NormalizedNote, Note, PronunciationOverrides,
-  Session,
-  Settings, Term
+  ByLangPronunciationOverrides, Language, NormalizedNote, PronunciationOverrides,
+  Session, Settings,
 } from "../../src/model";
 import {genFutureTime, genId, genSomeText, pick} from "./general-factories";
 import {LocalStore} from "../../src/reducers/local-store-reducer";
 import {NoteFactory} from "./notes-factories";
+import {denormalizedNote, Indexable} from "../../src/indexes";
 
 export function genLanguage(): Language {
   return pick<Language>("Japanese", "Cantonese", "English");
 }
 
 export function genLocalStore(): LocalStore {
-  var notes: Note[] = [];
-  var terms: Term[] = [];
-  var clozes: Cloze[] = [];
-  var newNotes: { [k: string]: NormalizedNote } = {};
+  let indexables: Indexable[] = [];
+  let newNotes: { [k: string]: NormalizedNote } = {};
 
-  for (var i = 0; i < 3; ++i) {
+  for (let i = 0; i < 3; ++i) {
     let noteFactory = new NoteFactory();
     let termFactory = noteFactory.addTerm();
-    termFactory.addCloze();
+    let clozeFactory = termFactory.addCloze();
+    let answerFactory = clozeFactory.addAnswer();
 
-    let denormalized = denormalizedNote(noteFactory.note, genId(), genId(), genId());
-    notes.push(denormalized.note);
-    terms = terms.concat(denormalized.terms);
-    clozes = clozes.concat(denormalized.clozes);
+    indexables.push(denormalizedNote(noteFactory.note, genId(), genId(), genId()));
 
     noteFactory = new NoteFactory();
     termFactory = noteFactory.addTerm();
-    termFactory.addCloze();
+    clozeFactory = termFactory.addCloze();
+    answerFactory = clozeFactory.addAnswer();
 
     newNotes[genId()] = noteFactory.note;
   }
 
   return {
     settings: genSettings(),
-    notes,
-    terms,
-    clozes,
+    indexables,
     newNotes
   }
 }

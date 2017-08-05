@@ -30,7 +30,7 @@ function createFolder(path: string, token: string, cb: (err: any, data?: any) =>
   dropboxApi("https://api.dropboxapi.com/2/files/create_folder_v2", "POST", {path}, token, cb);
 }
 
-function deletePath(path: string, token: string, cb: (err: any, data?: any) => void) {
+export function deletePath(path: string, token: string, cb: (err: any, data?: any) => void) {
   dropboxApi("https://api.dropboxapi.com/2/files/delete_v2", "POST", {path}, token, cb);
 }
 
@@ -44,7 +44,7 @@ export function setupDropbox(token: string, cb: (err: any, cursor: string) => vo
 
     createFolder(testPath, token, (err: any, data: any) => {
 
-      getLatestCursor(testPath, token, (err: any, data: any) => {
+      getLatestCursor("", token, (err: any, data: any) => {
         if (err) {
           cb(err, undefined)
         }

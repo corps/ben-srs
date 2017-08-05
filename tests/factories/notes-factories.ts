@@ -1,18 +1,10 @@
 import {
-  DenormalizedNoteParts, newNormalizeCloze, newNormalizedNote, newNormalizedTerm, newSchedule,
+  newNormalizeCloze, newNormalizedNote, newNormalizedTerm, newSchedule,
   NormalizedCloze, NormalizedNote, NormalizedTerm
 } from "../../src/model";
-import {clozesIndexer, indexesInitialState, notesIndexer, termsIndexer} from "../../src/indexes";
-import {genId, genNum, genSomeText} from "./general-factories";
+import {genId, genNum, genPastTime, genSomeText} from "./general-factories";
+import {Answer} from "../../src/scheduler";
 
-export function loadNote(indexes: typeof indexesInitialState,
-                         denormalized: DenormalizedNoteParts) {
-  indexes = {...indexes};
-  indexes.notes = notesIndexer.update(indexes.notes, [denormalized.note]);
-  indexes.terms = termsIndexer.update(indexes.terms, denormalized.terms);
-  indexes.clozes = clozesIndexer.update(indexes.clozes, denormalized.clozes);
-  return indexes;
-}
 
 export class NoteFactory {
   note: NormalizedNote = JSON.parse(JSON.stringify({
@@ -34,12 +26,19 @@ export class NoteFactory {
     return factory;
   }
 
+  withSomeData() {
+    let termFactory = this.addTerm();
+    let clozeFactory = termFactory.addCloze();
+    clozeFactory.addAnswer();
 
+    return this;
+  }
 }
 
 
 export class TermFactory {
-  constructor(public reference = genId()) {}
+  constructor(public reference = genId()) {
+  }
 
   term: NormalizedTerm = JSON.parse(JSON.stringify({
     ...newNormalizedTerm,
@@ -68,4 +67,17 @@ export class ClozeFactory {
       schedule: {...newSchedule, lastAnsweredMinutes: genNum()},
     },
   }));
+
+  addAnswer() {
+    let factory = new AnswerFactory();
+    this.cloze.attributes.answers.push(factory.answer);
+    return factory;
+  }
+}
+
+export class AnswerFactory {
+  answer: Answer = [
+    genPastTime(),
+    ["d", genNum()],
+  ];
 }

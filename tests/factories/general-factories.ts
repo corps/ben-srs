@@ -1,6 +1,15 @@
 let lastId = 0;
+
 export function genId() {
-  return (++lastId) + "";
+  let id = lastId++;
+  let result = "";
+
+  for (let i = 0; i < 5; ++i) {
+    result = (id % 10) + result;
+    id = Math.floor(id / 10);
+  }
+
+  return result;
 }
 
 export function genNum() {
@@ -22,5 +31,9 @@ export function pick<V>(...v: V[]): V {
 
 const start = Date.now();
 export function genFutureTime() {
-  return start + (1000 * 60 * 5) + genNum() * 100;
+  return start + (1000 * 60 * 15) + genNum() * 100;
+}
+
+export function genPastTime() {
+  return start - (1000 * 60 * 15) + genNum() * 100;
 }

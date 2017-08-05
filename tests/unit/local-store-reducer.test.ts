@@ -7,7 +7,7 @@ import {initialization} from "../../src/services/initialization";
 import {loadIndexesWorkerName, localStoreKey, newLocalStore} from "../../src/reducers/local-store-reducer";
 import {RequestWork, WorkComplete} from "kamo-reducers/services/workers";
 import {genLocalStore} from "../factories/settings-factory";
-import {clozesIndexer, indexesInitialState, notesIndexer, termsIndexer} from "../../src/indexes";
+import {indexesInitialState, loadIndexables} from "../../src/indexes";
 import {authInitialized, authSuccess} from "../../src/services/login";
 
 let tester: BensrsTester;
@@ -70,12 +70,7 @@ test("on loading an a localStore object, eventually loads all the expected data 
       let work = a as WorkComplete;
       assert.deepEqual(work.name, [loadIndexesWorkerName]);
 
-      let indexes = {...indexesInitialState};
-      indexes.notes = notesIndexer.update(indexes.notes, store.notes);
-      indexes.terms = termsIndexer.update(indexes.terms, store.terms);
-      indexes.clozes = clozesIndexer.update(indexes.clozes, store.clozes);
-
-      assert.deepEqual(s.indexes, indexes);
+      assert.deepEqual(s.indexes, loadIndexables(indexesInitialState, store.indexables));
       assert.deepEqual(s.settings, store.settings);
       assert.deepEqual(s.newNotes, store.newNotes);
 

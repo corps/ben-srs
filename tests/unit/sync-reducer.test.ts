@@ -23,12 +23,13 @@ import {authInitialized} from "../../src/services/login";
 import {isSideEffect, SideEffect} from "kamo-reducers/reducers";
 import {sequence} from "kamo-reducers/services/sequence";
 import {NoteFactory} from "../factories/notes-factories";
-import {denormalizedNote, NormalizedNote, normalizedNote, Note, Session, stringifyNote} from "../../src/model";
-import {genSomeText} from "../factories/general-factories";
+import {NormalizedNote, Note, Session, stringifyNote} from "../../src/model";
+import {genId, genSomeText} from "../factories/general-factories";
 import {
   genDeleteEntry, genDownloadResponse, genDropboxListFolderResponse,
   genFileEntry
 } from "../factories/responses-factories";
+import {denormalizedNote, findNoteTree, loadIndexables, normalizedNote} from "../../src/indexes";
 
 let tester: BensrsTester;
 let subscription = new Subscription();
@@ -80,6 +81,13 @@ class SyncTestSetup {
       session.accessToken, normalized, path, version), 200, "", ""));
   }
 
+  completeFileUploadRequestConflict(normalized: NormalizedNote, path = genSomeText(), version = "") {
+    let session = tester.state.settings.session;
+
+    tester.dispatch(completeRequest(requestFileUpload(
+      session.accessToken, normalized, path, version), 409, "", ""));
+  }
+
   completeListFolderRequest(listFolderResponse: DropboxListFolderResponse) {
     let session = tester.state.settings.session;
 
@@ -91,10 +99,7 @@ class SyncTestSetup {
   completeFileDownloadRequest(fileEntry: DropboxFileEntry) {
     let session = tester.state.settings.session;
 
-    let noteFactory = new NoteFactory();
-    let termFactory = noteFactory.addTerm();
-    termFactory.addCloze();
-
+    let noteFactory = new NoteFactory().withSomeData();
     let normalized = noteFactory.note;
 
     tester.dispatch(completeRequest(requestFileDownload(
@@ -123,11 +128,9 @@ class SyncTestSetup {
 
     this.editedNotes.push(factory.note);
 
-    let denormalized = denormalizedNote(factory.note, genSomeText(), path, genSomeText());
+    let denormalized = denormalizedNote(factory.note, "id:" + genId(), path, genSomeText());
     denormalized.note.localEdits = edited;
-    this.store.notes.push(denormalized.note);
-    this.store.terms = this.store.terms.concat(denormalized.terms);
-    this.store.clozes = this.store.clozes.concat(denormalized.clozes);
+    this.store.indexables.push(denormalized);
 
     return [denormalized.note, factory.note];
   };
@@ -209,12 +212,31 @@ test("completing a file upload clears localEdits of existing file", (assert) => 
   assert.ok(Indexer.getFirstMatching(tester.state.indexes.notes.byId, [note.id]));
 
   setup.startSync();
-  setup.completeFileUploadRequest(normalized, "id:" + note.id, note.version);
+  setup.completeFileUploadRequest(normalized, note.id, note.version);
 
   let updatedNote = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [note.id]);
   assert.ok(updatedNote);
   if (updatedNote) {
     assert.notOk(updatedNote.localEdits);
+    assert.deepEqual(updatedNote.attributes, note.attributes);
+  }
+});
+
+test("completing a file upload with 409 clears localEdits and sets hasConflicts of existing file", (assert) => {
+  let [note, normalized] = setup.addNote(true);
+  setup.prepareState();
+
+  assert.ok(note.localEdits);
+  assert.ok(Indexer.getFirstMatching(tester.state.indexes.notes.byId, [note.id]));
+
+  setup.startSync();
+  setup.completeFileUploadRequestConflict(normalized, note.id, note.version);
+
+  let updatedNote = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [note.id]);
+  assert.ok(updatedNote);
+  if (updatedNote) {
+    assert.notOk(updatedNote.localEdits);
+    assert.ok(updatedNote.hasConflicts);
     assert.deepEqual(updatedNote.attributes, note.attributes);
   }
 });
@@ -277,13 +299,33 @@ test("syncedNotes don't override local edits", (assert) => {
     assert.equal(newNote2.version, newFileEntry2.rev);
     assert.equal(newNote2.path, newFileEntry2.path_lower);
 
-    let normalizedNewNote2 = normalizedNote(
-      newNote2,
-      Indexer.getAllMatching(tester.state.indexes.terms.byNoteIdReferenceAndMarker, [newNote2.id]),
-      Indexer.getAllMatching(tester.state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [newNote2.id]),
-    );
+    let normalizedNewNote2 =
+      normalizedNote(findNoteTree(tester.state.indexes, newNote2.id) || null);
 
     assert.deepEqual(normalized2, JSON.parse(JSON.stringify(normalizedNewNote2)));
+  }
+});
+
+test("removes hasConflicts from downloaded notes", (assert) => {
+  let newFileEntry1 = genFileEntry();
+  setup.prepareState();
+
+  let noteFactory = new NoteFactory().withSomeData();
+  let denormalized = denormalizedNote(noteFactory.note, newFileEntry1.id, "", "");
+  denormalized.note.hasConflicts = true;
+  tester.state.indexes = loadIndexables(tester.state.indexes, [denormalized]);
+
+  let listFolderResponse = genDropboxListFolderResponse();
+  // listFolderResponse.entries.push(newFileEntry1);
+  setup.completeListFolderRequest(listFolderResponse);
+  let downloaded = setup.completeFileDownloadRequest(newFileEntry1);
+  assert.deepEqual(downloaded, JSON.parse(JSON.stringify(normalizedNote(findNoteTree(tester.state.indexes, newFileEntry1.id) || null))));
+
+  let note1 = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [newFileEntry1.id]);
+  assert.ok(note1);
+
+  if (note1) {
+    assert.equal(note1.hasConflicts, false);
   }
 });
 
@@ -332,6 +374,23 @@ test("applies deletes and updated notes after all requests complete, storing the
     assert.equal(note1.path, newFileEntry1.path_lower);
     assert.equal(note2.path, newFileEntry2.path_lower);
   }
+});
+
+test("a complete list request with a has_more = true will trigger another complete list", (assert) => {
+  setup.prepareState();
+  let listFolderResponse = genDropboxListFolderResponse();
+  listFolderResponse.has_more = true;
+  setup.completeListFolderRequest(listFolderResponse);
+
+  let ajaxes: RequestAjax[] = tester.findEffects("request-ajax") as any[];
+  assert.equal(ajaxes.filter(ajax => ajax.name[0] === listFolderRequestName).length, 1);
+
+  listFolderResponse = genDropboxListFolderResponse();
+  listFolderResponse.has_more = false;
+  setup.completeListFolderRequest(listFolderResponse);
+
+  ajaxes = tester.findEffects("request-ajax") as any[];
+  assert.equal(ajaxes.filter(ajax => ajax.name[0] === listFolderRequestName).length, 0);
 });
 
 test("a list folder response with no downloads just completes the sync and updates the token", (assert) => {

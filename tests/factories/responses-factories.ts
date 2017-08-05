@@ -25,7 +25,7 @@ export function genFileEntry(): DropboxFileEntry {
   return {
     ".tag": "file",
     name,
-    id: genSomeText(),
+    id: "id:" + genSomeText(),
     path_lower: genSomeText() + "/" + name,
     rev: genSomeText(),
     size: 100
