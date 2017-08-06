@@ -3,7 +3,7 @@ import {deletePath, setupDropbox, testPath} from "./dropbox-test-utils";
 import {Subscription} from "kamo-reducers/subject";
 import {BensrsTester} from "../tester";
 import {NoteFactory} from "../factories/notes-factories";
-import {newSettings, Term, Note} from "../../src/model";
+import {newSettings, Term, Note, newTerm, newCloze, newClozeAnswer} from "../../src/model";
 import {localStoreKey, newLocalStore} from "../../src/reducers/local-store-reducer";
 import uuid = require("uuid");
 import {storeLocalData} from "kamo-reducers/services/local-storage";
@@ -11,7 +11,7 @@ import {windowFocus} from "../../src/services/window";
 import {Indexer} from "redux-indexers";
 import {isSideEffect} from "kamo-reducers/reducers";
 import {setImmediate} from "timers";
-import {findNoteTree, normalizedNote, notesIndexer} from "../../src/indexes";
+import {findNoteTree, loadIndexables, normalizedNote, notesIndexer} from "../../src/indexes";
 import {startSync} from "../../src/reducers/sync-reducer";
 
 let subscription = new Subscription();
@@ -267,6 +267,44 @@ function awaitDeletedSync() {
   assert.equal(tester.state.indexes.clozes.byLanguageAndNextDue.length, 0);
   assert.equal(tester.state.indexes.clozeAnswers.byLanguageAndAnswered.length, 0);
 
+  setImmediate(function () {
+    let note = {...editedNotes[0]};
+    note.localEdits = true;
+
+    let term = {...newTerm};
+    term.noteId = note.id;
+
+    let cloze = {...newCloze};
+    cloze.noteId = note.id;
+
+    let clozeAnswer = {...newClozeAnswer};
+    clozeAnswer.noteId = note.id;
+
+    tester.state.indexes = loadIndexables(tester.state.indexes, [{
+      note,
+      terms: [term],
+      clozes: [cloze],
+      clozeAnswers: [clozeAnswer]
+    }]);
+
+    let {state, effect} = startSync(tester.state);
+    tester.state = state;
+    if (effect) {
+      tester.queued$.dispatch(effect);
+    }
+  });
+
+  return true;
+}
+
+function awaitConflictOfDeleteSync() {
+  if (tester.state.finishedSyncCount < 6) return false;
+
+  assert.equal(tester.state.indexes.notes.byPath.length, 0);
+  assert.equal(tester.state.indexes.terms.byLanguage.length, 0);
+  assert.equal(tester.state.indexes.clozes.byLanguageAndNextDue.length, 0);
+  assert.equal(tester.state.indexes.clozeAnswers.byLanguageAndAnswered.length, 0);
+
   return true;
 }
 
@@ -280,6 +318,7 @@ if (process.env.E2E_TEST) {
       awaitEditedSyncComplete,
       awaitEditedWithOlderRevision,
       awaitDeletedSync,
+      awaitConflictOfDeleteSync,
     ]);
 
     tester.queued$.buffering = false;

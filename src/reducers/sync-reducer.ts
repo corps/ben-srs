@@ -73,31 +73,36 @@ export function reduceSync(state: State, action: CompleteRequest | IgnoredAction
       }
 
       if (action.name[0] === filesDownloadRequestName) {
-        if (!action.success) {
+        if (!action.success && action.status !== 409) {
           state.syncOffline = true;
           ({state, effect} = sequenceReduction(effect, clearOtherSyncProcesses(state)));
           break;
         }
 
-        let downloadedNote: NormalizedNote;
-        try {
-          downloadedNote = parseNote(action.response);
-        } catch (e) {
-          if (process.env.NODE_ENV === "production") {
-            downloadedNote = {...newNormalizedNote};
-            downloadedNote.attributes = {...downloadedNote.attributes};
-            downloadedNote.attributes.content = action.response;
+        if (action.status === 409) {
+          state.executingDownloads = state.executingDownloads.slice();
+          state.executingDownloads.splice(state.executingDownloads.indexOf(action.name), 1);
+        } else {
+          let downloadedNote: NormalizedNote;
+          try {
+            downloadedNote = parseNote(action.response);
+          } catch (e) {
+            if (process.env.NODE_ENV === "production") {
+              downloadedNote = {...newNormalizedNote};
+              downloadedNote.attributes = {...downloadedNote.attributes};
+              downloadedNote.attributes.content = action.response;
+            }
+            else {
+              throw e;
+            }
           }
-          else {
-            throw e;
-          }
+
+          let headers = parseResponseHeaders(action.headers);
+          let response = JSON.parse(headers["dropbox-api-result"]) as DropboxDownloadResponse;
+
+          let denormalized = denormalizedNote(downloadedNote, response.id, response.path_lower, response.rev);
+          state.downloadedNotes = state.downloadedNotes.concat([denormalized]);
         }
-
-        let headers = parseResponseHeaders(action.headers);
-        let response = JSON.parse(headers["dropbox-api-result"]) as DropboxDownloadResponse;
-
-        let denormalized = denormalizedNote(downloadedNote, response.id, response.path_lower, response.rev);
-        state.downloadedNotes = state.downloadedNotes.concat([denormalized]);
 
         ({state, effect} = sequenceReduction(effect, checkSyncDownloadComplete(state)));
       }
@@ -202,16 +207,23 @@ function checkSyncDownloadComplete(state: State): ReductionWithEffect<State> {
 
   function loadDownloaded(id: string) {
     let idx = downloadedNoteIds.indexOf(id);
-    let downloaded = state.downloadedNotes[idx];
+    let existing = Indexer.getFirstMatching(state.indexes.notes.byId, [id]);
 
-    let existing = Indexer.getFirstMatching(state.indexes.notes.byId, [downloaded.note.id]);
+    if (idx === -1) {
+      if (existing) {
+        state.indexes = removeNote(state.indexes, existing);
+      }
+    } else {
 
-    if (existing) {
-      if (existing.localEdits) return;
-      state.indexes = removeNote(state.indexes, existing);
+      let downloaded = state.downloadedNotes[idx];
+
+      if (existing) {
+        if (existing.localEdits) return;
+        state.indexes = removeNote(state.indexes, existing);
+      }
+
+      state.indexes = loadIndexables(state.indexes, [downloaded]);
     }
-
-    state.indexes = loadIndexables(state.indexes, [downloaded]);
   }
 
   state.syncingListFolder.entries.forEach(entry => {
