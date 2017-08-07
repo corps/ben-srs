@@ -1,7 +1,7 @@
 import {BensrsTester} from "../tester";
 import {Subscription} from "kamo-reducers/subject";
 import {assert, test, testModule} from "../qunit";
-import {loadIndexesWorkerName, localStoreKey, requestLocalStoreUpdate} from "../../src/reducers/local-store-reducer";
+import {loadIndexesWorkerName, localStoreKey, requestLocalStoreUpdate} from "../../src/reducers/session-reducer";
 import {genLocalStore} from "../factories/settings-factory";
 import {loadLocalData} from "kamo-reducers/services/local-storage";
 import {
@@ -66,7 +66,7 @@ class SyncTestSetup {
   prepareState = runOnce(() => {
     tester.start();
     tester.dispatch(loadLocalData(localStoreKey, this.store));
-    tester.dispatch(workComplete([loadIndexesWorkerName], doIndexesLoadingWork(this.store)));
+    tester.dispatch(workComplete([loadIndexesWorkerName], doIndexesLoadingWork(this.store.indexables)));
     tester.dispatch(authInitialized);
     tester.state = {...tester.state, ...this.stateOverwrite};
 

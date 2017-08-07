@@ -12,6 +12,8 @@ testModule("services/speech", {
   }
 });
 
+const timePerVoice = 1500;
+
 test("speech", (assert) => {
   let effect$ = new Subject<SideEffect>();
   let finish = assert.async();
@@ -40,7 +42,7 @@ test("speech", (assert) => {
           if (voice) {
             effect$.dispatch(requestSpeech(voice, "こんにちわ"));
           }
-        }, 5000);
+        }, timePerVoice);
 
         setTimeout(() => {
           let voice = findVoiceForLanguage(voices, LanguageSettings["Cantonese"].codes);
@@ -48,9 +50,9 @@ test("speech", (assert) => {
           if (voice) {
             effect$.dispatch(requestSpeech(voice, "好耐冇見"));
           }
-        }, 10000);
+        }, timePerVoice * 2);
 
-        setTimeout(finish, 15000);
+        setTimeout(finish, timePerVoice * 3);
       }
     }
   }));

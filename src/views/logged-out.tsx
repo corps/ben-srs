@@ -2,8 +2,8 @@ import * as React from "react";
 import {Action} from "../reducer";
 import {State} from "../state";
 import {VCenteringContainer, VCentered} from "../components/layout-utils";
-import {clickLogin} from "../reducers/login-reducer";
 import {BookClosed} from "../components/book-closed";
+import {clickLogin} from "../reducers/session-reducer";
 
 export function loggedOutContent(dispatch: (action: Action) => void) {
   return (state: State) => {

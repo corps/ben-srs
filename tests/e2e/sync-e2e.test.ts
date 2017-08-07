@@ -4,7 +4,7 @@ import {Subscription} from "kamo-reducers/subject";
 import {BensrsTester} from "../tester";
 import {NoteFactory} from "../factories/notes-factories";
 import {newSettings, Term, Note, newTerm, newCloze, newClozeAnswer} from "../../src/model";
-import {localStoreKey, newLocalStore} from "../../src/reducers/local-store-reducer";
+import {localStoreKey, newLocalStore} from "../../src/reducers/session-reducer";
 import uuid = require("uuid");
 import {storeLocalData} from "kamo-reducers/services/local-storage";
 import {windowFocus} from "../../src/services/window";

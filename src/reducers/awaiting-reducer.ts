@@ -7,8 +7,6 @@ import {WorkCanceled, WorkComplete} from "kamo-reducers/services/workers";
 export function withUpdatedAwaiting(state: State, active: boolean, ...items: string[]): ReductionWithEffect<State> {
   let original = state;
 
-  console.debug("withUpdatedAwaiting", active, items);
-
   for (let item of items) {
     let index = state.awaiting.indexOf(item);
     if (index !== -1) {

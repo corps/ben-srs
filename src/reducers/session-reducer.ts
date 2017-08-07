@@ -1,36 +1,50 @@
 import {initialState, State} from "../state";
 import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
-import {Language, newSettings, NormalizedNote, Note} from "../model";
-import {LoadLocalData, requestLocalData, storeLocalData} from "kamo-reducers/services/local-storage";
+import {newSettings, NormalizedNote} from "../model";
+import {
+  LoadLocalData, requestLocalData, storeLocalData, cancelLocalLoad,
+  clearLocalData
+} from "kamo-reducers/services/local-storage";
 import {WindowFocus} from "../services/window";
 import {Initialization} from "../services/initialization";
-import {AuthAction} from "../services/login";
+import {AuthAction, checkLoginSession, requestLogin} from "../services/login";
 import {Indexable, indexesInitialState, NoteTree} from "../indexes";
 import {clearOtherSyncProcesses, startSync} from "./sync-reducer";
 import {cancelWork, requestWork, WorkComplete} from "kamo-reducers/services/workers";
-import {Indexer} from "redux-indexers";
+import {withUpdatedAwaiting} from "./awaiting-reducer";
 
 export const localStoreKey = "settings";
 
-export type LocalStoreAction =
+export interface ClickLogin {
+  type: "click-login"
+}
+
+export const clickLogin: ClickLogin = {type: "click-login"};
+
+export type SessionActions =
   WindowFocus
   | LoadLocalData
   | Initialization
   | WorkComplete
+  | ClickLogin
   | AuthAction;
 
 export const loadIndexesWorkerName = "load-indexes";
 
-export function reduceLocalStore(state: State, action: LocalStoreAction | IgnoredAction): ReductionWithEffect<State> {
+export function reduceSession(state: State, action: SessionActions | IgnoredAction): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;
 
   switch (action.type) {
     case "initialization":
     case "window-focus":
+      ({state, effect} = sequenceReduction(effect, clearOtherSyncProcesses(state)));
+
       state = {...state};
       state.indexesReady = false;
+      state.authReady = false;
 
+      state.clearSyncEffects = sequence(state.clearSyncEffects, cancelLocalLoad(localStoreKey))
       effect = sequence(effect, requestLocalData(localStoreKey));
       break;
 
@@ -46,15 +60,40 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
       state.settings = data.settings;
       state.newNotes = data.newNotes;
       state.downloadedNotes = data.downloadedNotes;
-      state.loadingStore = data;
+      state.loadingIndexable = data.indexables;
 
-      state.clearSyncEffects = sequence(state.clearSyncEffects, cancelWork([loadIndexesWorkerName]));
-      effect = sequence(effect, requestWork([loadIndexesWorkerName], data));
+      effect = sequence(effect, checkLoginSession);
+      ({state, effect} = sequenceReduction(effect, withUpdatedAwaiting(state, true, "auth")));
       break;
 
     case "auth-success":
+      state = {...state};
+
+      if (state.settings.session.login !== action.login) {
+        effect = sequence(effect, clearLocalData);
+        state.loadingIndexable = [];
+        state.settings = newSettings;
+      }
+
+      state.settings = {...state.settings};
+      state.settings.session = {...state.settings.session};
+
+      state.settings.session.login = action.login;
+      state.settings.session.accessToken = action.accessToken;
+      state.settings.session.sessionExpiresAt = action.expires;
+
       effect = sequence(effect, requestLocalStoreUpdate(state));
       break;
+
+    case "auth-initialized":
+      ({state, effect} = sequenceReduction(effect, withUpdatedAwaiting(state, false, "auth")));
+      state = {...state};
+      state.authReady = true;
+
+      state.clearSyncEffects = sequence(state.clearSyncEffects, cancelWork([loadIndexesWorkerName]));
+      effect = sequence(effect, requestWork([loadIndexesWorkerName], state.loadingIndexable));
+      break;
+
 
     case "work-complete":
       if (action.name[0] !== loadIndexesWorkerName) break;
@@ -64,20 +103,13 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
       let loadedIndexes = action.result as typeof indexesInitialState;
       state.indexes = loadedIndexes;
       state.indexesReady = true;
-      state.languages = [];
-
-      let note: Note | 0 = null;
-      let language: Language = null;
-      while (note = Indexer.iterator(state.indexes.notes.byLanguage, [language, Infinity])()) {
-        language = note.attributes.language;
-        state.languages.push(language);
-      }
-
-      state.inputs = {...state.inputs};
-
-      state.inputs.curLanguage = language;
 
       ({state, effect} = sequenceReduction(effect, startSync(state)));
+      break;
+
+    case "click-login":
+      effect = sequence(effect, requestLogin);
+      break;
   }
 
   return {state, effect};
@@ -87,7 +119,7 @@ export function requestLocalStoreUpdate(state: State) {
   let localStore = {...newLocalStore};
   localStore.settings = state.settings;
 
-  if (state.indexesReady || !state.loadingStore) {
+  if (state.indexesReady || !state.loadingIndexable) {
     localStore.indexables = [
       {
         notes: state.indexes.notes.byId.map(k => k[1]),
@@ -97,7 +129,7 @@ export function requestLocalStoreUpdate(state: State) {
       }
     ];
   } else {
-    localStore.indexables = state.loadingStore.indexables;
+    localStore.indexables = state.loadingIndexable;
   }
 
   localStore.newNotes = state.newNotes;

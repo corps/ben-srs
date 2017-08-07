@@ -3,7 +3,7 @@ import {
   Session, Settings,
 } from "../../src/model";
 import {genFutureTime, genId, genSomeText, pick} from "./general-factories";
-import {LocalStore} from "../../src/reducers/local-store-reducer";
+import {LocalStore} from "../../src/reducers/session-reducer";
 import {NoteFactory} from "./notes-factories";
 import {denormalizedNote, Indexable, NoteTree} from "../../src/indexes";
 

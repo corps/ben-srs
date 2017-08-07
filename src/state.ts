@@ -1,8 +1,7 @@
-import {indexesInitialState, NoteTree} from "./indexes";
+import {Indexable, indexesInitialState, NoteTree} from "./indexes";
 import {Language, newSettings, NormalizedNote} from "./model";
 import {DropboxListFolderResponse} from "./reducers/sync-reducer";
 import {SideEffect} from "kamo-reducers/reducers";
-import {LocalStore} from "./reducers/local-store-reducer";
 
 export const newCounts = {
   today: 0,
@@ -57,7 +56,7 @@ export const initialState = {
   startedSyncCount: 0,
   finishedSyncCount: 0,
 
-  loadingStore: null as LocalStore,
+  loadingIndexable: null as Indexable[],
 
   remainingUploads: [] as string[][],
   executingDownloads: [] as string[][],

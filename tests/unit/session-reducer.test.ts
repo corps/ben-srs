@@ -1,19 +1,25 @@
 import {BensrsTester} from "../tester";
 import {test, testModule} from "../qunit";
 import {Subscription} from "kamo-reducers/subject";
-import {loadLocalData, requestLocalData, RequestLocalData, StoreLocalData} from "kamo-reducers/services/local-storage";
+import {
+  loadLocalData,
+  requestLocalData,
+  RequestLocalData,
+  StoreLocalData,
+  clearLocalData
+} from "kamo-reducers/services/local-storage";
 import {windowFocus} from "../../src/services/window";
 import {initialization} from "../../src/services/initialization";
-import {loadIndexesWorkerName, localStoreKey, newLocalStore} from "../../src/reducers/local-store-reducer";
+import {loadIndexesWorkerName, localStoreKey} from "../../src/reducers/session-reducer";
 import {RequestWork, WorkComplete} from "kamo-reducers/services/workers";
 import {genLocalStore} from "../factories/settings-factory";
 import {indexesInitialState, loadIndexables} from "../../src/indexes";
-import {authInitialized, authSuccess} from "../../src/services/login";
+import {authInitialized, authSuccess, checkLoginSession} from "../../src/services/login";
 
 let tester: BensrsTester;
 let subscription = new Subscription();
 
-testModule("unit/local-store-reducer", {
+testModule("unit/session-reducer", {
   beforeEach: (assert) => {
     tester = new BensrsTester();
     subscription.add(tester.subscription.unsubscribe);
@@ -45,15 +51,18 @@ test("on initialization and window focus, loads localStore data", (assert) => {
   assert.equal(localDataRequests.length, 0);
 });
 
-test("on loading an empty set of data, begins loading the newLocalStore data", (assert) => {
+test("on loading an empty set of data, will load empty indexes", (assert) => {
   tester.start();
 
   tester.dispatch(loadLocalData(localStoreKey, undefined));
   let workRequests: RequestWork[] = tester.findEffects("request-work") as any[];
+  assert.equal(workRequests.length, 0);
 
+  tester.dispatch(authInitialized);
+  workRequests = tester.findEffects("request-work") as any[];
   assert.equal(workRequests.length, 1);
   assert.deepEqual(workRequests[0].name, [loadIndexesWorkerName]);
-  assert.deepEqual(workRequests[0].data, newLocalStore);
+  assert.deepEqual(workRequests[0].data, []);
 });
 
 test("on loading an a localStore object, eventually loads all the expected data into the state, and kicks off a sync", (assert) => {
@@ -81,10 +90,12 @@ test("on loading an a localStore object, eventually loads all the expected data 
     }
   });
 
-  assert.expect(7);
+  assert.expect(8);
+  tester.dispatch(loadLocalData(localStoreKey, store));
+  assert.equal(tester.findEffects(checkLoginSession.effectType).length, 1);
+
   tester.queued$.buffering = false;
   tester.dispatch(authInitialized);
-  tester.dispatch(loadLocalData(localStoreKey, store));
 });
 
 test("multiple overlapping store loads would cancel each other's work", (assert) => {
@@ -125,4 +136,67 @@ test("saves the current store on auth-success", (assert) => {
   assert.equal(stored.length, 1);
   assert.equal(stored[0].key, localStoreKey);
   assert.deepEqual(stored[0].data, store);
+});
+
+test("authInitialized is first false, then true after auth-initialized", (assert) => {
+  let unsubscribe = tester.update$.subscribe((update) => {
+    let [action, state] = update;
+    if (action.type !== "auth-initialized") {
+      assert.equal(state.authReady, false);
+
+      unsubscribe();
+    }
+  });
+
+  assert.expect(2);
+  tester.start();
+  tester.queued$.flushUntilEmpty();
+  assert.equal(tester.state.authReady, true);
+});
+
+test("authSuccess sets the session parameters", (assert) => {
+  tester.start();
+  tester.dispatch(authSuccess("zach", "token123", 123456));
+
+  assert.equal(tester.state.settings.session.sessionExpiresAt, 123456);
+  assert.equal(tester.state.settings.session.accessToken, "token123");
+  assert.equal(tester.state.settings.session.login, "zach");
+});
+
+test("authSuccess for an existing login updates in place without clearing storage", (assert) => {
+  tester.start();
+  tester.dispatch(authSuccess("zach", "token123", 123456));
+
+  tester.state = {...tester.state};
+  tester.state.settings = {...tester.state.settings};
+  tester.state.settings.session = {...tester.state.settings.session};
+  tester.state.settings.session.syncCursor = "cursor1";
+
+  tester.dispatch(authSuccess("zach", "newToken", 554));
+
+  assert.equal(tester.state.settings.session.sessionExpiresAt, 554);
+  assert.equal(tester.state.settings.session.accessToken, "newToken");
+  assert.equal(tester.state.settings.session.login, "zach");
+  assert.equal(tester.state.settings.session.syncCursor, "cursor1");
+
+  assert.equal(tester.findEffects(clearLocalData.effectType).length, 0);
+});
+
+test("authSuccess for a login different from the storage clears and resets storage and session", (assert) => {
+  tester.start();
+  tester.dispatch(authSuccess("zach", "token123", 123456));
+
+  tester.state = {...tester.state};
+  tester.state.settings = {...tester.state.settings};
+  tester.state.settings.session = {...tester.state.settings.session};
+  tester.state.settings.session.syncCursor = "cursor1";
+
+  tester.dispatch(authSuccess("bob", "newToken", 554));
+
+  assert.equal(tester.state.settings.session.sessionExpiresAt, 554);
+  assert.equal(tester.state.settings.session.accessToken, "newToken");
+  assert.equal(tester.state.settings.session.login, "bob");
+  assert.equal(tester.state.settings.session.syncCursor, "");
+
+  assert.equal(tester.findEffects(clearLocalData.effectType).length, 1);
 });

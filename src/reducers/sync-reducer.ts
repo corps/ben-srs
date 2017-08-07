@@ -10,7 +10,7 @@ import {
   denormalizedNote, findNoteTree, loadIndexables, normalizedNote, notesIndexer, NoteTree, removeNote,
 } from "../indexes";
 import {parseNote, stringifyNote, NormalizedNote, newNormalizedNote} from "../model";
-import {requestLocalStoreUpdate} from "./local-store-reducer";
+import {requestLocalStoreUpdate} from "./session-reducer";
 
 export function reduceSync(state: State, action: CompleteRequest | IgnoredAction): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;

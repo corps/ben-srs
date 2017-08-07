@@ -6,7 +6,6 @@ export function router(state: State, location: PathLocation): ReductionWithEffec
   let effect: SideEffect | 0 = null;
 
   state = {...state};
-  state.now = Date.now();
 
   let pathParts = location.pathname.split("/");
   if (pathParts.length == 0) pathParts = [""];
