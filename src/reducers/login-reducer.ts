@@ -32,6 +32,7 @@ export function reduceLogin(state: State, action: LoginAction | IgnoredAction): 
       state = {...state};
 
       if (state.settings.session.login !== action.login) {
+        debugger
         effect = sequence(effect, clearLocalData);
         state.settings = newSettings;
       }

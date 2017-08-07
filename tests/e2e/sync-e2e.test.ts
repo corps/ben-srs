@@ -80,7 +80,7 @@ function sequenceChecks(assert: Assert, checks: Function[]) {
     } else {
       console.log("action", ea);
     }
-  }))
+  }));
 
   subscription.add(tester.update$.subscribe((u) => {
     if (inCheck) return;

@@ -41,7 +41,7 @@ declare module "redux-indexers" {
 
     getByPk(indexes: I, key: any[]): V | 0;
 
-    static getRangeFrom(index: Index<any>, startKey?: any[], endKey?: any[]): { startIndx: number, endIdx: number }
+    static getRangeFrom(index: Index<any>, startKey?: any[], endKey?: any[]): { startIdx: number, endIdx: number }
 
     static getFirstMatching<V>(index: Index<V>, key: any[]): V | 0;
   }

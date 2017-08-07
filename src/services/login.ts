@@ -12,6 +12,9 @@ export interface AuthFailure {
   type: "auth-failure"
 }
 
+export const checkLoginSession = {effectType: "check-login-session"};
+export type CheckLoginSession = typeof checkLoginSession;
+
 export const unauthorizedAccess = {type: "unauthorized-access"};
 
 export interface AuthSuccess {
@@ -46,7 +49,7 @@ export function withLogin(effect$: Subject<SideEffect>): Subscriber<GlobalAction
         redirect_uri: location.protocol + "//" + location.host + location.pathname + "?"
       });
 
-      subscription.add(effect$.subscribe((effect: RequestLogin | IgnoredSideEffect) => {
+      subscription.add(effect$.subscribe((effect: RequestLogin | CheckLoginSession | IgnoredSideEffect) => {
         switch (effect.effectType) {
           case "request-login":
             hello.login("dropbox", {
@@ -54,26 +57,28 @@ export function withLogin(effect$: Subject<SideEffect>): Subscriber<GlobalAction
               response_type: "token",
             });
             break;
+
+          case "check-login-session":
+            let curAuth = hello.getAuthResponse("dropbox");
+            if (curAuth && curAuth.access_token && curAuth.expires * 1000 > Date.now()) {
+              location.search = "";
+
+              hello.api({network: "dropbox", path: "/me", method: "get"}).then(function (data) {
+                curAuth && curAuth.access_token && dispatch(authSuccess(data.email, curAuth.access_token, curAuth.expires));
+              }, function (err) {
+                console.error(err);
+                dispatch(unauthorizedAccess);
+              }).then(() => {
+                dispatch(authInitialized);
+              }, () => {
+                dispatch(authInitialized);
+              });
+            } else {
+              dispatch(authInitialized);
+            }
+
         }
       }));
-
-      let curAuth = hello.getAuthResponse("dropbox");
-      if (curAuth && curAuth.access_token && curAuth.expires * 1000 > Date.now()) {
-        location.search = "";
-
-        hello.api({network: "dropbox", path: "/me", method: "get"}).then(function (data) {
-          curAuth && curAuth.access_token && dispatch(authSuccess(data.email, curAuth.access_token, curAuth.expires));
-        }, function (err) {
-          console.error(err);
-          dispatch(unauthorizedAccess);
-        }).then(() => {
-          dispatch(authInitialized);
-        }, () => {
-          dispatch(authInitialized);
-        });
-      } else {
-        dispatch(authInitialized);
-      }
 
       return subscription.unsubscribe;
     }

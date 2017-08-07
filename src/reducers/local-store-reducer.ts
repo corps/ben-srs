@@ -1,14 +1,15 @@
 import {initialState, State} from "../state";
 import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
-import {newSettings, NormalizedNote} from "../model";
+import {Language, newSettings, NormalizedNote, Note} from "../model";
 import {LoadLocalData, requestLocalData, storeLocalData} from "kamo-reducers/services/local-storage";
 import {WindowFocus} from "../services/window";
 import {Initialization} from "../services/initialization";
 import {AuthAction} from "../services/login";
-import {Indexable, indexesInitialState} from "../indexes";
+import {Indexable, indexesInitialState, NoteTree} from "../indexes";
 import {clearOtherSyncProcesses, startSync} from "./sync-reducer";
 import {cancelWork, requestWork, WorkComplete} from "kamo-reducers/services/workers";
+import {Indexer} from "redux-indexers";
 
 export const localStoreKey = "settings";
 
@@ -29,13 +30,13 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
     case "window-focus":
       state = {...state};
       state.indexesReady = false;
+
       effect = sequence(effect, requestLocalData(localStoreKey));
       break;
 
     case "load-local-data":
       if (action.key !== localStoreKey) break;
 
-      console.log("load local data");
       ({state, effect} = sequenceReduction(effect, clearOtherSyncProcesses(state)));
 
       state = {...state};
@@ -44,6 +45,7 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
       let data = action.data as LocalStore || newLocalStore;
       state.settings = data.settings;
       state.newNotes = data.newNotes;
+      state.downloadedNotes = data.downloadedNotes;
       state.loadingStore = data;
 
       state.clearSyncEffects = sequence(state.clearSyncEffects, cancelWork([loadIndexesWorkerName]));
@@ -62,6 +64,18 @@ export function reduceLocalStore(state: State, action: LocalStoreAction | Ignore
       let loadedIndexes = action.result as typeof indexesInitialState;
       state.indexes = loadedIndexes;
       state.indexesReady = true;
+      state.languages = [];
+
+      let note: Note | 0 = null;
+      let language: Language = null;
+      while (note = Indexer.iterator(state.indexes.notes.byLanguage, [language, Infinity])()) {
+        language = note.attributes.language;
+        state.languages.push(language);
+      }
+
+      state.inputs = {...state.inputs};
+
+      state.inputs.curLanguage = language;
 
       ({state, effect} = sequenceReduction(effect, startSync(state)));
   }
@@ -85,7 +99,9 @@ export function requestLocalStoreUpdate(state: State) {
   } else {
     localStore.indexables = state.loadingStore.indexables;
   }
+
   localStore.newNotes = state.newNotes;
+  localStore.downloadedNotes = state.downloadedNotes;
   return storeLocalData(localStoreKey, localStore);
 }
 
@@ -93,6 +109,7 @@ export const newLocalStore = {
   settings: newSettings,
   indexables: [] as Indexable[],
   newNotes: {} as { [k: string]: NormalizedNote },
+  downloadedNotes: [] as NoteTree[],
 };
 
 export type LocalStore = typeof newLocalStore;

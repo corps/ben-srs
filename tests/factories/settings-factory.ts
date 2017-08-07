@@ -5,7 +5,7 @@ import {
 import {genFutureTime, genId, genSomeText, pick} from "./general-factories";
 import {LocalStore} from "../../src/reducers/local-store-reducer";
 import {NoteFactory} from "./notes-factories";
-import {denormalizedNote, Indexable} from "../../src/indexes";
+import {denormalizedNote, Indexable, NoteTree} from "../../src/indexes";
 
 export function genLanguage(): Language {
   return pick<Language>("Japanese", "Cantonese", "English");
@@ -14,6 +14,7 @@ export function genLanguage(): Language {
 export function genLocalStore(): LocalStore {
   let indexables: Indexable[] = [];
   let newNotes: { [k: string]: NormalizedNote } = {};
+  let downloadedNotes: NoteTree[] = [];
 
   for (let i = 0; i < 3; ++i) {
     let noteFactory = new NoteFactory();
@@ -34,7 +35,8 @@ export function genLocalStore(): LocalStore {
   return {
     settings: genSettings(),
     indexables,
-    newNotes
+    newNotes,
+    downloadedNotes,
   }
 }
 

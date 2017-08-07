@@ -12,7 +12,7 @@ const initialState = {
 
 const classNameGenerator = classNamesGeneratorFor<ProgressBarProps>(add => {
   add("tasksNum", <div className="o-100"/>, <div className="o-0"/>);
-}, <div className="h_25 br2 br--right bg-light-red transition"/>);
+}, <div className="h-100 w-100 br2 br--right bg-light-red transition"/>);
 
 export class ProgressBar extends React.Component<ProgressBarProps, typeof initialState> {
   state = initialState;

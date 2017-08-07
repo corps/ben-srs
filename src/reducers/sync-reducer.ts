@@ -7,7 +7,7 @@ import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/redu
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
 import {Indexer} from "redux-indexers";
 import {
-  denormalizedNote, findNoteTree, loadIndexables, normalizedNote, notesIndexer, removeNote,
+  denormalizedNote, findNoteTree, loadIndexables, normalizedNote, notesIndexer, NoteTree, removeNote,
 } from "../indexes";
 import {parseNote, stringifyNote, NormalizedNote, newNormalizedNote} from "../model";
 import {requestLocalStoreUpdate} from "./local-store-reducer";
@@ -69,7 +69,7 @@ export function reduceSync(state: State, action: CompleteRequest | IgnoredAction
 
         let response = JSON.parse(action.response) as DropboxListFolderResponse;
         ({state, effect} = sequenceReduction(effect, startSyncDownload(state, response)));
-        ({state, effect} = sequenceReduction(effect, checkSyncDownloadComplete(state)));
+        ({state, effect} = sequenceReduction(effect, checkSyncDownloadComplete(state, false)));
       }
 
       if (action.name[0] === filesDownloadRequestName) {
@@ -79,10 +79,10 @@ export function reduceSync(state: State, action: CompleteRequest | IgnoredAction
           break;
         }
 
-        if (action.status === 409) {
-          state.executingDownloads = state.executingDownloads.slice();
-          state.executingDownloads.splice(state.executingDownloads.indexOf(action.name), 1);
-        } else {
+        state.executingDownloads = state.executingDownloads.slice();
+        state.executingDownloads.splice(state.executingDownloads.indexOf(action.name), 1);
+
+        if (action.success) {
           let downloadedNote: NormalizedNote;
           try {
             downloadedNote = parseNote(action.response);
@@ -102,9 +102,11 @@ export function reduceSync(state: State, action: CompleteRequest | IgnoredAction
 
           let denormalized = denormalizedNote(downloadedNote, response.id, response.path_lower, response.rev);
           state.downloadedNotes = state.downloadedNotes.concat([denormalized]);
+
+          effect = sequence(effect, requestLocalStoreUpdate(state));
         }
 
-        ({state, effect} = sequenceReduction(effect, checkSyncDownloadComplete(state)));
+        ({state, effect} = sequenceReduction(effect, checkSyncDownloadComplete(state, action.success)));
       }
   }
 
@@ -146,7 +148,8 @@ export function requestListFolder(accessToken: string, cursor = ""): RequestAjax
 
   config.json = cursor ? {cursor} : {
     recursive: true,
-    include_deleted: true
+    include_deleted: true,
+    path: ""
   };
 
   if (cursor) config.url += "/continue";
@@ -189,10 +192,10 @@ export function requestFileUpload(accessToken: string,
   return requestAjax([filesUploadRequestName, accessToken, path], config);
 }
 
-function checkSyncDownloadComplete(state: State): ReductionWithEffect<State> {
+function checkSyncDownloadComplete(state: State, alreadyRequestingStore: boolean): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;
 
-  if (state.downloadedNotes.length !== state.executingDownloads.length) {
+  if (state.executingDownloads.length) {
     return {state, effect};
   }
 
@@ -201,27 +204,24 @@ function checkSyncDownloadComplete(state: State): ReductionWithEffect<State> {
     return {state, effect};
   }
 
-  let downloadedNoteIds = state.downloadedNotes.map(n => n.note.id);
+  const downloadedNotes: { [k: string]: NoteTree } = {};
+  state.downloadedNotes.forEach(n => {
+    downloadedNotes[n.note.id] = n;
+  });
+
+  state.downloadedNotes = [];
 
   state.indexes = {...state.indexes};
 
   function loadDownloaded(id: string) {
-    let idx = downloadedNoteIds.indexOf(id);
+    let downloaded = downloadedNotes[id];
     let existing = Indexer.getFirstMatching(state.indexes.notes.byId, [id]);
 
-    if (idx === -1) {
-      if (existing) {
-        state.indexes = removeNote(state.indexes, existing);
-      }
-    } else {
+    if (existing) {
+      state.indexes = removeNote(state.indexes, existing);
+    }
 
-      let downloaded = state.downloadedNotes[idx];
-
-      if (existing) {
-        if (existing.localEdits) return;
-        state.indexes = removeNote(state.indexes, existing);
-      }
-
+    if (downloaded) {
       state.indexes = loadIndexables(state.indexes, [downloaded]);
     }
   }
@@ -248,7 +248,9 @@ function checkSyncDownloadComplete(state: State): ReductionWithEffect<State> {
   state.settings = {...state.settings};
   state.settings.session = {...state.settings.session};
   state.settings.session.syncCursor = state.syncingListFolder.cursor;
-  effect = sequence(effect, requestLocalStoreUpdate(state));
+
+  if (!alreadyRequestingStore)
+    effect = sequence(effect, requestLocalStoreUpdate(state));
 
   if (state.syncingListFolder.has_more) {
     effect = sequence(effect, requestListFolder(state.settings.session.accessToken, state.syncingListFolder.cursor));
@@ -297,8 +299,9 @@ function startSyncDownload(state: State, response: DropboxListFolderResponse): R
   let token = state.settings.session.accessToken;
 
   state.syncingListFolder = response;
-  state.downloadedNotes = [];
   state.executingDownloads = [];
+  const downloadedNoteRevs: { [k: string]: boolean } = {};
+  state.downloadedNotes.forEach(n => downloadedNoteRevs[n.note.version] = true);
 
   let hasConflicts = Indexer.getAllMatching(state.indexes.notes.byHasConflicts, [true]);
   for (let note of hasConflicts) {
@@ -310,7 +313,10 @@ function startSyncDownload(state: State, response: DropboxListFolderResponse): R
 
   for (let entry of response.entries) {
     if (entry[".tag"] === "file") {
-      let request = requestFileDownload(token, "rev:" + (entry as DropboxFileEntry).rev);
+      let rev = (entry as DropboxFileEntry).rev;
+      if (downloadedNoteRevs[rev]) continue;
+
+      let request = requestFileDownload(token, "rev:" + rev);
       state.clearSyncEffects = sequence(state.clearSyncEffects, abortRequest(request.name));
       effect = sequence(effect, request);
       state.executingDownloads.push(request.name);

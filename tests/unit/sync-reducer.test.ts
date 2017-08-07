@@ -265,47 +265,6 @@ test("a list folder response issues requests for each file entry, which is abort
   }
 });
 
-test("syncedNotes don't override local edits", (assert) => {
-  let [note1] = setup.addNote(true);
-  let newFileEntry1 = genFileEntry();
-  newFileEntry1.id = note1.id;
-
-  let [note2] = setup.addNote(false);
-  let newFileEntry2 = genFileEntry();
-  newFileEntry2.id = note2.id;
-
-  setup.prepareState();
-
-  assert.ok(Indexer.getFirstMatching(tester.state.indexes.notes.byId, [note1.id]));
-  assert.ok(Indexer.getFirstMatching(tester.state.indexes.notes.byId, [note2.id]));
-
-  let listFolderResponse = genDropboxListFolderResponse();
-  listFolderResponse.entries.push(newFileEntry1);
-  listFolderResponse.entries.push(newFileEntry2);
-  setup.completeListFolderRequest(listFolderResponse);
-
-  setup.completeFileDownloadRequest(newFileEntry1);
-  let normalized2 = setup.completeFileDownloadRequest(newFileEntry2);
-
-  let newNote1 = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [newFileEntry1.id]);
-  let newNote2 = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [newFileEntry2.id]);
-
-  assert.ok(newNote1);
-  assert.ok(newNote2);
-
-  if (newNote1 && newNote2) {
-    assert.strictEqual(newNote1, note1);
-
-    assert.equal(newNote2.version, newFileEntry2.rev);
-    assert.equal(newNote2.path, newFileEntry2.path_lower);
-
-    let normalizedNewNote2 =
-      normalizedNote(findNoteTree(tester.state.indexes, newNote2.id) || null);
-
-    assert.deepEqual(normalized2, JSON.parse(JSON.stringify(normalizedNewNote2)));
-  }
-});
-
 test("removes hasConflicts from downloaded notes", (assert) => {
   let newFileEntry1 = genFileEntry();
   setup.prepareState();
@@ -329,7 +288,7 @@ test("removes hasConflicts from downloaded notes", (assert) => {
   }
 });
 
-test("applies deletes and updated notes after all requests complete, storing the result", (assert) => {
+test("applies deletes and updated notes after all requests complete, but stores all intermediate results", (assert) => {
   let newFileEntry1 = genFileEntry();
   let newFileEntry2 = genFileEntry();
   let [deletedNote, deleteNoteEntry] = setup.addDeletedNote();
@@ -352,7 +311,12 @@ test("applies deletes and updated notes after all requests complete, storing the
 
   setup.completeFileDownloadRequest(newFileEntry1);
   assert.strictEqual(originalNotes, tester.state.indexes.notes);
-  assert.equal(tester.findEffects("store-local-data").length, 0);
+  assert.equal(tester.findEffects("store-local-data").length, 1);
+
+  let note1 = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [newFileEntry1.id]);
+  let note2 = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [newFileEntry2.id]);
+  assert.notOk(note1);
+  assert.notOk(note2);
 
   setup.completeFileDownloadRequest(newFileEntry2);
   assert.equal(tester.findEffects("store-local-data").length, 1);
@@ -361,9 +325,8 @@ test("applies deletes and updated notes after all requests complete, storing the
   assert.notOk(Indexer.getFirstMatching(tester.state.indexes.terms.byNoteIdReferenceAndMarker, [deletedNote.id]));
   assert.notOk(Indexer.getFirstMatching(tester.state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [deletedNote.id]));
 
-  let note1 = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [newFileEntry1.id]);
-  let note2 = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [newFileEntry2.id]);
-
+  note1 = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [newFileEntry1.id]);
+  note2 = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [newFileEntry2.id]);
   assert.ok(note1);
   assert.ok(note2);
 
