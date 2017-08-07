@@ -1,6 +1,6 @@
 import {reduceTime, UpdateTime} from "kamo-reducers/services/time";
-import {State} from "./state";
-import {computedFor, reducerChain, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
+import {Inputs, State} from "./state";
+import {computedFor, reducerChain, ReductionWithEffect, SideEffect, subReducersFor} from "kamo-reducers/reducers";
 import {NavigationAction} from "kamo-reducers/services/navigation";
 import {reduceSession, SessionActions} from "./reducers/session-reducer";
 import {reduceAwaiting} from "./reducers/awaiting-reducer";
@@ -10,14 +10,23 @@ import {
   computeEndOfDay
 } from "./reducers/time-computed";
 import {computeStudyData} from "./reducers/study-data-computed";
-import {reduceRouting} from "./router";
 import {reduceTick} from "./reducers/ticker-reducer";
 import {computeCurLanguageDefault, computeLanguages} from "./reducers/languages-computed";
 import {computeHasEdits} from "./reducers/has-edits-computed";
+import {Keypress} from "./services/keypresses";
+import {reduceKeypresses} from "./reducers/keypresses-reducer";
+import {InputAction, reduceInputs} from "kamo-reducers/reducers/inputs";
+import {NewNoteActions, reduceNewNote} from "./reducers/new-note-reducer";
+import {MainMenuActions, reduceMainMenu} from "./reducers/main-menu-reducer";
+import {reduceStudy, StudyActions} from "./reducers/study-reducer";
+import {EditNoteActions, reduceEditNote} from "./reducers/edit-note-reducer";
+import {reduceToggle} from "kamo-reducers/reducers/toggle";
 
-export type Action = UpdateTime | NavigationAction | SessionActions;
+export type Action = UpdateTime | NavigationAction | SessionActions | Keypress |
+  InputAction<Inputs> | NewNoteActions | MainMenuActions | StudyActions | EditNoteActions;
 
 const computedProperty = computedFor<State>();
+const subreducer = subReducersFor<State>();
 
 export function reducer(state: State, action: Action): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;
@@ -28,7 +37,13 @@ export function reducer(state: State, action: Action): ReductionWithEffect<State
     .apply(reduceAwaiting)
     .apply(reduceSession)
     .apply(reduceSync)
-    .apply(reduceRouting)
+    .apply(reduceKeypresses)
+    .apply(reduceMainMenu)
+    .apply(reduceNewNote)
+    .apply(reduceStudy)
+    .apply(reduceEditNote)
+    .apply(subreducer("inputs", reduceInputs))
+    .apply(subreducer("toggles", reduceToggle))
     .apply(computedProperty("startOfDayMinutes", computeStartOfDay))
     .apply(computedProperty("startOfWeekMinutes", computeStartOfWeek))
     .apply(computedProperty("startOfMonthMinutes", computeStartOfMonth))

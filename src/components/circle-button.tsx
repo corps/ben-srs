@@ -6,6 +6,7 @@ export interface CircleButtonProps {
   green?: boolean
   blue?: boolean
   yellow?: boolean
+  onClick?: React.MouseEventHandler<any>
 }
 
 const circleClassNames = classNamesGeneratorFor<CircleButtonProps>(add => {
@@ -16,7 +17,7 @@ const circleClassNames = classNamesGeneratorFor<CircleButtonProps>(add => {
 }, <div className="br-100 dib f2 shadow-1 tc"/>);
 
 export function CircleButton(props: CircleButtonProps & ClassAndChildren) {
-  return <div className={circleClassNames(props)}>
+  return <div className={circleClassNames(props)} onClick={props.onClick}>
     <div className="dt w4 h4 f2-ns f4">
       <div className="dtc v-mid tc white">
         {props.children}

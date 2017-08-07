@@ -1,5 +1,5 @@
 import {Indexable, indexesInitialState, NoteTree} from "./indexes";
-import {Language, newSettings, NormalizedNote} from "./model";
+import {Language, newNormalizedNote, newNote, newSettings, NormalizedNote} from "./model";
 import {DropboxListFolderResponse} from "./reducers/sync-reducer";
 import {SideEffect} from "kamo-reducers/reducers";
 
@@ -22,6 +22,9 @@ export const newStudyData = {
 
 export type StudyData = typeof newStudyData;
 
+export type Location = "main" | "edit-note" | "new-note" | "study"
+
+export type EditingNoteMode = "select" | "content" | "term"
 
 export const initialState = {
   awaiting: [] as string[],
@@ -32,11 +35,35 @@ export const initialState = {
 
   inputs: {
     curLanguage: "English" as Language,
+    newNoteContent: "",
+    newNoteLanguage: "" as Language,
+
+    editingNoteContent: "",
+    editingNoteLanguage: "English" as Language,
+
+    termSearchBy: "",
+    termHint: "",
+    termPronounce: "",
+    termClozes: "",
+    termDefinition: "",
   },
+
+  toggles: {
+    studyByProduce: false,
+    studyByRecognize: false,
+    studyBySpeak: false,
+    studyByListen: false,
+  },
+
+  editingNoteMode: "term" as EditingNoteMode,
+  editingNote: newNote,
+  editingNoteNormalized: newNormalizedNote,
+  selectTermLeft: -1,
+  editingTermMarker: "",
+  editingTermReference: "",
 
   languages: [] as Language[],
 
-  pathParts: [] as string[],
   now: Date.now(),
   relativeNow: 0,
   startOfDayMinutes: 0,
@@ -46,6 +73,7 @@ export const initialState = {
   endOfWeekMinutes: 0,
   endOfMonthMinutes: 0,
 
+  location: "main" as Location,
   studyData: newStudyData,
 
   authReady: false,
@@ -68,3 +96,4 @@ export const initialState = {
 
 export type State = typeof initialState;
 export type Inputs = typeof initialState.inputs;
+export type Toggles = typeof initialState.toggles;

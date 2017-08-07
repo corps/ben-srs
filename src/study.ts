@@ -1,4 +1,4 @@
-import {Cloze, Language, Note} from "./model";
+import {Cloze, Language, newNormalizedTerm, NormalizedNote} from "./model";
 import {Indexer, IndexIterator} from "redux-indexers";
 import {State} from "./state";
 
@@ -65,7 +65,7 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: State["indexes"]): S
   }
 }
 
-export function findTermRange(term: { attributes: { reference: string, marker: string } }, text: string) {
+export function findTermRange(term: { attributes: { reference: string, marker: string } }, text: string): [number, number] {
   let fullMarker = term.attributes.reference + "[" + term.attributes.marker + "]";
   let start = text.indexOf(fullMarker);
 
@@ -104,9 +104,9 @@ export function splitByClozes(clozes: Cloze[], text: string) {
   return result;
 }
 
-export function findNextUniqueMarker(note: Note): string {
+export function findNextUniqueMarker(content: string): string {
   for (let i = 1; ; ++i) {
-    if (note.attributes.content.indexOf("[" + i + "]") === -1) return i + "";
+    if (content.indexOf("[" + i + "]") === -1) return i + "";
   }
 }
 
@@ -127,4 +127,24 @@ export function findContentRange(term: { attributes: { marker: string, reference
   let rightSideIdx = Math.min(termEnd + grabCharsMax + unusedRight.match(allNotDivisibleHeadRegex)[0].length, content.length);
 
   return [leftSideIdx, rightSideIdx];
+}
+
+export function addNewTerm(note: NormalizedNote, left: number, right: number): NormalizedNote {
+  let content = note.attributes.content;
+  let reference = content.slice(left, right);
+  let marker = findNextUniqueMarker(content);
+
+  note = {...note};
+  note.attributes = {...note.attributes};
+
+  let normalizedTerm = {...newNormalizedTerm};
+  normalizedTerm.attributes = {...normalizedTerm.attributes};
+  normalizedTerm.attributes.reference = reference;
+  normalizedTerm.attributes.marker = marker;
+
+  content = content.slice(0, left) + reference + "[" + marker + "]" + content.slice(right);
+  note.attributes.terms = note.attributes.terms.concat([normalizedTerm]);
+  note.attributes.content = content;
+
+  return note;
 }

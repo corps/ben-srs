@@ -1,9 +1,14 @@
 import * as React from "react";
 import {Action} from "../reducer";
-import {State} from "../state";
+import {Inputs, State} from "../state";
 import {CountsRow} from "../components/counts-row";
 import {CircleButton} from "../components/circle-button";
 import {clickLogin, clickLogout} from "../reducers/session-reducer";
+import {SelectSingle} from "../components/select-single";
+import {applyInputChange} from "kamo-reducers/reducers/inputs";
+import {visitNewNote} from "../reducers/new-note-reducer";
+import {visitEditNote} from "../reducers/edit-note-reducer";
+import {visitStudy} from "../reducers/study-reducer";
 
 export function mainMenuContent(dispatch: (action: Action) => void) {
   return (state: State) => {
@@ -18,6 +23,16 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
           <span className="ml1 pointer blue hover-light-blue" onClick={() => dispatch(clickLogout)}>
             (ロゴアウト)
           </span>
+        </div>
+
+        <div className="f5">
+          言語:
+          <div className="ml2 w4 dib">
+            <SelectSingle
+              onChange={(lang: string) => dispatch(applyInputChange<Inputs>("curLanguage", lang))}
+              value={state.inputs.curLanguage}
+              values={state.languages}/>
+          </div>
         </div>
       </div>
 
@@ -42,7 +57,9 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
 
       <div className="tc">
         <div className="mv2">
-          <CircleButton red className="mh2 pointer dim">
+          <CircleButton
+            onClick={() => dispatch(visitStudy)}
+            red className="mh2 pointer dim">
             <span className="fw6">訓</span>
             <span className="fw3">練</span>
             <br/>
@@ -50,7 +67,9 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
             <span className="fw4">始</span>
           </CircleButton>
 
-          <CircleButton green className="mh2 pointer dim">
+          <CircleButton
+            onClick={() => dispatch(visitNewNote)}
+            green className="mh2 pointer dim">
             <span className="fw4">新</span>
             <span className="fw2">規</span>
             <br/>
@@ -60,20 +79,22 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
         </div>
 
         <div className="mv2">
-          <CircleButton yellow className="mh2 pointer dim">
+          <CircleButton
+            onClick={() => dispatch(visitEditNote)}
+            yellow className="mh2 pointer dim">
             <span className="fw3">編</span>
             <span className="fw5">集</span>
           </CircleButton>
 
           { state.syncAuthBad ?
-            <div onClick={() => dispatch(clickLogin)}>
-              <CircleButton blue className="mh2 pointer dim">
-                <span className="fw5">再</span>
-                <br/>
-                <span className="fw1">認</span>
-                <span className="fw3">証</span>
-              </CircleButton>
-            </div> : null }
+            <CircleButton
+              onClick={() => dispatch(clickLogin)}
+              blue className="mh2 pointer dim">
+              <span className="fw5">再</span>
+              <br/>
+              <span className="fw1">認</span>
+              <span className="fw3">証</span>
+            </CircleButton> : null }
         </div>
       </div>
 

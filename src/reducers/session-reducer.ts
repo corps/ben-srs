@@ -80,6 +80,7 @@ export function reduceSession(state: State, action: SessionActions | IgnoredActi
         effect = sequence(effect, clearLocalData);
         state.loadingIndexable = [];
         state.settings = newSettings;
+        state.location = "main";
       }
 
       state.settings = {...state.settings};
@@ -118,6 +119,7 @@ export function reduceSession(state: State, action: SessionActions | IgnoredActi
       break;
 
     case "click-logout":
+      ({state, effect} = sequenceReduction(effect, clearOtherSyncProcesses(state)));
       effect = sequence(effect, clearLocalData);
       state = {...state};
       state.settings = newSettings;

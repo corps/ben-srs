@@ -1,5 +1,5 @@
 import {test, testModule} from "../qunit";
-import {newNote, newTerm} from "../../src/model";
+import {newTerm} from "../../src/model";
 import {findContentRange, findNextUniqueMarker, findTermRange, studyDetailsForCloze} from "../../src/study";
 import {NoteFactory} from "../factories/notes-factories";
 import {denormalizedNote, indexesInitialState, loadIndexables} from "../../src/indexes";
@@ -9,11 +9,7 @@ import {Indexer} from "redux-indexers";
 testModule("unit/study");
 
 test("findNextUniqueMarker finds the next marker that is not present anywhere in the given note", (assert) => {
-  let note = {...newNote};
-  note.attributes = {...note.attributes};
-  note.attributes.content = "some[0]values[1]with[2]thing";
-
-  assert.equal(findNextUniqueMarker(note), "3");
+  assert.equal(findNextUniqueMarker("some[0]values[1]with[2]thing"), "3");
 });
 
 test("findTermRange", (assert) => {

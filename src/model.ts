@@ -12,6 +12,7 @@ export const LanguageSettings = {
 };
 
 export type Language = keyof typeof LanguageSettings;
+export const allLanguages: Language[] = Object.keys(LanguageSettings) as any[];
 
 export const newSchedule = {
   lastAnsweredMinutes: 0,
@@ -32,7 +33,7 @@ export type ByLangPronunciationOverrides = typeof newByLangPronunciationOverride
 
 export const newNote = {
   attributes: {
-    content: "",
+    content: "This would be new note",
     language: "" as Language,
     editsComplete: false,
     terms: undefined as void,

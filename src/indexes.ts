@@ -7,6 +7,7 @@ export type NotesStore = {
   byLanguage: Index<Note>
   byHasLocalEdits: Index<Note>
   byHasConflicts: Index<Note>
+  byEditsComplete: Index<Note>
 }
 
 export type TermsStore = {
@@ -31,6 +32,7 @@ notesIndexer.addIndex("byId", note => [note.id]);
 notesIndexer.addIndex("byLanguage", note => [note.attributes.language]);
 notesIndexer.addIndex("byHasLocalEdits", note => [note.localEdits]);
 notesIndexer.addIndex("byHasConflicts", note => [note.hasConflicts]);
+notesIndexer.addIndex("byEditsComplete", note => [note.attributes.editsComplete]);
 
 export const termsIndexer = new Indexer<Term, TermsStore>("byNoteIdReferenceAndMarker");
 termsIndexer.addIndex("byNoteIdReferenceAndMarker", term => [term.noteId, term.attributes.reference, term.attributes.marker]);
