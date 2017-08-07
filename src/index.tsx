@@ -47,9 +47,11 @@ subscription.add(generateRootElement().subscribe((element: HTMLElement) => {
   subscription.add(renderLoop<State, Action>(renderer, reducer, getServices(), initialState).subscribe(e => {
     switch (e[0]) {
       case "a":
+        // console.log(e[1]);
         break;
 
       case "s":
+        // console.log(e[1]);
         break;
     }
   }));

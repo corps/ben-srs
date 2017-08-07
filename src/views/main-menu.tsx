@@ -2,48 +2,83 @@ import * as React from "react";
 import {Action} from "../reducer";
 import {State} from "../state";
 import {CountsRow} from "../components/counts-row";
+import {CircleButton} from "../components/circle-button";
+import {clickLogin, clickLogout} from "../reducers/session-reducer";
 
 export function mainMenuContent(dispatch: (action: Action) => void) {
   return (state: State) => {
 
     return <div>
-      <div className="tc f1-ns f2 pt5-ns fw5 mb3">
-        こんにちは, Zach
+      <div className="tc pt5-ns fw5 mb3">
+        <div className="f1-ns f2">
+          こんにちは,
+        </div>
+        <div className="f5 mb2">
+          {state.settings.session.login}
+          <span className="ml1 pointer blue hover-light-blue" onClick={() => dispatch(clickLogout)}>
+            (ロゴアウト)
+          </span>
+        </div>
       </div>
 
-      <CountsRow counts={state.studyData.due} postfix="枚">
+      <CountsRow counts={state.studyData.due} postfix="枚" className="tc">
         予定:
       </CountsRow>
 
-      <CountsRow counts={state.studyData.studied} postfix="枚">
+      <CountsRow counts={state.studyData.studied} postfix="枚" className="tc">
         実績:
       </CountsRow>
 
-      <CountsRow counts={state.studyData.studyTimeMinutes} postfix="分">
+      <CountsRow counts={state.studyData.studyTimeMinutes} postfix="分" className="tc">
         経過:
       </CountsRow>
 
       <div className="tc f4 fw4 mb3 red">
-        <span className="red mr1">オフライン</span>
-        <span className="black-70">未保存変更あり</span>
+        { state.syncOffline ?
+          <span className="red mr1">オフライン</span> : null }
+        { state.hasEdits ?
+          <span className="black-70">未保存変更あり</span> : null}
       </div>
 
       <div className="tc">
-        <div className="br-100 bg-red dib f2 shadow-1">
-          <div className="dt w4 h4">
-            <div className="dtc v-mid tc white">
-              <span className="fw6">訓</span>
-              <span className="fw3">練</span>
-              <br/>
-              <span className="fw1">開</span>
-              <span className="fw4">始</span>
-            </div>
-          </div>
+        <div className="mv2">
+          <CircleButton red className="mh2 pointer dim">
+            <span className="fw6">訓</span>
+            <span className="fw3">練</span>
+            <br/>
+            <span className="fw1">開</span>
+            <span className="fw4">始</span>
+          </CircleButton>
+
+          <CircleButton green className="mh2 pointer dim">
+            <span className="fw4">新</span>
+            <span className="fw2">規</span>
+            <br/>
+            <span className="fw6">追</span>
+            <span className="fw3">加</span>
+          </CircleButton>
+        </div>
+
+        <div className="mv2">
+          <CircleButton yellow className="mh2 pointer dim">
+            <span className="fw3">編</span>
+            <span className="fw5">集</span>
+          </CircleButton>
+
+          { state.syncAuthBad ?
+            <div onClick={() => dispatch(clickLogin)}>
+              <CircleButton blue className="mh2 pointer dim">
+                <span className="fw5">再</span>
+                <br/>
+                <span className="fw1">認</span>
+                <span className="fw3">証</span>
+              </CircleButton>
+            </div> : null }
         </div>
       </div>
 
 
-      <CountsRow counts={state.studyData.newStudy} postfix="枚">
+      <CountsRow counts={state.studyData.newStudy} postfix="枚" className="tc">
         新規:
       </CountsRow>
 

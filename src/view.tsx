@@ -11,13 +11,18 @@ export function view(dispatch: (action: Action) => void) {
 
   return (state: State) => {
     return <div>
-      <div className="fixed w-100 h1 top-0 left-0">
+      <div className="fixed w-100 h0_3 top-0 left-0">
         <ProgressBar tasksNum={state.awaiting.length}/>
       </div>
       {
         (function () {
-          if (!state.authReady) return <div/>;
-          if (!state.settings.session.login) return LoggedOutContent(state);
+          if (!state.settings.session.login) {
+            if (state.authReady) {
+              return LoggedOutContent(state);
+            } else {
+              return <div/>;
+            }
+          }
 
           return <div className="wf-mplus1p">
             {MainMenuContent(state)}

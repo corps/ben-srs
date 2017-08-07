@@ -22,12 +22,19 @@ export interface ClickLogin {
 
 export const clickLogin: ClickLogin = {type: "click-login"};
 
+export interface ClickLogout {
+  type: "click-logout"
+}
+
+export const clickLogout: ClickLogout = {type: "click-logout"};
+
 export type SessionActions =
   WindowFocus
   | LoadLocalData
   | Initialization
   | WorkComplete
   | ClickLogin
+  | ClickLogout
   | AuthAction;
 
 export const loadIndexesWorkerName = "load-indexes";
@@ -97,7 +104,6 @@ export function reduceSession(state: State, action: SessionActions | IgnoredActi
 
     case "work-complete":
       if (action.name[0] !== loadIndexesWorkerName) break;
-
       state = {...state};
 
       let loadedIndexes = action.result as typeof indexesInitialState;
@@ -109,6 +115,13 @@ export function reduceSession(state: State, action: SessionActions | IgnoredActi
 
     case "click-login":
       effect = sequence(effect, requestLogin);
+      break;
+
+    case "click-logout":
+      effect = sequence(effect, clearLocalData);
+      state = {...state};
+      state.settings = newSettings;
+      state.authReady = true;
       break;
   }
 

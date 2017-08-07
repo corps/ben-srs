@@ -52,6 +52,7 @@ export const initialState = {
   indexesReady: false,
   syncOffline: false,
   syncAuthBad: false,
+  hasEdits: false,
 
   startedSyncCount: 0,
   finishedSyncCount: 0,

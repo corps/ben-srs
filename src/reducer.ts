@@ -13,6 +13,7 @@ import {computeStudyData} from "./reducers/study-data-computed";
 import {reduceRouting} from "./router";
 import {reduceTick} from "./reducers/ticker-reducer";
 import {computeCurLanguageDefault, computeLanguages} from "./reducers/languages-computed";
+import {computeHasEdits} from "./reducers/has-edits-computed";
 
 export type Action = UpdateTime | NavigationAction | SessionActions;
 
@@ -36,6 +37,7 @@ export function reducer(state: State, action: Action): ReductionWithEffect<State
     .apply(computedProperty("endOfMonthMinutes", computeEndOfMonth))
     .apply(computedProperty("studyData", computeStudyData))
     .apply(computedProperty("languages", computeLanguages))
+    .apply(computedProperty("hasEdits", computeHasEdits))
     .result());
 
   let curLanguage = computeCurLanguageDefault(state);

@@ -7,7 +7,8 @@ export interface ProgressBarProps {
 }
 
 const initialState = {
-  progress: 0
+  progress: 0,
+  maxTasks: 0,
 };
 
 const classNameGenerator = classNamesGeneratorFor<ProgressBarProps>(add => {
@@ -20,19 +21,42 @@ export class ProgressBar extends React.Component<ProgressBarProps, typeof initia
 
   render() {
     let progress = this.state.progress;
+    progress /= (progress + 2);
 
-    let percentage = this.props.tasksNum ? Math.floor(progress / (progress + 2) * 100 / this.props.tasksNum) : 100;
+    if (this.state.maxTasks > 0) {
+      progress = ((this.state.maxTasks - this.props.tasksNum) + progress) / this.state.maxTasks;
+    } else {
+      progress = 1;
+    }
 
-    return <div className={classNameGenerator(this.props)} style={{width: percentage + "%"}}>
+    progress *= 100;
+
+    return <div className={classNameGenerator(this.props)} style={{width: progress + "%"}}>
     </div>;
   }
 
   componentDidMount() {
     this.handle = setInterval(() => {
       this.setState((prev) => {
-        return {progress: prev.progress + 0.4};
+        if (this.props.tasksNum == 0) return prev;
+        if (prev.progress > 30) return prev;
+        return {progress: prev.progress + 0.4, maxTasks: prev.maxTasks};
       });
     }, 200);
+  }
+
+  componentDidUpdate(prevProps: ProgressBarProps) {
+    let prevNum = prevProps.tasksNum;
+    let nextNum = this.props.tasksNum;
+
+    if (prevNum !== nextNum) {
+      this.setState((prev) => {
+        return {
+          progress: nextNum ? prev.progress : 0,
+          maxTasks: nextNum ? Math.max(prev.maxTasks, nextNum) : 0
+        };
+      });
+    }
   }
 
   componentWillUnmount() {
