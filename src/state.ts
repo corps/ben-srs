@@ -2,6 +2,7 @@ import {Indexable, indexesInitialState, NoteTree} from "./indexes";
 import {Language, newNormalizedNote, newNote, newSettings, NormalizedNote} from "./model";
 import {DropboxListFolderResponse} from "./reducers/sync-reducer";
 import {SideEffect} from "kamo-reducers/reducers";
+import {SpeechVoice} from "./services/speech";
 
 export const newCounts = {
   today: 0,
@@ -63,6 +64,7 @@ export const initialState = {
   editingTermReference: "",
 
   languages: [] as Language[],
+  voices: [] as SpeechVoice[],
 
   now: Date.now(),
   relativeNow: 0,

@@ -1,5 +1,5 @@
 import {reduceTime, UpdateTime} from "kamo-reducers/services/time";
-import {Inputs, State} from "./state";
+import {Inputs, State, Toggles} from "./state";
 import {computedFor, reducerChain, ReductionWithEffect, SideEffect, subReducersFor} from "kamo-reducers/reducers";
 import {NavigationAction} from "kamo-reducers/services/navigation";
 import {reduceSession, SessionActions} from "./reducers/session-reducer";
@@ -20,9 +20,9 @@ import {NewNoteActions, reduceNewNote} from "./reducers/new-note-reducer";
 import {MainMenuActions, reduceMainMenu} from "./reducers/main-menu-reducer";
 import {reduceStudy, StudyActions} from "./reducers/study-reducer";
 import {EditNoteActions, reduceEditNote} from "./reducers/edit-note-reducer";
-import {reduceToggle} from "kamo-reducers/reducers/toggle";
+import {reduceToggle, Toggle} from "kamo-reducers/reducers/toggle";
 
-export type Action = UpdateTime | NavigationAction | SessionActions | Keypress |
+export type Action = UpdateTime | NavigationAction | SessionActions | Keypress | Toggle<Toggles> |
   InputAction<Inputs> | NewNoteActions | MainMenuActions | StudyActions | EditNoteActions;
 
 const computedProperty = computedFor<State>();

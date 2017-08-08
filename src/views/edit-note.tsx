@@ -6,13 +6,15 @@ import {applyInputChange, applyInputChangeDispatcher, inputChangeDispatcher} fro
 import {allLanguages} from "../model";
 import {TextArea} from "../components/text-area";
 import {
-  applyNoteEdits, returnToTermSelect, selectEditTerm, selectTermCell,
-  startContentEdit
+  applyNoteEdits, commitTerm, deleteTerm, returnToTermSelect, selectEditTerm, selectTermCell,
+  startContentEdit, testPronounciation
 } from "../reducers/edit-note-reducer";
 import {visitMainMenu} from "../reducers/main-menu-reducer";
 import {findTermRange} from "../study";
 import {bisect} from "redux-indexers";
 import {TextInput} from "../components/text-input";
+import {toggleDispatcher} from "kamo-reducers/reducers/toggle";
+import {DictionaryLookup} from "../components/dictionary-lookup";
 
 export function editNoteContent(dispatch: (action: Action) => void) {
   return (state: State) => {
@@ -65,25 +67,28 @@ export function editNoteContent(dispatch: (action: Action) => void) {
     for (let i = 0; i < content.length; ++i) {
       let char = content[i];
       char = char === " " ? "　" : char;
-      let termIdx = bisect(termRanges, i, (i, entry) => i - entry.range[0]);
+      let termIdx = bisect(termRanges, i, (i, entry) => i - entry.range[1]);
 
-      if (termIdx >= 0 && termIdx < termRanges.length && termRanges[termIdx].range[1] > i) {
+      if (termIdx < termRanges.length && i >= termRanges[termIdx].range[0] && i < termRanges[termIdx].range[1]) {
         cells.push(<div
+          key={i + ""}
           onClick={() => dispatch(selectEditTerm(termRanges[termIdx].term))}
-          className="w2 pv2 dib tc pointer underline">
+          className="w1 pv1 dib tc pointer bg-orange">
           {char}
         </div>);
       } else {
         if (i == state.selectTermLeft) {
           cells.push(<div
+            key={i + ""}
             onClick={() => dispatch(selectTermCell(i))}
-            className="w2 pv2 dib tc pointer bg-light-green fw5">
+            className="w1 pv1 dib tc pointer bg-light-green fw5">
             {char}
           </div>);
         } else {
           cells.push(<div
+            key={i + ""}
             onClick={() => dispatch(selectTermCell(i))}
-            className="w2 pv2 dib tc pointer">
+            className="w1 pv1 dib tc pointer">
             {char}
           </div>);
         }
@@ -141,17 +146,21 @@ export function editNoteContent(dispatch: (action: Action) => void) {
 
   function EditTerm(state: State) {
     const header = <div className="tc">
-      <span className="mr2 pointer blue hover-light-blue underline">
+      <span
+        onClick={() => dispatch(commitTerm)}
+        className="mr2 pointer blue hover-light-blue underline">
         コミット
       </span>
 
       <span
-        onClick={() => dispatch(visitMainMenu)}
-        className="pointer blue hover-light-blue underline">
+        onClick={() => dispatch(returnToTermSelect)}
+        className="pointer blue hover-light-blue underline mr2">
           戻る
       </span>
 
-      <span className="pointer mr2 blue hover-light-blue underline">
+      <span
+        onClick={() => dispatch(deleteTerm)}
+        className="pointer mr2 blue hover-light-blue underline">
         削除
       </span>
     </div>;
@@ -188,7 +197,60 @@ export function editNoteContent(dispatch: (action: Action) => void) {
         </div>
 
         <div>
+          <div>
+            勉強モード
+          </div>
+          <div>
+            <label className="dib">
+              思出<input className="ml2 mr3"
+                       type="checkbox"
+                       onChange={toggleDispatcher(dispatch, "studyByProduce")}
+                       checked={state.toggles.studyByProduce}/>
+            </label>
+            <label className="dib">
+              聞取<input className="ml2 mr3" type="checkbox"
+                       onChange={toggleDispatcher(dispatch, "studyByListen")}
+                       checked={state.toggles.studyByListen}/>
+            </label>
+            <label className="dib">
+              認識<input className="ml2 mr3" type="checkbox"
+                       onChange={toggleDispatcher(dispatch, "studyByRecognize")}
+                       checked={state.toggles.studyByRecognize}/>
+            </label>
+            <label className="dib">
+              出力<input className="ml2 mr3" type="checkbox"
+                       onChange={toggleDispatcher(dispatch, "studyBySpeak")}
+                       checked={state.toggles.studyBySpeak}/>
+            </label>
+          </div>
         </div>
+
+        { state.toggles.studyByListen || state.toggles.studyBySpeak ? <div>
+          <span>
+            発音上書き
+          </span>
+          <button className="ml3 br2" onClick={() => dispatch(testPronounciation)}>
+            テスト
+          </button>
+          <div className="w-100">
+            <TextInput
+              onChange={inputChangeDispatcher(dispatch, "termPronounce", state.inputs.termPronounce)}
+              onBlur={applyInputChangeDispatcher(dispatch, "termPronounce")}
+              value={state.inputs.termPronounce}
+              className="w-100"/>
+          </div>
+        </div> : null }
+
+        { state.toggles.studyByProduce || state.toggles.studyByProduce ? <div>
+          言葉分割
+          <div className="w-100">
+            <TextInput
+              onChange={inputChangeDispatcher(dispatch, "termClozes", state.inputs.termClozes)}
+              onBlur={applyInputChangeDispatcher(dispatch, "termClozes")}
+              value={state.inputs.termClozes}
+              className="w-100"/>
+          </div>
+        </div> : null }
 
         <div>
           辞書を検索
@@ -202,64 +264,12 @@ export function editNoteContent(dispatch: (action: Action) => void) {
         </div>
 
         <div className="tc">
-          {(function () {
-            const original = state.inputs.termSearchBy;
-
-            switch (state.editingNoteNormalized.attributes.language) {
-              case "Cantonese":
-                return <div>
-                  <a target="_blank"
-                     className="hover-light-blue blue mh1"
-                     href={`http://www.cantonese.sheik.co.uk/dictionary/search/?searchtype=1&text=${original}`}>
-                    CantoD
-                  </a>
-                  <a target="_blank"
-                     className="hover-light-blue blue mh1"
-                     href={`https://glosbe.com/ja/yue/${original}`}>
-                    Glosbe
-                  </a>
-                  <a target="_blank"
-                     className="hover-light-blue blue mh1"
-                     href={`https://www.google.co.jp/?q=${original}とは`}>
-                    Google
-                  </a>
-                </div>;
-
-              default:
-              case "English":
-                return <div/>
-
-              case "Japanese":
-                return <div>
-                  <a target="_blank"
-                     className="hover-light-blue blue mh1"
-                     href={`https://www.sanseido.biz/User/Dic/Index.aspx?TWords=${original}&st=0&DailyJJ=checkbox&DailyEJ=checkbox&DailyJE=checkbox`}>
-                    Sansei
-                  </a>
-                  <a target="_blank"
-                     className="hover-light-blue blue mh1"
-                     href={"http://jisho.org/search/" + original}>Jisho</a>
-                  <a target="_blank"
-                     className="hover-light-blue blue mh1"
-                     href={`http://eow.alc.co.jp/search?q=${original}&ref=sa`}>
-                    Alc
-                  </a>
-                  <a target="_blank"
-                     className="hover-light-blue blue mh1"
-                     href={`http://dictionary.goo.ne.jp/srch/all/${original}/m0u/`}>
-                    Yahoo
-                  </a>
-                  <a target="_blank"
-                     className="hover-light-blue blue mh1"
-                     href={`https://www.google.co.jp/?q=${original}とは`}>
-                    Google
-                  </a>
-                </div>;
-            }
-          })()}
+          <DictionaryLookup language={state.editingNoteNormalized.attributes.language}
+                            word={state.inputs.termSearchBy}/>
         </div>
 
       </div>
     </div>
   }
 }
+

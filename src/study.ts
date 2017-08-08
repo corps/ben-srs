@@ -1,4 +1,4 @@
-import {Cloze, Language, newNormalizedTerm, NormalizedNote} from "./model";
+import {Cloze, Language, newNormalizedTerm, NormalizedNote, NormalizedTerm} from "./model";
 import {Indexer, IndexIterator} from "redux-indexers";
 import {State} from "./state";
 
@@ -147,4 +147,36 @@ export function addNewTerm(note: NormalizedNote, left: number, right: number): N
   note.attributes.content = content;
 
   return note;
+}
+
+export function getTermFragment(note: NormalizedNote,
+                                term: NormalizedTerm,
+                                termOverride = term.attributes.reference,
+                                grabCharsMax = 30) {
+  let content = note.attributes.content;
+  for (let noteTerm of note.attributes.terms) {
+    if (noteTerm.attributes.reference === term.attributes.reference &&
+      noteTerm.attributes.marker === term.attributes.marker) {
+      continue;
+    }
+    let range = findTermRange(noteTerm, content);
+    if (range[0] === -1) continue;
+    content = content.slice(0, range[0]) + noteTerm.attributes.reference + content.slice(range[1]);
+  }
+
+
+  let contentRange = findContentRange(term, note.attributes.content, grabCharsMax);
+  if (contentRange[0] === -1) return "";
+  content = content.slice(contentRange[0], contentRange[1]);
+
+  let range = findTermRange(term, content);
+  if (range[0] === -1) return "";
+
+  return content.slice(0, range[0]) + termOverride + content.slice(range[1]);
+}
+
+export function findTermInNormalizedNote(note: NormalizedNote, reference: string, marker: string): NormalizedTerm | 0 {
+  for (let term of note.attributes.terms) {
+    if (term.attributes.reference === reference, term.attributes.marker === marker) return term;
+  }
 }
