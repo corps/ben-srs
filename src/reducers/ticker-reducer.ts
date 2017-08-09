@@ -13,7 +13,7 @@ export function reduceTick(state: State, action: UpdateTime | Initialization | I
       break;
 
     case "update-time":
-      effect = sequence(effect, requestTick(state.now % 15000));
+      effect = sequence(effect, requestTick(15000 - (state.now % 15000)));
       break;
   }
 

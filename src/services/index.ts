@@ -9,9 +9,11 @@ import {withAsyncStorage} from "kamo-reducers/services/async-storage";
 import {withWorkers} from "kamo-reducers/services/workers";
 import {withSpeech} from "./speech";
 import {withKeyPresses} from "./keypresses";
+import {withTime} from "kamo-reducers/services/time";
 
 export const newServiceConfig = {
   storageService: withAsyncStorage as Service,
+  timeService: withTime(Date.now()) as Service,
   windowFocus: withWindowFocus,
 };
 
@@ -23,6 +25,7 @@ export function getServices(config = newServiceConfig): Service[] {
   services.push(withSequenced);
   services.push(withSpeech);
   services.push(withLogin);
+  if (config.timeService) services.push(config.timeService);
   services.push(withKeyPresses);
   services.push(config.storageService);
   services.push(withWorkers(require("worker-loader!./worker")));

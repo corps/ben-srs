@@ -3,6 +3,7 @@ import {Language, newNormalizedNote, newNote, newSettings, NormalizedNote} from 
 import {DropboxListFolderResponse} from "./reducers/sync-reducer";
 import {SideEffect} from "kamo-reducers/reducers";
 import {SpeechVoice} from "./services/speech";
+import {StudyDetails} from "./study";
 
 export const newCounts = {
   today: 0,
@@ -54,9 +55,13 @@ export const initialState = {
     studyByRecognize: false,
     studyBySpeak: false,
     studyByListen: false,
+    showBack: false,
   },
 
-  editingNoteMode: "term" as EditingNoteMode,
+  studyDetails: null as StudyDetails,
+  studyStarted: Date.now(),
+
+  editingNoteMode: "select" as EditingNoteMode,
   editingNote: newNote,
   editingNoteNormalized: newNormalizedNote,
   selectTermLeft: -1,

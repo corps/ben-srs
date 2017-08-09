@@ -7,8 +7,7 @@ import {clickLogin, clickLogout} from "../reducers/session-reducer";
 import {SelectSingle} from "../components/select-single";
 import {applyInputChange} from "kamo-reducers/reducers/inputs";
 import {visitNewNote} from "../reducers/new-note-reducer";
-import {visitEditNote} from "../reducers/edit-note-reducer";
-import {visitStudy} from "../reducers/study-reducer";
+import {visitEditNote, visitStudy} from "../reducers/main-menu-reducer";
 
 export function mainMenuContent(dispatch: (action: Action) => void) {
   return (state: State) => {
@@ -58,7 +57,7 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
       <div className="tc">
         <div className="mv2">
           <CircleButton
-            onClick={() => dispatch(visitStudy)}
+            onClick={() => dispatch(visitStudy())}
             red className="mh2 pointer dim">
             <span className="fw6">訓</span>
             <span className="fw3">練</span>

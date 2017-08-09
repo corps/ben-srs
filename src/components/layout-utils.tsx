@@ -24,18 +24,12 @@ export function FlexContainer(props: FlexContainerOptions & ClassAndChildren) {
 export interface ColumnOptions {
   fixedColumn?: boolean
   stretchColumn?: boolean
-  rightBorder?: boolean
-  sideMenuOpened?: boolean
-  sideMenuClosed?: boolean
 }
 
 const classesForColumn = classNamesGeneratorFor<ColumnOptions>(add => {
   add("fixedColumn", <div className="flex-none"/>);
   add("stretchColumn", <div className="flex-auto"/>);
-  add("rightBorder", <div className="br"/>);
-  add("sideMenuOpened", <div className="wmenu width-animate"/>);
-  add("sideMenuClosed", <div className="w3 width-animate"/>);
-}, <div className="b--light-gray flex-column flex items-stretch"/>);
+}, <div className="flex-column flex items-stretch"/>);
 
 export function Column(props: ColumnOptions & ClassAndChildren) {
   return <div className={classesForColumn(props)}>
@@ -46,14 +40,12 @@ export function Column(props: ColumnOptions & ClassAndChildren) {
 export interface RowOptions {
   stretchRow?: boolean
   fixedRow?: boolean
-  bottomBorder?: boolean
 }
 
 const classesForRow = classNamesGeneratorFor<RowOptions>(add => {
   add("stretchRow", <div className="flex-auto"/>);
   add("fixedRow", <div className="flex-none"/>);
-  add("bottomBorder", <div className="bb"/>);
-}, <div className="b--light-gray flex flex-row items-stretch"/>);
+}, <div className="flex flex-row items-stretch"/>);
 
 export function Row(props: RowOptions & ClassAndChildren) {
   return <div className={classesForRow(props)}>

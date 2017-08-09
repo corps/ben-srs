@@ -8,6 +8,9 @@ import {Action, reducer} from "./reducer";
 import {trackMutations} from "kamo-reducers/track-mutations";
 import {getServices} from "./services";
 import {developmentView} from "./development-view";
+import {denormalizedNote, loadIndexables} from "./indexes";
+import {NoteFactory} from "../tests/factories/notes-factories";
+import {studyDetailsForCloze} from "./study";
 
 declare var require: any;
 
@@ -47,7 +50,21 @@ subscription.add(generateRootElement().subscribe((element: HTMLElement) => {
 
   renderer = trackMutations(renderer);
 
-  subscription.add(renderLoop<State, Action>(renderer, reducer, getServices(), initialState).subscribe(e => {
+  let noteFactory = new NoteFactory();
+
+  noteFactory.addTerm();
+  let termFactory = noteFactory.addTerm();
+  noteFactory.addTerm();
+
+  termFactory.addCloze();
+  termFactory.addCloze();
+
+  let state = {...initialState};
+  state.indexes = loadIndexables(state.indexes, [denormalizedNote(noteFactory.note, "", "", "")]);
+  state.studyDetails = studyDetailsForCloze(state.indexes.clozes.byLanguageAndNextDue[0][1], state.indexes) || null;
+  state.location = "study";
+
+  subscription.add(renderLoop<State, Action>(renderer, reducer, getServices(), state).subscribe(e => {
     switch (e[0]) {
       case "a":
         console.log("action", e[1]);

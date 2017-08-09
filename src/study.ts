@@ -1,15 +1,23 @@
 import {Cloze, Language, newNormalizedTerm, NormalizedNote, NormalizedTerm} from "./model";
-import {Indexer, IndexIterator} from "redux-indexers";
+import {Indexer} from "redux-indexers";
 import {State} from "./state";
+import {findNoteTree, normalizedNote} from "./indexes";
 
 export interface StudyDetails {
   cloze: Cloze
-  contentRange: [number, number]
+  content: string
   beforeTerm: string
   beforeCloze: string
   clozed: string
   afterCloze: string
   afterTerm: string
+}
+
+export interface TermId {
+  attributes: {
+    marker: string
+    reference: string
+  }
 }
 
 const divisible = [
@@ -23,20 +31,16 @@ const allNotDivisibleRegex = new RegExp("[^" + divisibleRegex.source + "]*");
 const allNotDivisibleTailRegex = new RegExp(allNotDivisibleRegex.source + "$");
 const allNotDivisibleHeadRegex = new RegExp("^" + allNotDivisibleRegex.source);
 
-export function iterStudySchedule(language: Language,
-                                  fromMinutes: number,
-                                  indexes: State["indexes"]): IndexIterator<StudyDetails> {
-  let dueIter = Indexer.reverseIter(indexes.clozes.byLanguageAndNextDue, [language, fromMinutes]);
-  let undueIter = Indexer.iterator(indexes.clozes.byLanguageAndNextDue, [language, fromMinutes]);
+export function findNextStudyDetails(language: Language,
+                                     fromMinutes: number,
+                                     indexes: State["indexes"]): StudyDetails | 0 {
+  const index = indexes.clozes.byLanguageAndNextDue;
 
-  return () => {
-    for (var cloze = dueIter(); cloze; cloze = dueIter()) {
-      return studyDetailsForCloze(cloze, indexes);
-    }
+  let nextCloze = Indexer.reverseIter(index, [language, fromMinutes], [language, null])();
+  nextCloze = nextCloze || Indexer.iterator(index, [language, fromMinutes], [language, Infinity])();
 
-    for (cloze = undueIter(); cloze; cloze = undueIter()) {
-      return studyDetailsForCloze(cloze, indexes);
-    }
+  if (nextCloze) {
+    return studyDetailsForCloze(nextCloze, indexes);
   }
 }
 
@@ -44,10 +48,11 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: State["indexes"]): S
   let term = Indexer.getFirstMatching(indexes.terms.byNoteIdReferenceAndMarker, [cloze.noteId, cloze.reference, cloze.marker]);
   let note = Indexer.getFirstMatching(indexes.notes.byId, [cloze.noteId]);
   let clozes = Indexer.getAllMatching(indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [cloze.noteId, cloze.reference, cloze.marker]);
+  let noteTree = findNoteTree(indexes, cloze.noteId);
 
-  if (term && note) {
-    let contentRange = findContentRange(term, note.attributes.content);
-    let content = note.attributes.content.slice(contentRange[0], contentRange[1]);
+  if (term && note && noteTree) {
+    let normalized = normalizedNote(noteTree);
+    let content = getTermFragment(normalized, term);
     let termRange = findTermRange(term, content);
     let clozeSplits = splitByClozes(clozes, term.attributes.reference);
 
@@ -55,7 +60,7 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: State["indexes"]): S
 
     return {
       cloze,
-      contentRange,
+      content,
       beforeTerm: content.slice(0, termRange[0]),
       beforeCloze: content.slice(termRange[0], termRange[0] + clozeSplits.slice(0, -1).reduce((sum, next) => sum + next.length, 0)),
       clozed: cloze.attributes.clozed,
@@ -65,7 +70,7 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: State["indexes"]): S
   }
 }
 
-export function findTermRange(term: { attributes: { reference: string, marker: string } }, text: string): [number, number] {
+export function findTermRange(term: TermId, text: string): [number, number] {
   let fullMarker = term.attributes.reference + "[" + term.attributes.marker + "]";
   let start = text.indexOf(fullMarker);
 
@@ -110,7 +115,7 @@ export function findNextUniqueMarker(content: string): string {
   }
 }
 
-export function findContentRange(term: { attributes: { marker: string, reference: string } }, content: string, grabCharsMax = 30): [number, number] {
+export function findContentRange(term: TermId, content: string, grabCharsMax = 30): [number, number] {
   let [termStart, termEnd] = findTermRange(term, content);
   if (termStart === -1) return [-1, -1];
 
@@ -150,7 +155,7 @@ export function addNewTerm(note: NormalizedNote, left: number, right: number): N
 }
 
 export function getTermFragment(note: NormalizedNote,
-                                term: NormalizedTerm,
+                                term: TermId,
                                 termOverride = term.attributes.reference,
                                 grabCharsMax = 30) {
   let content = note.attributes.content;
@@ -179,4 +184,8 @@ export function findTermInNormalizedNote(note: NormalizedNote, reference: string
   for (let term of note.attributes.terms) {
     if (term.attributes.reference === reference, term.attributes.marker === marker) return term;
   }
+}
+
+export function findNextEditableNote(indexes: State["indexes"], lastNoteId = undefined as string) {
+  return Indexer.iterator(indexes.notes.byEditsComplete, [false, lastNoteId], [false, Infinity])();
 }

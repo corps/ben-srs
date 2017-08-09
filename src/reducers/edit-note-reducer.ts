@@ -1,15 +1,11 @@
 import {State} from "../state";
 import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
-import {ClozeType, LanguageSettings, newNormalizeCloze, NormalizedCloze, NormalizedTerm} from "../model";
-import {addNewTerm, findTermInNormalizedNote, findTermRange, getTermFragment} from "../study";
+import {ClozeType, LanguageSettings, newNormalizeCloze, NormalizedCloze, NormalizedTerm, Note} from "../model";
+import {addNewTerm, findNextEditableNote, findTermInNormalizedNote, findTermRange, getTermFragment} from "../study";
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
 import {findVoiceForLanguage, requestSpeech} from "../services/speech";
-
-export interface VisitEditNote {
-  type: "visit-edit-note"
-}
-
-export const visitEditNote: VisitEditNote = {type: "visit-edit-note"};
+import {denormalizedNote, findNoteTree, loadIndexables, normalizedNote, removeNote} from "../indexes";
+import {requestLocalStoreUpdate} from "./session-reducer";
 
 export interface ApplyNoteEdits {
   type: "apply-note-edits"
@@ -71,9 +67,21 @@ export interface DeleteTerm {
 
 export const deleteTerm: DeleteTerm = {type: "delete-term"};
 
-export type EditNoteActions = VisitEditNote | ApplyNoteEdits | StartContentEdit |
+export interface CommitNote {
+  type: "commit-note"
+}
+
+export const commitNote: CommitNote = {type: "commit-note"};
+
+export interface SkipNote {
+  type: "skip-note"
+}
+
+export const skipNote: SkipNote = {type: "skip-note"};
+
+export type EditNoteActions = ApplyNoteEdits | StartContentEdit |
   ReturnToTermSelect | SelectTermCell | SelectEditTerm | TestPronounciation |
-  CommitTerm | DeleteTerm;
+  CommitTerm | DeleteTerm | CommitNote | SkipNote;
 
 export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAction): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;
@@ -81,9 +89,14 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
   let content = state.editingNoteNormalized.attributes.content;
 
   switch (action.type) {
-    case "visit-edit-note":
-      state = {...state};
-      state.location = "edit-note";
+    case "skip-note":
+      var editableNote = findNextEditableNote(state.indexes, state.editingNote.id);
+      if (editableNote) {
+        ({state, effect} = sequenceReduction(effect, startEditingNote(state, editableNote)));
+      } else {
+        state = {...state};
+        state.location = "main";
+      }
       break;
 
     case "return-to-term-select":
@@ -105,6 +118,20 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
 
       let terms = noteAttrs.terms = noteAttrs.terms.slice();
       terms.splice(terms.indexOf(term), 1);
+      break;
+
+    case "commit-note":
+      state = {...state};
+
+      state.indexes = removeNote(state.indexes, state.editingNote);
+      var denormalized = denormalizedNote(state.editingNoteNormalized, state.editingNote.id, state.editingNote.path, state.editingNote.version);
+      denormalized.note = {...denormalized.note};
+      denormalized.note.localEdits = true;
+      denormalized.note.attributes = {...denormalized.note.attributes};
+      denormalized.note.attributes.editsComplete = true;
+
+      state.indexes = loadIndexables(state.indexes, [denormalized]);
+      effect = sequence(effect, requestLocalStoreUpdate(state));
       break;
 
     case "commit-term":
@@ -226,6 +253,22 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
         state.selectTermLeft = action.idx
       }
       break;
+  }
+
+  return {state, effect};
+}
+
+export function startEditingNote(state: State, note: Note): ReductionWithEffect<State> {
+  let effect: SideEffect | 0 = null;
+  state = {...state};
+
+  state.editingNote = note;
+  let tree = findNoteTree(state.indexes, note.id);
+
+  if (tree) {
+    state.editingNoteNormalized = normalizedNote(tree);
+    state.location = "edit-note";
+    state.editingNoteMode = "select";
   }
 
   return {state, effect};

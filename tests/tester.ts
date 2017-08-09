@@ -14,6 +14,7 @@ export class BensrsTester extends Tester<State> {
     let config = {...newServiceConfig};
     config.storageService =
       withSynchronousStorage(new MemoryStorage(), s => JSON.stringify(s), s => s ? JSON.parse(s) : undefined);
+    config.timeService = null;
     config.windowFocus = null;
     return config;
   })();
