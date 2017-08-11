@@ -53,11 +53,19 @@ subscription.add(generateRootElement().subscribe((element: HTMLElement) => {
   let noteFactory = new NoteFactory();
 
   noteFactory.addTerm();
+  noteFactory.addTerm();
+  noteFactory.addTerm();
   let termFactory = noteFactory.addTerm();
+  termFactory.term.attributes.hint = "This would be a hint!  And some more stuff here";
+  noteFactory.addTerm();
+  noteFactory.addTerm();
+  noteFactory.addTerm();
   noteFactory.addTerm();
 
-  termFactory.addCloze();
-  termFactory.addCloze();
+  let clozeFactory = termFactory.addCloze();
+  clozeFactory.cloze.attributes.clozed = termFactory.reference[2];
+  clozeFactory.cloze.attributes.type = "listen";
+
 
   let state = {...initialState};
   state.indexes = loadIndexables(state.indexes, [denormalizedNote(noteFactory.note, "", "", "")]);

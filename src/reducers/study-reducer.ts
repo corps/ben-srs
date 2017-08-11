@@ -1,26 +1,35 @@
-import {State} from "../state";
+import {State, Toggles} from "../state";
 import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
 import {minutesOfTime} from "../utils/time";
 import {findNextStudyDetails} from "../study";
 import {requestTick, UpdateTime} from "kamo-reducers/services/time";
 import {sequence} from "kamo-reducers/services/sequence";
+import {Toggle} from "kamo-reducers/reducers/toggle";
+import {findVoiceForLanguage, requestSpeech} from "../services/speech";
+import {LanguageSettings} from "../model";
 
-
-export interface FlipCard {
-  type: "flip-card",
+export interface ReadCard {
+  type: "read-card"
 }
 
-export const flipCard: FlipCard = {type: "flip-card"};
+export const readCard: ReadCard = {type: "read-card"};
 
-export type StudyActions = FlipCard;
+export type StudyActions = ReadCard;
 
-export function reduceStudy(state: State, action: StudyActions | UpdateTime | IgnoredAction): ReductionWithEffect<State> {
+export function reduceStudy(state: State, action: StudyActions | UpdateTime | IgnoredAction | Toggle<Toggles>): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;
 
   switch (action.type) {
     case "update-time":
-      if (state.location === "study" && !state.toggles.showBack)
-        effect = sequence(effect, requestTick(1000 - (state.now % 1000)));
+      if (state.location !== "study") break;
+      effect = sequence(effect, requestTick(1000 - (state.now % 1000)));
+      break;
+
+    case "read-card":
+      let voice = findVoiceForLanguage(state.voices, LanguageSettings[state.studyDetails.cloze.language].codes);
+      if (voice) {
+        effect = sequence(effect, requestSpeech(voice, state.studyDetails.spoken));
+      }
       break;
   }
 

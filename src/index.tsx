@@ -18,15 +18,21 @@ if (module.hot) {
 
 let subscription = new Subscription();
 
-class Root extends React.Component<{}, State> {
+type Container<S> = { inner: S };
+
+class Root extends React.Component<{}, Container<State>> {
   public view: (state: State) => JSX.Element;
 
   render(): JSX.Element {
     if (this.view) {
-      return this.view(this.state);
+      return this.view(this.state.inner);
     }
 
     return null;
+  }
+
+  shouldComponentUpdate(nextProps: any, nextState: Container<State>) {
+    return this.state.inner !== nextState.inner;
   }
 }
 
@@ -40,7 +46,7 @@ subscription.add(generateRootElement().subscribe((element: HTMLElement) => {
     }
 
     if (state) {
-      root.setState(state, next);
+      root.setState({inner: state}, next);
     }
   };
 

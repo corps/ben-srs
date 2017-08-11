@@ -4,6 +4,7 @@ import {
 } from "../../src/model";
 import {genId, genNum, genPastTime, genSomeText} from "./general-factories";
 import {Answer} from "../../src/scheduler";
+import {fullTermMarker} from "../../src/study";
 
 
 export class NoteFactory {
@@ -19,7 +20,7 @@ export class NoteFactory {
   addTerm(reference = genId(), postContent = " " + genSomeText() + " ") {
     let factory = new TermFactory(reference);
 
-    this.note.attributes.content += factory.term.attributes.reference + "[" + factory.term.attributes.marker + "]";
+    this.note.attributes.content += fullTermMarker(factory.term);
     this.note.attributes.content += postContent;
     this.note.attributes.terms.push(factory.term);
 

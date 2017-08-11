@@ -1,6 +1,9 @@
 import {test, testModule} from "../qunit";
 import {newTerm} from "../../src/model";
-import {findContentRange, findNextUniqueMarker, findTermRange, studyDetailsForCloze} from "../../src/study";
+import {
+  findContentRange, findNextUniqueMarker, findTermRange, fullTermMarker, getTermFragment,
+  studyDetailsForCloze
+} from "../../src/study";
 import {NoteFactory} from "../factories/notes-factories";
 import {denormalizedNote, indexesInitialState, loadIndexables} from "../../src/indexes";
 import {genSomeText} from "../factories/general-factories";
@@ -105,11 +108,8 @@ test("studyDetailsForCloze", (assert) => {
 
   assert.equal(clozes.length, 3);
 
-  let content = factory.note.attributes.content;
-  let contentRange = findContentRange(targetTerm, content);
-  content = content.slice(contentRange[0], contentRange[1]);
-
-  let termPlusMarker = targetTerm.attributes.reference + "[" + targetTerm.attributes.marker + "]";
+  let termPlusMarker = fullTermMarker(targetTerm);
+  let content = getTermFragment(factory.note, targetTerm, termPlusMarker);
 
   assert.deepEqual(studyDetailsForCloze(clozes[0], indexes), {
     afterCloze: termPlusMarker.slice(1),
@@ -118,7 +118,9 @@ test("studyDetailsForCloze", (assert) => {
     beforeTerm: content.slice(0, content.indexOf(termPlusMarker)),
     cloze: clozes[0],
     clozed: "a",
-    contentRange,
+    content,
+    hint: targetTerm.attributes.hint,
+    type: clozes[0].attributes.type,
   });
 
   assert.deepEqual(studyDetailsForCloze(clozes[1], indexes), {
@@ -128,7 +130,9 @@ test("studyDetailsForCloze", (assert) => {
     beforeTerm: content.slice(0, content.indexOf(termPlusMarker)),
     cloze: clozes[1],
     clozed: "a",
-    contentRange,
+    content,
+    hint: targetTerm.attributes.hint,
+    type: clozes[1].attributes.type,
   });
 
   assert.deepEqual(studyDetailsForCloze(clozes[2], indexes), {
@@ -138,6 +142,8 @@ test("studyDetailsForCloze", (assert) => {
     beforeTerm: content.slice(0, content.indexOf(termPlusMarker)),
     cloze: clozes[2],
     clozed: "d",
-    contentRange,
+    content,
+    hint: targetTerm.attributes.hint,
+    type: clozes[2].attributes.type,
   });
 });

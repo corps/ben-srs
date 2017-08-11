@@ -1,4 +1,4 @@
-import {Cloze, Language, newNormalizedTerm, NormalizedNote, NormalizedTerm} from "./model";
+import {Cloze, ClozeType, Language, newNormalizedTerm, NormalizedNote, NormalizedTerm} from "./model";
 import {Indexer} from "redux-indexers";
 import {State} from "./state";
 import {findNoteTree, normalizedNote} from "./indexes";
@@ -6,11 +6,15 @@ import {findNoteTree, normalizedNote} from "./indexes";
 export interface StudyDetails {
   cloze: Cloze
   content: string
+  spoken: string
   beforeTerm: string
   beforeCloze: string
   clozed: string
   afterCloze: string
   afterTerm: string
+  hint: string
+  definition: string
+  type: ClozeType
 }
 
 export interface TermId {
@@ -52,7 +56,7 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: State["indexes"]): S
 
   if (term && note && noteTree) {
     let normalized = normalizedNote(noteTree);
-    let content = getTermFragment(normalized, term);
+    let content = getTermFragment(normalized, term, fullTermMarker(term));
     let termRange = findTermRange(term, content);
     let clozeSplits = splitByClozes(clozes, term.attributes.reference);
 
@@ -60,18 +64,22 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: State["indexes"]): S
 
     return {
       cloze,
-      content,
+      definition: term.attributes.definition,
+      content: content,
+      spoken: content.replace(fullTermMarker(term), term.attributes.pronounce || term.attributes.reference),
       beforeTerm: content.slice(0, termRange[0]),
       beforeCloze: content.slice(termRange[0], termRange[0] + clozeSplits.slice(0, -1).reduce((sum, next) => sum + next.length, 0)),
       clozed: cloze.attributes.clozed,
       afterCloze: content.slice(termRange[0] + clozeSplits.reduce((sum, next) => sum + next.length, 0), termRange[1]),
-      afterTerm: content.slice(termRange[1]),
+      afterTerm: content.slice(termRange[1], cloze.reference.length),
+      hint: term.attributes.hint,
+      type: cloze.attributes.type,
     }
   }
 }
 
 export function findTermRange(term: TermId, text: string): [number, number] {
-  let fullMarker = term.attributes.reference + "[" + term.attributes.marker + "]";
+  let fullMarker = fullTermMarker(term);
   let start = text.indexOf(fullMarker);
 
   if (start === -1) {
@@ -147,7 +155,7 @@ export function addNewTerm(note: NormalizedNote, left: number, right: number): N
   normalizedTerm.attributes.reference = reference;
   normalizedTerm.attributes.marker = marker;
 
-  content = content.slice(0, left) + reference + "[" + marker + "]" + content.slice(right);
+  content = content.slice(0, left) + fullTermMarker(normalizedTerm) + content.slice(right);
   note.attributes.terms = note.attributes.terms.concat([normalizedTerm]);
   note.attributes.content = content;
 
@@ -188,4 +196,9 @@ export function findTermInNormalizedNote(note: NormalizedNote, reference: string
 
 export function findNextEditableNote(indexes: State["indexes"], lastNoteId = undefined as string) {
   return Indexer.iterator(indexes.notes.byEditsComplete, [false, lastNoteId], [false, Infinity])();
+}
+
+export function fullTermMarker(term: TermId) {
+  if (term.attributes.marker.indexOf(term.attributes.reference) === 0) return term.attributes.marker;
+  return term.attributes.reference + "[" + term.attributes.marker + "]";
 }
