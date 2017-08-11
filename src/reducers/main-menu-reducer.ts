@@ -19,14 +19,10 @@ export const visitEditNote: VisitEditNote = {type: "visit-edit-note"};
 
 export interface VisitStudy {
   type: "visit-study"
-  when: number
 }
 
-export function visitStudy(when = Date.now()): VisitStudy {
-  return {
-    type: "visit-study",
-    when
-  };
+export const visitStudy: VisitStudy = {
+  type: "visit-study"
 }
 
 
@@ -50,9 +46,8 @@ export function reduceMainMenu(state: State, action: MainMenuActions | IgnoredAc
 
     case "visit-study":
       state = {...state};
-      state.now = action.when;
 
-      ({state, effect} = sequenceReduction(effect, startStudyingNextCard(state)))
+      ({state, effect} = sequenceReduction(effect, startStudyingNextCard(state)));
       break;
   }
 

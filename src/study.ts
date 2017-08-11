@@ -58,7 +58,8 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: State["indexes"]): S
     let normalized = normalizedNote(noteTree);
     let content = getTermFragment(normalized, term, fullTermMarker(term));
     let termRange = findTermRange(term, content);
-    let clozeSplits = splitByClozes(clozes, term.attributes.reference);
+    let reference = term.attributes.reference;
+    let clozeSplits = splitByClozes(clozes, reference);
 
     clozeSplits = clozeSplits.slice(0, 2 * (cloze.clozeIdx + 1));
 
@@ -66,12 +67,12 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: State["indexes"]): S
       cloze,
       definition: term.attributes.definition,
       content: content,
-      spoken: content.replace(fullTermMarker(term), term.attributes.pronounce || term.attributes.reference),
+      spoken: content.replace(fullTermMarker(term), term.attributes.pronounce || reference),
       beforeTerm: content.slice(0, termRange[0]),
-      beforeCloze: content.slice(termRange[0], termRange[0] + clozeSplits.slice(0, -1).reduce((sum, next) => sum + next.length, 0)),
+      beforeCloze: reference.slice(0, clozeSplits.slice(0, -1).reduce((sum, next) => sum + next.length, 0)),
       clozed: cloze.attributes.clozed,
-      afterCloze: content.slice(termRange[0] + clozeSplits.reduce((sum, next) => sum + next.length, 0), termRange[1]),
-      afterTerm: content.slice(termRange[1], cloze.reference.length),
+      afterCloze: reference.slice(clozeSplits.reduce((sum, next) => sum + next.length, 0)),
+      afterTerm: content.slice(termRange[1]),
       hint: term.attributes.hint,
       type: cloze.attributes.type,
     }

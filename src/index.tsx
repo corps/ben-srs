@@ -32,7 +32,7 @@ class Root extends React.Component<{}, Container<State>> {
   }
 
   shouldComponentUpdate(nextProps: any, nextState: Container<State>) {
-    return this.state.inner !== nextState.inner;
+    return !this.state || this.state.inner !== nextState.inner;
   }
 }
 

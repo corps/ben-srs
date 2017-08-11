@@ -112,7 +112,7 @@ test("studyDetailsForCloze", (assert) => {
   let content = getTermFragment(factory.note, targetTerm, termPlusMarker);
 
   assert.deepEqual(studyDetailsForCloze(clozes[0], indexes), {
-    afterCloze: termPlusMarker.slice(1),
+    afterCloze: targetTerm.attributes.reference.slice(1),
     afterTerm: content.slice(content.indexOf(termPlusMarker) + termPlusMarker.length),
     beforeCloze: "",
     beforeTerm: content.slice(0, content.indexOf(termPlusMarker)),
@@ -121,10 +121,12 @@ test("studyDetailsForCloze", (assert) => {
     content,
     hint: targetTerm.attributes.hint,
     type: clozes[0].attributes.type,
+    definition: targetTerm.attributes.definition,
+    spoken: content.replace(termPlusMarker, targetTerm.attributes.pronounce),
   });
 
   assert.deepEqual(studyDetailsForCloze(clozes[1], indexes), {
-    afterCloze: termPlusMarker.slice(3),
+    afterCloze: targetTerm.attributes.reference.slice(3),
     afterTerm: content.slice(content.indexOf(termPlusMarker) + termPlusMarker.length),
     beforeCloze: "ab",
     beforeTerm: content.slice(0, content.indexOf(termPlusMarker)),
@@ -133,10 +135,12 @@ test("studyDetailsForCloze", (assert) => {
     content,
     hint: targetTerm.attributes.hint,
     type: clozes[1].attributes.type,
+    definition: targetTerm.attributes.definition,
+    spoken: content.replace(termPlusMarker, targetTerm.attributes.pronounce),
   });
 
   assert.deepEqual(studyDetailsForCloze(clozes[2], indexes), {
-    afterCloze: termPlusMarker.slice(4),
+    afterCloze: targetTerm.attributes.reference.slice(4),
     afterTerm: content.slice(content.indexOf(termPlusMarker) + termPlusMarker.length),
     beforeCloze: "aba",
     beforeTerm: content.slice(0, content.indexOf(termPlusMarker)),
@@ -145,5 +149,7 @@ test("studyDetailsForCloze", (assert) => {
     content,
     hint: targetTerm.attributes.hint,
     type: clozes[2].attributes.type,
+    definition: targetTerm.attributes.definition,
+    spoken: content.replace(termPlusMarker, targetTerm.attributes.pronounce),
   });
 });

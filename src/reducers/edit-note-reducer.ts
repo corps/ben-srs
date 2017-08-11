@@ -142,9 +142,10 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
       var term = findTermInNormalizedNote(editingNote, state.editingTermReference, state.editingTermMarker);
       if (!term)  break;
 
-      term = {...term};
-
       let existingIdx = editingNote.attributes.terms.indexOf(term);
+      if (existingIdx === -1) throw new Error("Bug");
+
+      term = {...term};
       editingNote.attributes = {...editingNote.attributes};
       editingNote.attributes.terms = editingNote.attributes.terms.slice();
       editingNote.attributes.terms.splice(existingIdx, 1, term);

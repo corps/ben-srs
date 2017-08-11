@@ -6,7 +6,7 @@ import {SimpleNavLink} from "../components/simple-nav-link";
 import {visitMainMenu} from "../reducers/main-menu-reducer";
 import {describeDuration, timeOfMinutes} from "../utils/time";
 import {StudyDetails} from "../study";
-import {readCard} from "../reducers/study-reducer";
+import {answerCard, editCard, readCard} from "../reducers/study-reducer";
 import {toggle} from "kamo-reducers/reducers/toggle";
 
 export function studyContent(dispatch: (action: Action) => void) {
@@ -19,7 +19,7 @@ export function studyContent(dispatch: (action: Action) => void) {
           <VCentered className="tc">
             <div>
             <span className="dn dib-l">
-              (裏返し <span className="pv1 ph2 br2 bg-gray white">f</span>)
+              <span className="pv1 ph2 br2 bg-gray white">f</span>
             </span>
 
               <span className="mh2">経過</span>
@@ -42,7 +42,7 @@ export function studyContent(dispatch: (action: Action) => void) {
       </Row>
 
       <Row stretchRow className="w-100 overflow-y-auto word-wrap">
-        <div className="w-100 f3 ph3 pv2"
+        <div className="w-100 f3 pv2"
              onClick={(e) => e.target instanceof HTMLButtonElement ? null : dispatch(toggle<Toggles>("showBack"))}>
           <VCenteringContainer>
             <VCentered>
@@ -57,7 +57,7 @@ export function studyContent(dispatch: (action: Action) => void) {
   function FrontSide(state: State) {
     let studyDetails = state.studyDetails;
 
-    return <div className="tc mw6 center">
+    return <div className="tc ph3 mw6 center">
       {(function () {
         switch (studyDetails.type) {
           case "produce":
@@ -155,8 +155,26 @@ export function studyContent(dispatch: (action: Action) => void) {
   }
 
   function BackSide(state: State) {
-    return <div>
-      <div className="h4 overflow-y-auto overflow-x-hidden">
+    const timeToAnswer = state.now - state.studyStarted;
+
+
+    return <div className="mw6 center">
+      <div className="f4 ph3 mb2 tc">
+        {state.studyDetails.beforeCloze}
+
+        <span className="fw8 mh1">
+          {state.studyDetails.clozed}
+        </span>
+
+        {state.studyDetails.afterCloze}
+
+        <button className="mh1 pa1 br2 f5"
+                onClick={() => dispatch(readCard)}>
+          読み上げ
+        </button>
+      </div>
+
+      <div className="f5 h5 overflow-x-hidden overflow-y-auto ph3">
         {state.studyDetails.definition.split("\n").map((s, i) => <span key={i + ""}>{s}<br/></span>)}
         asdfjalsk asjdfkl adl fajskdl fjkdfaklsdjfkaljdf jdl fajksld fjas ljd fjasdfaskjdfl<br/>
         amdlfjasda asjdf asjd jfkasdlf<br/>
@@ -168,6 +186,25 @@ export function studyContent(dispatch: (action: Action) => void) {
         akdlfjaskdfj asjdfkasdf<br/>
         ajkdfjajkjdaflkkdksfjkladjkfladflk<br/>
         jakdjfkjalsdjkalsf
+      </div>
+
+      <div className="f5 mt2 tc">
+        <button className="mh1 pa1 br2"
+                onClick={() => dispatch(answerCard(["f", timeToAnswer < 6 ? 3.5 : 2.2]))}>
+          OK!
+        </button>
+        <button className="mh1 pa1 br2"
+                onClick={() => dispatch(answerCard(["d", 60]))}>
+          スキップ
+        </button>
+        <button className="mh1 pa1 br2"
+                onClick={() => dispatch(answerCard(["f", 0.4]))}>
+          間違えた！
+        </button>
+        <button className="mh1 pa1 br2"
+                onClick={() => dispatch(editCard)}>
+          編集
+        </button>
       </div>
     </div>
   }

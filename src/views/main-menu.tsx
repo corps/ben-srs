@@ -57,7 +57,7 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
       <div className="tc">
         <div className="mv2">
           <CircleButton
-            onClick={() => dispatch(visitStudy())}
+            onClick={() => dispatch(visitStudy)}
             red className="mh2 pointer dim">
             <span className="fw6">訓</span>
             <span className="fw3">練</span>

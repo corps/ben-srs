@@ -1,12 +1,17 @@
 import {State, Toggles} from "../state";
 import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
 import {minutesOfTime} from "../utils/time";
-import {findNextStudyDetails} from "../study";
+import {findNextStudyDetails, findTermInNormalizedNote} from "../study";
 import {requestTick, UpdateTime} from "kamo-reducers/services/time";
-import {sequence} from "kamo-reducers/services/sequence";
+import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
 import {Toggle} from "kamo-reducers/reducers/toggle";
 import {findVoiceForLanguage, requestSpeech} from "../services/speech";
 import {LanguageSettings} from "../model";
+import {Answer, AnswerDetails, scheduledBy} from "../scheduler";
+import {startEditingNote, startEditingTerm} from "./edit-note-reducer";
+import {Indexer} from "redux-indexers";
+import {denormalizedNote, findNoteTree, loadIndexables, normalizedNote} from "../indexes";
+import {requestLocalStoreUpdate} from "./session-reducer";
 
 export interface ReadCard {
   type: "read-card"
@@ -14,10 +19,32 @@ export interface ReadCard {
 
 export const readCard: ReadCard = {type: "read-card"};
 
-export type StudyActions = ReadCard;
+export interface AnswerCard {
+  type: "answer-card"
+  details: AnswerDetails
+}
+
+export function answerCard(details: AnswerDetails): AnswerCard {
+  return {
+    type: "answer-card",
+    details
+  }
+}
+
+export interface EditCard {
+  type: "edit-card"
+}
+
+export const editCard: EditCard = {
+  type: "edit-card"
+};
+
+export type StudyActions = ReadCard | AnswerCard | EditCard;
 
 export function reduceStudy(state: State, action: StudyActions | UpdateTime | IgnoredAction | Toggle<Toggles>): ReductionWithEffect<State> {
   let effect: SideEffect | 0 = null;
+
+  let cloze = state.studyDetails && state.studyDetails.cloze;
 
   switch (action.type) {
     case "update-time":
@@ -26,9 +53,59 @@ export function reduceStudy(state: State, action: StudyActions | UpdateTime | Ig
       break;
 
     case "read-card":
-      let voice = findVoiceForLanguage(state.voices, LanguageSettings[state.studyDetails.cloze.language].codes);
+      let voice = findVoiceForLanguage(state.voices, LanguageSettings[cloze.language].codes);
       if (voice) {
         effect = sequence(effect, requestSpeech(voice, state.studyDetails.spoken));
+      }
+      break;
+
+    case "answer-card":
+      state = {...state};
+      let answer: Answer = [minutesOfTime(state.now), action.details];
+      let schedule = scheduledBy(cloze.attributes.schedule, answer);
+      var tree = findNoteTree(state.indexes, cloze.noteId);
+
+      if (tree) {
+        let normalized = normalizedNote(tree);
+        let term = findTermInNormalizedNote(normalized, cloze.reference, cloze.marker);
+
+        if (term && term.attributes.clozes.length > cloze.clozeIdx) {
+          let termIdx = normalized.attributes.terms.indexOf(term);
+          term = {...term};
+
+          normalized = {...normalized};
+          normalized.attributes = {...normalized.attributes};
+          normalized.attributes.terms = normalized.attributes.terms.slice();
+          normalized.attributes.terms.splice(termIdx, 1, term);
+
+          term.attributes = {...term.attributes};
+          term.attributes.clozes = term.attributes.clozes.slice();
+          let updatingCloze = term.attributes.clozes[cloze.clozeIdx];
+          updatingCloze = term.attributes.clozes[cloze.clozeIdx] = {...updatingCloze};
+          updatingCloze.attributes = {...updatingCloze.attributes};
+          updatingCloze.attributes.schedule = schedule;
+          updatingCloze.attributes.answers = updatingCloze.attributes.answers.concat([answer]);
+
+          state.indexes = loadIndexables(state.indexes,
+            [denormalizedNote(normalized, tree.note.id, tree.note.path, tree.note.version)]);
+
+          effect = sequence(effect, requestLocalStoreUpdate(state));
+        }
+      }
+
+      ({state, effect} = startStudyingNextCard(state));
+      break;
+
+    case "edit-card":
+      var note = Indexer.getFirstMatching(state.indexes.notes.byId, [cloze.noteId]);
+      var tree = note && findNoteTree(state.indexes, note.id);
+      if (note && tree) {
+        let term = findTermInNormalizedNote(normalizedNote(tree), cloze.reference, cloze.marker);
+
+        if (term) {
+          ({state, effect} = sequenceReduction(effect, startEditingNote(state, note)));
+          ({state, effect} = sequenceReduction(effect, startEditingTerm(state, term)));
+        }
       }
       break;
   }
