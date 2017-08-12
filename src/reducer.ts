@@ -21,6 +21,7 @@ import {MainMenuActions, reduceMainMenu} from "./reducers/main-menu-reducer";
 import {reduceStudy, StudyActions} from "./reducers/study-reducer";
 import {EditNoteActions, reduceEditNote} from "./reducers/edit-note-reducer";
 import {reduceToggle, Toggle} from "kamo-reducers/reducers/toggle";
+import {reduceSpeech} from "./reducers/speech-reducer";
 
 export type Action = UpdateTime | NavigationAction | SessionActions | Keypress | Toggle<Toggles> |
   InputAction<Inputs> | NewNoteActions | MainMenuActions | StudyActions | EditNoteActions;
@@ -37,6 +38,7 @@ export function reducer(state: State, action: Action): ReductionWithEffect<State
     .apply(reduceAwaiting)
     .apply(reduceSession)
     .apply(reduceSync)
+    .apply(reduceSpeech)
     .apply(reduceKeypresses)
     .apply(reduceMainMenu)
     .apply(reduceNewNote)

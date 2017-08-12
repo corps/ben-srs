@@ -57,7 +57,7 @@ export function studyContent(dispatch: (action: Action) => void) {
   function FrontSide(state: State) {
     let studyDetails = state.studyDetails;
 
-    return <div className="tc ph3 mw6 center">
+    return <div className="tc ph3 mw6 center lh-copy">
       {(function () {
         switch (studyDetails.type) {
           case "produce":
@@ -176,21 +176,11 @@ export function studyContent(dispatch: (action: Action) => void) {
 
       <div className="f5 h5 overflow-x-hidden overflow-y-auto ph3">
         {state.studyDetails.definition.split("\n").map((s, i) => <span key={i + ""}>{s}<br/></span>)}
-        asdfjalsk asjdfkl adl fajskdl fjkdfaklsdjfkaljdf jdl fajksld fjas ljd fjasdfaskjdfl<br/>
-        amdlfjasda asjdf asjd jfkasdlf<br/>
-        akdlfjaskdfj asjdfkasdf<br/>
-        ajkdfjajkjdaflkkdksfjkladjkfladflk<br/>
-        jakdjfkjalsdjkalsf<br/>
-        asdfjalsk asjdfkl adl fajskdl fjkdfaklsdjfkaljdf jdl fajksld fjas ljd fjasdfaskjdfl<br/>
-        amdlfjasda asjdf asjd jfkasdlf<br/>
-        akdlfjaskdfj asjdfkasdf<br/>
-        ajkdfjajkjdaflkkdksfjkladjkfladflk<br/>
-        jakdjfkjalsdjkalsf
       </div>
 
-      <div className="f5 mt2 tc">
+      { state.indexesReady ? <div className="f5 mt2 tc">
         <button className="mh1 pa1 br2"
-                onClick={() => dispatch(answerCard(["f", timeToAnswer < 6 ? 3.5 : 2.2]))}>
+                onClick={() => dispatch(answerCard(["f", timeToAnswer < 15 ? 3.5 : 2.2]))}>
           OK!
         </button>
         <button className="mh1 pa1 br2"
@@ -205,7 +195,7 @@ export function studyContent(dispatch: (action: Action) => void) {
                 onClick={() => dispatch(editCard)}>
           編集
         </button>
-      </div>
+      </div> : null }
     </div>
   }
 }

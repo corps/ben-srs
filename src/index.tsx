@@ -3,7 +3,7 @@ import * as React from "react";
 import * as ReactDom from "react-dom";
 import {initialState, State} from "./state";
 import {generateRootElement} from "kamo-reducers/dom";
-import {renderLoop} from "kamo-reducers/reducers";
+import {GlobalAction, renderLoop} from "kamo-reducers/reducers";
 import {Action, reducer} from "./reducer";
 import {view} from "./view";
 import {getServices} from "./services";
@@ -50,14 +50,26 @@ subscription.add(generateRootElement().subscribe((element: HTMLElement) => {
     }
   };
 
+  let start: number[] = [];
+  let startAction: GlobalAction[] = [];
+
   subscription.add(renderLoop<State, Action>(renderer, reducer, getServices(), initialState).subscribe(e => {
     switch (e[0]) {
       case "a":
-        // console.log(e[1]);
+        start.push(Date.now());
+        startAction.push(e[1] as any);
         break;
 
-      case "s":
-        // console.log(e[1]);
+      case "c":
+        let time = Date.now() - start.pop();
+        let action = startAction.pop();
+
+        console.log("render in", time, "ms");
+
+        if(time > 50) {
+          console.log("slow action:", action);
+        }
+
         break;
     }
   }));

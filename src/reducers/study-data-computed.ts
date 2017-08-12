@@ -1,7 +1,6 @@
 import {memoizeBySomeProperties} from "kamo-reducers/memoizers";
 import {Counts, initialState, newCounts, newStudyData} from "../state";
 import {Index, Indexer} from "redux-indexers";
-import {minutesOfTime} from "../utils/time";
 
 function getPastCounts(index: Index<any>, state: {
   startOfDayMinutes: number,
@@ -42,7 +41,6 @@ function getFutureCounts(index: Index<any>, state: {
 
 export const computeStudyData = memoizeBySomeProperties({
   indexes: initialState.indexes,
-  now: initialState.now,
   inputs: {curLanguage: initialState.inputs.curLanguage},
   startOfDayMinutes: initialState.startOfDayMinutes,
   startOfWeekMinutes: initialState.startOfWeekMinutes,
@@ -66,39 +64,50 @@ export const computeStudyData = memoizeBySomeProperties({
     state.indexes.clozeAnswers.byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx,
     state, languageStartKey, [language, Infinity]);
 
-  const minutesOfNow = minutesOfTime(state.now);
-
   result.studied = getPastCounts(
     state.indexes.clozeAnswers.byLanguageAndAnswered,
-    state, languageStartKey, [language, minutesOfNow]);
+    state, languageStartKey, [language, Infinity]);
 
   result.due = getFutureCounts(
-    state.indexes.clozes.byLanguageAndNextDue, state, languageStartKey, languageStartKey)
+    state.indexes.clozes.byLanguageAndNextDue, state, languageStartKey, languageStartKey);
 
   let answersIter = Indexer.iterator(
     state.indexes.clozeAnswers.byLanguageAndAnswered,
     [language, state.startOfMonthMinutes],
-    [language, minutesOfNow]);
+    [language, Infinity]);
+
+  let answerTimes: number[] = [];
 
   result.studyTimeMinutes = {...newCounts};
 
   let lastAnswer = 0;
+  let sessionStart = 0;
 
   for (let answer = answersIter(); answer; answer = answersIter()) {
     let answered = answer.answer[0];
-    let timeToAdd = answered - lastAnswer;
+    answerTimes.push(answered);
+  }
 
-    if (timeToAdd < 5) {
+  if (answerTimes.length > 0) answerTimes.push(answerTimes[answerTimes.length - 1] + 1);
+  answerTimes.push(Infinity);
+
+  for (let answered of answerTimes) {
+    let diff = answered - lastAnswer;
+
+    if (diff > 5) {
+      let sessionLength = lastAnswer - sessionStart;
+      sessionStart = answered;
+
       if (answered >= state.startOfWeekMinutes) {
-        result.studyTimeMinutes.week += timeToAdd;
+        result.studyTimeMinutes.week += sessionLength;
       }
 
       if (answered >= state.startOfDayMinutes) {
-        result.studyTimeMinutes.today += timeToAdd;
+        result.studyTimeMinutes.today += sessionLength;
       }
 
       if (answered >= state.startOfMonthMinutes) {
-        result.studyTimeMinutes.month += timeToAdd;
+        result.studyTimeMinutes.month += sessionLength;
       }
     }
 

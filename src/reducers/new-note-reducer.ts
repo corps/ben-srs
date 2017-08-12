@@ -34,7 +34,7 @@ export function reduceNewNote(state: State, action: NewNoteActions | IgnoredActi
     case "click-add-new-note":
       state = {...state};
       state.newNotes = {...state.newNotes};
-      let newNote = state.newNotes[uuid.v4() + ".txt"] = {...newNormalizedNote};
+      let newNote = state.newNotes["/" + uuid.v4() + ".txt"] = {...newNormalizedNote};
       newNote.attributes = {...newNote.attributes};
       newNote.attributes.content = state.inputs.newNoteContent;
       newNote.attributes.language = state.inputs.newNoteLanguage;

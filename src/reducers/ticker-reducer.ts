@@ -13,6 +13,10 @@ export function reduceTick(state: State, action: UpdateTime | Initialization | I
       break;
 
     case "update-time":
+      if (!document.hidden) {
+        state = {...state};
+        state.lastWindowVisible = action.absoluteTime;
+      }
       effect = sequence(effect, requestTick(15000 - (state.now % 15000)));
       break;
   }

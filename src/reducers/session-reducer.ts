@@ -45,14 +45,16 @@ export function reduceSession(state: State, action: SessionActions | IgnoredActi
   switch (action.type) {
     case "initialization":
     case "window-focus":
-      ({state, effect} = sequenceReduction(effect, clearOtherSyncProcesses(state)));
+      if (action.type !== "window-focus" || state.lastWindowVisible < Date.now() - 15 * 60 * 1000) {
+        ({state, effect} = sequenceReduction(effect, clearOtherSyncProcesses(state)));
 
-      state = {...state};
-      state.indexesReady = false;
-      state.authReady = false;
+        state = {...state};
+        state.indexesReady = false;
+        state.authReady = false;
 
-      state.clearSyncEffects = sequence(state.clearSyncEffects, cancelLocalLoad(localStoreKey))
-      effect = sequence(effect, requestLocalData(localStoreKey));
+        state.clearSyncEffects = sequence(state.clearSyncEffects, cancelLocalLoad(localStoreKey))
+        effect = sequence(effect, requestLocalData(localStoreKey));
+      }
       break;
 
     case "load-local-data":

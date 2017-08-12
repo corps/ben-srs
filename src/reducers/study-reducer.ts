@@ -12,6 +12,7 @@ import {startEditingNote, startEditingTerm} from "./edit-note-reducer";
 import {Indexer} from "redux-indexers";
 import {denormalizedNote, findNoteTree, loadIndexables, normalizedNote} from "../indexes";
 import {requestLocalStoreUpdate} from "./session-reducer";
+import {startSync} from "./sync-reducer";
 
 export interface ReadCard {
   type: "read-card"
@@ -86,14 +87,17 @@ export function reduceStudy(state: State, action: StudyActions | UpdateTime | Ig
           updatingCloze.attributes.schedule = schedule;
           updatingCloze.attributes.answers = updatingCloze.attributes.answers.concat([answer]);
 
-          state.indexes = loadIndexables(state.indexes,
-            [denormalizedNote(normalized, tree.note.id, tree.note.path, tree.note.version)]);
+          let denormalized = denormalizedNote(normalized, tree.note.id, tree.note.path, tree.note.version);
+          denormalized.note = {...denormalized.note};
+          denormalized.note.localEdits = true;
 
+          state.indexes = loadIndexables(state.indexes, [denormalized]);
           effect = sequence(effect, requestLocalStoreUpdate(state));
+          ({state, effect} = sequenceReduction(effect, startSync(state)));
         }
       }
 
-      ({state, effect} = startStudyingNextCard(state));
+      ({state, effect} = sequenceReduction(effect, startStudyingNextCard(state)));
       break;
 
     case "edit-card":
@@ -118,6 +122,7 @@ export function startStudyingNextCard(state: State): ReductionWithEffect<State> 
 
   let studyDetails = findNextStudyDetails(state.inputs.curLanguage, minutesOfTime(state.now), state.indexes);
   if (studyDetails) {
+    console.log(studyDetails);
     state.studyDetails = studyDetails;
     state.toggles = {...state.toggles};
     state.toggles.showBack = false;

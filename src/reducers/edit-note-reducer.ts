@@ -6,6 +6,7 @@ import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
 import {findVoiceForLanguage, requestSpeech} from "../services/speech";
 import {denormalizedNote, findNoteTree, loadIndexables, normalizedNote, removeNote} from "../indexes";
 import {requestLocalStoreUpdate} from "./session-reducer";
+import {startSync} from "./sync-reducer";
 
 export interface ApplyNoteEdits {
   type: "apply-note-edits"
@@ -122,6 +123,7 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
 
     case "commit-note":
       state = {...state};
+      state.location = "main";
 
       state.indexes = removeNote(state.indexes, state.editingNote);
       var denormalized = denormalizedNote(state.editingNoteNormalized, state.editingNote.id, state.editingNote.path, state.editingNote.version);
@@ -132,6 +134,7 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
 
       state.indexes = loadIndexables(state.indexes, [denormalized]);
       effect = sequence(effect, requestLocalStoreUpdate(state));
+      ({state, effect} = sequenceReduction(effect, startSync(state)));
       break;
 
     case "commit-term":
@@ -228,7 +231,7 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
       if (voice && term) {
         let fragment = getTermFragment(
           state.editingNoteNormalized, term,
-          term.attributes.pronounce || term.attributes.reference);
+          state.inputs.termPronounce || term.attributes.reference);
         effect = sequence(effect, requestSpeech(voice, fragment));
       }
       break;

@@ -58,6 +58,8 @@ export const initialState = {
     showBack: false,
   },
 
+  lastWindowVisible: Date.now(),
+
   studyDetails: null as StudyDetails,
   studyStarted: Date.now(),
 

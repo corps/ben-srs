@@ -39,7 +39,7 @@ export function selectTermContent(dispatch: (action: Action) => void) {
       </div>
 
 
-      <div className="mw6 pv2 ph3">
+      <div className="mw6 pv2 ph3 center">
         {content.split("").map((char, i) => {
           char = char === " " ? "　" : char;
           let termIdx = bisect(termRanges, i, (i, entry) => i - entry.range[1]);
