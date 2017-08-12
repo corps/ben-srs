@@ -1,9 +1,9 @@
 import {State} from "../state";
 import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
-import {ClozeType, LanguageSettings, newNormalizeCloze, NormalizedCloze, NormalizedTerm, Note} from "../model";
+import {ClozeType, newNormalizeCloze, NormalizedCloze, NormalizedTerm, Note} from "../model";
 import {addNewTerm, findNextEditableNote, findTermInNormalizedNote, findTermRange, getTermFragment} from "../study";
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
-import {findVoiceForLanguage, requestSpeech} from "../services/speech";
+import {requestSpeech} from "../services/speech";
 import {denormalizedNote, findNoteTree, loadIndexables, normalizedNote, removeNote} from "../indexes";
 import {requestLocalStoreUpdate} from "./session-reducer";
 import {startSync} from "./sync-reducer";
@@ -220,19 +220,16 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
       break;
 
     case "test-pronounciation":
-      let voice = findVoiceForLanguage(state.voices,
-        LanguageSettings[state.editingNoteNormalized.attributes.language].codes);
-
       var term = findTermInNormalizedNote(
         state.editingNoteNormalized,
         state.editingTermReference,
         state.editingTermMarker);
 
-      if (voice && term) {
+      if (term) {
         let fragment = getTermFragment(
           state.editingNoteNormalized, term,
           state.inputs.termPronounce || term.attributes.reference);
-        effect = sequence(effect, requestSpeech(voice, fragment));
+        effect = sequence(effect, requestSpeech(fragment, state.editingNoteNormalized.attributes.language));
       }
       break;
 

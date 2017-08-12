@@ -1,8 +1,7 @@
 import {test, testModule} from "../qunit";
-import {isSideEffect, serviceOutputs, SideEffect} from "kamo-reducers/reducers";
+import {serviceOutputs, SideEffect} from "kamo-reducers/reducers";
 import {Subject, Subscription} from "kamo-reducers/subject";
-import {findVoiceForLanguage, LoadVoices, requestSpeech, withSpeech} from "../../src/services/speech";
-import {LanguageSettings} from "../../src/model";
+import {requestSpeech, withSpeech} from "../../src/services/speech";
 
 let subscription = new Subscription();
 
@@ -20,40 +19,20 @@ test("speech", (assert) => {
 
   assert.timeout(30000);
 
+  assert.ok(true);
 
-  subscription.add(serviceOutputs(effect$, [withSpeech]).subscribe((ea) => {
-    if (!isSideEffect(ea)) {
-      if (ea.type === "load-voices") {
-        let loadVoices = ea as LoadVoices;
-        let voices = loadVoices.voices;
-        assert.ok(voices.length);
+  subscription.add(serviceOutputs(effect$, [withSpeech]).subscribe(() => 0));
+  setTimeout(() => {
+    effect$.dispatch(requestSpeech("Hello World!", "English"));
+  }, 10);
 
-        setTimeout(() => {
-          let voice = findVoiceForLanguage(voices, LanguageSettings["English"].codes);
-          assert.ok(voice);
-          if (voice) {
-            effect$.dispatch(requestSpeech(voice, "Hello World!"));
-          }
-        }, 10);
+  setTimeout(() => {
+    effect$.dispatch(requestSpeech("こんにちわ", "Japanese"));
+  }, timePerVoice);
 
-        setTimeout(() => {
-          let voice = findVoiceForLanguage(voices, LanguageSettings["Japanese"].codes);
-          assert.ok(voice);
-          if (voice) {
-            effect$.dispatch(requestSpeech(voice, "こんにちわ"));
-          }
-        }, timePerVoice);
+  setTimeout(() => {
+    effect$.dispatch(requestSpeech("好耐冇見", "Cantonese"));
+  }, timePerVoice * 2);
 
-        setTimeout(() => {
-          let voice = findVoiceForLanguage(voices, LanguageSettings["Cantonese"].codes);
-          assert.ok(voice);
-          if (voice) {
-            effect$.dispatch(requestSpeech(voice, "好耐冇見"));
-          }
-        }, timePerVoice * 2);
-
-        setTimeout(finish, timePerVoice * 3);
-      }
-    }
-  }));
+  setTimeout(finish, timePerVoice * 3);
 });

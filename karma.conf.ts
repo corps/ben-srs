@@ -15,6 +15,8 @@ export = function (config: any) {
     // base path that will be used to resolve all patterns (eg. files, exclude)
     basePath: '',
 
+    hostname: "0.0.0.0",
+
     browserNoActivityTimeout: 30000,
 
     // frameworks to use

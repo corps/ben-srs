@@ -5,8 +5,7 @@ import {findNextStudyDetails, findTermInNormalizedNote} from "../study";
 import {requestTick, UpdateTime} from "kamo-reducers/services/time";
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
 import {Toggle} from "kamo-reducers/reducers/toggle";
-import {findVoiceForLanguage, requestSpeech} from "../services/speech";
-import {LanguageSettings} from "../model";
+import {requestSpeech} from "../services/speech";
 import {Answer, AnswerDetails, scheduledBy} from "../scheduler";
 import {startEditingNote, startEditingTerm} from "./edit-note-reducer";
 import {Indexer} from "redux-indexers";
@@ -54,10 +53,7 @@ export function reduceStudy(state: State, action: StudyActions | UpdateTime | Ig
       break;
 
     case "read-card":
-      let voice = findVoiceForLanguage(state.voices, LanguageSettings[cloze.language].codes);
-      if (voice) {
-        effect = sequence(effect, requestSpeech(voice, state.studyDetails.spoken));
-      }
+      effect = sequence(effect, requestSpeech(state.studyDetails.spoken, cloze.language));
       break;
 
     case "answer-card":

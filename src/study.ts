@@ -124,7 +124,7 @@ export function findNextUniqueMarker(content: string): string {
   }
 }
 
-export function findContentRange(term: TermId, content: string, grabCharsMax = 30): [number, number] {
+export function findContentRange(term: TermId, content: string, grabCharsMax = 50): [number, number] {
   let [termStart, termEnd] = findTermRange(term, content);
   if (termStart === -1) return [-1, -1];
 
@@ -166,7 +166,7 @@ export function addNewTerm(note: NormalizedNote, left: number, right: number): N
 export function getTermFragment(note: NormalizedNote,
                                 term: TermId,
                                 termOverride = term.attributes.reference,
-                                grabCharsMax = 30) {
+                                grabCharsMax = 50) {
   let content = note.attributes.content;
   for (let noteTerm of note.attributes.terms) {
     if (noteTerm.attributes.reference === term.attributes.reference &&

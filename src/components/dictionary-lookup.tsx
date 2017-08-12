@@ -29,7 +29,18 @@ export function DictionaryLookup(props: DictionaryLookupProps) {
 
     default:
     case "English":
-      return <div/>
+      return <div>
+        <a target="_blank"
+           className="hover-light-blue blue mh1"
+           href={`http://ejje.weblio.jp/content/${props.word}`}>
+          weblio
+        </a>
+        <a target="_blank"
+           className="hover-light-blue blue mh1"
+           href={`https://www.sanseido.biz/User/Dic/Index.aspx?TWords=${props.word}&st=0&DORDER=161517&DailyEJ=checkbox`}>
+          sansei
+        </a>
+      </div>
 
     case "Japanese":
       return <div>

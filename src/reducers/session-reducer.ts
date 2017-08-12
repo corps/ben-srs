@@ -78,7 +78,7 @@ export function reduceSession(state: State, action: SessionActions | IgnoredActi
     case "auth-success":
       state = {...state};
 
-      if (state.settings.session.login !== action.login) {
+      if (state.settings.session.login && state.settings.session.login !== action.login) {
         effect = sequence(effect, clearLocalData);
         state.loadingIndexable = [];
         state.settings = newSettings;

@@ -1,5 +1,6 @@
 import {Subject, Subscriber, Subscription} from "kamo-reducers/subject";
 import {GlobalAction, IgnoredSideEffect, SideEffect} from "kamo-reducers/reducers";
+import {Language, LanguageSettings} from "../model";
 
 export interface SpeechVoice {
   readonly default: boolean;
@@ -9,28 +10,16 @@ export interface SpeechVoice {
   readonly voiceURI: string;
 }
 
-export interface LoadVoices {
-  type: "load-voices"
-  voices: SpeechVoice[]
-}
-
-export function loadVoices(voices: SpeechVoice[]): LoadVoices {
-  return {
-    type: "load-voices",
-    voices
-  }
-}
-
 export interface RequestSpeech {
   effectType: "request-speech",
-  voice: SpeechVoice,
+  language: Language,
   text: string
 }
 
-export function requestSpeech(voice: SpeechVoice, text: string): RequestSpeech {
+export function requestSpeech(text: string, language: Language): RequestSpeech {
   return {
     effectType: "request-speech",
-    voice, text
+    language, text
   }
 }
 
@@ -39,38 +28,26 @@ export function withSpeech(effect$: Subject<SideEffect>): Subscriber<GlobalActio
     subscribe: (dispatch: (a: GlobalAction) => void) => {
       let subscription = new Subscription();
 
-      let checkVoices = () => {
-        let voices = speechSynthesis.getVoices();
-        if (voices.length) {
-          clearInterval(checkVoicesInterval);
-
-          // Copy the data
-          voices = voices.map(v => {
-            let {lang, localService, name, voiceURI} = v;
-            return {default: v.default, lang, localService, name, voiceURI};
-          });
-
-          dispatch(loadVoices(voices));
-        }
-      };
-
-      let checkVoicesInterval = setInterval(checkVoices, 1000);
-      checkVoices();
-
-      subscription.add(() => {
-        clearInterval(checkVoicesInterval);
-      });
-
       subscription.add(effect$.subscribe((effect: RequestSpeech | IgnoredSideEffect) => {
         switch (effect.effectType) {
           case "request-speech":
             speechSynthesis.cancel();
+
             let utterance = new SpeechSynthesisUtterance();
             utterance.text = effect.text;
-            // utterance.voice = effect.voice;
-            // IOS
-            (utterance as any).voiceURI = effect.voice.voiceURI;
-            utterance.lang = effect.voice.lang;
+
+            for (let code of LanguageSettings[effect.language].codes) {
+              for (let voice of speechSynthesis.getVoices()) {
+                if (voice.lang === code || voice.lang.replace(/-/g, "_") === code) {
+                  utterance.voice = voice;
+                  (utterance as any).voiceURI = voice.voiceURI;
+                }
+              }
+            }
+
+            if (!utterance.voice) {
+              utterance.lang = LanguageSettings[effect.language].codes[0];
+            }
 
             speechSynthesis.speak(utterance);
         }
@@ -81,12 +58,3 @@ export function withSpeech(effect$: Subject<SideEffect>): Subscriber<GlobalActio
   }
 }
 
-export function findVoiceForLanguage(voices: SpeechVoice[], codes: string[]): SpeechVoice | 0 {
-  for (let code of codes) {
-    for (let voice of voices) {
-      if (voice.lang === code) return voice;
-    }
-  }
-
-  return null;
-}
