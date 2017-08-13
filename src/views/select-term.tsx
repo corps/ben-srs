@@ -42,7 +42,7 @@ export function selectTermContent(dispatch: (action: Action) => void) {
       <div className="mw6 pv2 ph3 center">
         {content.split("").map((char, i) => {
           char = char === " " ? "　" : char;
-          let termIdx = bisect(termRanges, i, (i, entry) => i - entry.range[1]);
+          let termIdx = bisect(termRanges, i, (i, entry) => i - (entry.range[1] - 1));
           let isTerm = termIdx < termRanges.length && i >= termRanges[termIdx].range[0] && i < termRanges[termIdx].range[1];
           let isSelected = i == state.selectTermLeft;
           let onClick = isTerm ?

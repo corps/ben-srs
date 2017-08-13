@@ -10,7 +10,6 @@ import {getServices} from "./services";
 import {developmentView} from "./development-view";
 import {denormalizedNote, loadIndexables} from "./indexes";
 import {NoteFactory} from "../tests/factories/notes-factories";
-import {studyDetailsForCloze} from "./study";
 
 declare var require: any;
 
@@ -52,25 +51,9 @@ subscription.add(generateRootElement().subscribe((element: HTMLElement) => {
 
   let noteFactory = new NoteFactory();
 
-  noteFactory.addTerm();
-  noteFactory.addTerm();
-  noteFactory.addTerm();
-  let termFactory = noteFactory.addTerm();
-  termFactory.term.attributes.hint = "This would be a hint!  And some more stuff here";
-  noteFactory.addTerm();
-  noteFactory.addTerm();
-  noteFactory.addTerm();
-  noteFactory.addTerm();
-
-  let clozeFactory = termFactory.addCloze();
-  clozeFactory.cloze.attributes.clozed = termFactory.reference[2];
-  clozeFactory.cloze.attributes.type = "listen";
-
-
   let state = {...initialState};
   state.indexes = loadIndexables(state.indexes, [denormalizedNote(noteFactory.note, "", "", "")]);
-  state.studyDetails = studyDetailsForCloze(state.indexes.clozes.byLanguageAndNextDue[0][1], state.indexes) || null;
-  state.location = "study";
+  state.location = "edit-note";
 
   subscription.add(renderLoop<State, Action>(renderer, reducer, getServices(), state).subscribe(e => {
     switch (e[0]) {

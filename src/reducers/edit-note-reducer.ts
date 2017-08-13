@@ -160,7 +160,7 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
       termAttrs.hint = state.inputs.termHint;
 
       let newClozes = state.toggles.studyByProduce ? state.inputs.termClozes.split(",") : [];
-      let produced = termAttrs.clozes.filter(c => c.attributes.type === "produce")
+      let produced = termAttrs.clozes.filter(c => c.attributes.type === "produce");
 
       let next: NormalizedCloze;
 
@@ -241,7 +241,7 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
       state = {...state};
 
       if (state.selectTermLeft >= 0) {
-        if (action.idx > state.selectTermLeft) {
+        if (action.idx >= state.selectTermLeft) {
           state.editingNoteNormalized = addNewTerm(state.editingNoteNormalized, state.selectTermLeft, action.idx + 1);
           let terms = state.editingNoteNormalized.attributes.terms;
           let term = terms[terms.length - 1];
