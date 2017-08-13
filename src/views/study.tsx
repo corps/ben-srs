@@ -175,6 +175,9 @@ export function studyContent(dispatch: (action: Action) => void) {
       </div>
 
       <div className="f5 h5 overflow-x-hidden overflow-y-auto ph3">
+        { state.studyDetails.cloze.attributes.type === "listen" ? <div className="mb3">
+          {state.studyDetails.content.split("\n").map((s, i) => <span key={i + ""}>{s}<br/></span>)}
+        </div> : null }
         {state.studyDetails.definition.split("\n").map((s, i) => <span key={i + ""}>{s}<br/></span>)}
       </div>
 

@@ -65,7 +65,7 @@ function describeAbsDuration(time: number) {
   if (minutes < 60) return minutes + "分";
 
   let hours = Math.floor(minutes / 60);
-  if (hours < 60) return hours + "時間";
+  if (hours < 24) return hours + "時間";
 
   let days = Math.floor(hours / 24);
   if (days < 30) return days + "日";
