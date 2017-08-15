@@ -183,7 +183,7 @@ export function studyContent(dispatch: (action: Action) => void) {
 
       { state.indexesReady ? <div className="f5 mt2 tc">
         <button className="mh1 pa1 br2"
-                onClick={() => dispatch(answerCard(["f", timeToAnswer < 15 ? 3.5 : 2.2]))}>
+                onClick={() => dispatch(answerCard(["f", timeToAnswer < 6 ? 3.0 : 2.0]))}>
           OK!
         </button>
         <button className="mh1 pa1 br2"
