@@ -61,8 +61,6 @@ export function withLogin(effect$: Subject<SideEffect>): Subscriber<GlobalAction
           case "check-login-session":
             let curAuth = hello.getAuthResponse("dropbox");
             if (curAuth && curAuth.access_token && curAuth.expires * 1000 > Date.now()) {
-              location.search = "";
-
               hello.api({network: "dropbox", path: "/me", method: "get"}).then(function (data) {
                 curAuth && curAuth.access_token && dispatch(authSuccess(data.email, curAuth.access_token, curAuth.expires));
               }, function (err) {
