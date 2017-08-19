@@ -46,7 +46,7 @@ export function withLogin(effect$: Subject<SideEffect>): Subscriber<GlobalAction
     subscribe: (dispatch: (a: GlobalAction) => void) => {
       let subscription = new Subscription();
       hello.init({dropbox: process.env.DROPBOX_CLIENT_ID}, {
-        redirect_uri: location.protocol + "//" + location.host + location.pathname + "?"
+        redirect_uri: location.href
       });
 
       subscription.add(effect$.subscribe((effect: RequestLogin | CheckLoginSession | IgnoredSideEffect) => {
