@@ -4,7 +4,6 @@ declare var __dirname: string;
 let path = require("path");
 let webpack = require("webpack");
 let CopyWebpackPlugin = require('copy-webpack-plugin');
-let home = process.env.HOME;
 
 var config: any = {
   entry: {
@@ -12,8 +11,7 @@ var config: any = {
   },
   output: {
     filename: '[name].js',
-    // path: path.join(__dirname, "build/"),
-    path: path.join(home, "Dropbox/Public/bensrs"),
+    path: path.join(__dirname, "docs/"),
     pathinfo: true
   },
 
