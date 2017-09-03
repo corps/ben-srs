@@ -18,6 +18,7 @@ export type TermsStore = {
 export type ClozesStore = {
   byNoteIdReferenceMarkerAndClozeIdx: Index<Cloze>
   byLanguageAndNextDue: Index<Cloze>
+  byLanguageNewAndNextDue: Index<Cloze>
 }
 
 export type ClozeAnswersStore = {
@@ -41,6 +42,7 @@ termsIndexer.addIndex("byLanguage", term => [term.language]);
 export const clozesIndexer = new Indexer<Cloze, ClozesStore>("byNoteIdReferenceMarkerAndClozeIdx");
 clozesIndexer.addIndex("byNoteIdReferenceMarkerAndClozeIdx", cloze => [cloze.noteId, cloze.reference, cloze.marker, cloze.clozeIdx]);
 clozesIndexer.addIndex("byLanguageAndNextDue", cloze => [cloze.language, cloze.attributes.schedule.nextDueMinutes]);
+clozesIndexer.addIndex("byLanguageNewAndNextDue", cloze => [cloze.language, cloze.attributes.schedule.isNew, cloze.attributes.schedule.nextDueMinutes]);
 
 export const clozeAnswersIndexer = new Indexer<ClozeAnswer, ClozeAnswersStore>("byNoteIdReferenceMarkerClozeIdxAndAnswerIdx");
 clozeAnswersIndexer.addIndex("byNoteIdReferenceMarkerClozeIdxAndAnswerIdx", answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx, answer.answerIdx])

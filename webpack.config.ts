@@ -4,6 +4,7 @@ declare var __dirname: string;
 let path = require("path");
 let webpack = require("webpack");
 let CopyWebpackPlugin = require('copy-webpack-plugin');
+let AppCachePlugin = require('appcache-webpack-plugin');
 
 var config: any = {
   entry: {
@@ -16,10 +17,10 @@ var config: any = {
   },
 
   plugins: [
+    new webpack.DefinePlugin({ "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV) }),
     new webpack.DefinePlugin({
       "process": "(" + JSON.stringify({
         env: {
-          NODE_ENV: process.env.NODE_ENV,
           E2E_TEST: process.env.E2E_TEST,
           DROPBOX_CLIENT_ID: process.env.DROPBOX_CLIENT_ID,
           DROPBOX_TEST_ACCESS_TOKEN: process.env.NODE_ENV !== "production" ? process.env.DROPBOX_TEST_ACCESS_TOKEN : "",
@@ -30,6 +31,14 @@ var config: any = {
       from: 'index.html',
       to: 'index.html'
     }]),
+    new AppCachePlugin({
+      cache: [],
+      network: ['*'],
+      fallback: [],
+      settings: ['prefer-online'],
+      exclude: ['development.js'],
+      output: 'app.appcache',
+    }),
   ],
 
   module: {
