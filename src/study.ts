@@ -38,7 +38,8 @@ const allNotDivisibleHeadRegex = new RegExp("^" + allNotDivisibleRegex.source);
 export function findNextStudyDetails(language: Language,
                                      fromMinutes: number,
                                      indexes: State["indexes"]): StudyDetails | 0 {
-  let nextCloze = Indexer.reverseIter(indexes.clozes.byLanguageNewAndNextDue, [language, true, fromMinutes], [language, null, null])();
+  let nextCloze = Indexer.reverseIter(indexes.clozes.byLanguageNewAndNextDue, [language, true, fromMinutes], [language, true, null])();
+  nextCloze = nextCloze || Indexer.reverseIter(indexes.clozes.byLanguageNewAndNextDue, [language, false, fromMinutes], [language, false, null])();
   nextCloze = nextCloze || Indexer.iterator(indexes.clozes.byLanguageAndNextDue, [language, fromMinutes], [language, Infinity])();
 
   if (nextCloze) {

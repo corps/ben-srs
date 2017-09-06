@@ -118,7 +118,6 @@ export function startStudyingNextCard(state: State): ReductionWithEffect<State> 
 
   let studyDetails = findNextStudyDetails(state.inputs.curLanguage, minutesOfTime(state.now), state.indexes);
   if (studyDetails) {
-    console.log(studyDetails);
     state.studyDetails = studyDetails;
     state.toggles = {...state.toggles};
     state.toggles.showBack = false;
