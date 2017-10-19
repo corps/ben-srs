@@ -18,7 +18,7 @@ if (module.hot) {
 
 let subscription = new Subscription();
 
-type Container<S> = { inner: S };
+type Container<S> = {inner: S};
 
 class Root extends React.Component<{}, Container<State>> {
   public view: (state: State) => JSX.Element;
@@ -36,44 +36,57 @@ class Root extends React.Component<{}, Container<State>> {
   }
 }
 
-subscription.add(generateRootElement().subscribe((element: HTMLElement) => {
-  let root: Root;
+subscription.add(
+  generateRootElement().subscribe((element: HTMLElement) => {
+    let root: Root;
 
-  let renderer = (state: State, dispatch: (a: Action) => void, next: () => void) => {
-    if (!root) {
-      root = ReactDom.render(<Root/>, element) as any;
-      root.view = view(dispatch);
-    }
+    let renderer = (
+      state: State,
+      dispatch: (a: Action) => void,
+      next: () => void
+    ) => {
+      if (!root) {
+        root = ReactDom.render(<Root />, element) as any;
+        root.view = view(dispatch);
+      }
 
-    if (state) {
-      root.setState({inner: state}, next);
-    }
-  };
+      if (state) {
+        root.setState({inner: state}, next);
+      }
+    };
 
-  let start: number[] = [];
-  let startAction: GlobalAction[] = [];
+    let start: number[] = [];
+    let startAction: GlobalAction[] = [];
 
-  subscription.add(renderLoop<State, Action>(renderer, reducer, getServices(), initialState).subscribe(e => {
-    switch (e[0]) {
-      case "a":
-        start.push(Date.now());
-        startAction.push(e[1] as any);
-        break;
+    subscription.add(
+      renderLoop<State, Action>(
+        renderer,
+        reducer,
+        getServices(),
+        initialState
+      ).subscribe(e => {
+        switch (e[0]) {
+          case "a":
+            start.push(Date.now());
+            startAction.push(e[1] as any);
+            break;
 
-      case "c":
-        let time = Date.now() - start.pop();
-        let action = startAction.pop();
+          case "c":
+            let time = Date.now() - start.pop();
+            let action = startAction.pop();
 
-        console.log("render in", time, "ms");
+            console.log("render in", time, "ms");
 
-        if(time > 50) {
-          console.log("slow action:", action);
+            if (time > 50) {
+              console.log("slow action:", action);
+            }
+
+            break;
         }
-
-        break;
-    }
-  }));
-}));
+      })
+    );
+  })
+);
 
 if (module.hot) {
   module.hot.dispose(subscription.unsubscribe);

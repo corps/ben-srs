@@ -1,23 +1,34 @@
 import * as React from "react";
 
 export interface ClassAndChildren {
-  className?: string, children?: (JSX.Element | string | number)[] | JSX.Element | string | number
+  className?: string;
+  children?: (JSX.Element | string | number)[] | JSX.Element | string | number;
+  [k: string]: any;
 }
 
 export interface StyleAdder<T extends ClassAndChildren> {
-  (k: keyof T,
-   e: React.ReactElement<{ className: string }>,
-   inverse?: React.ReactElement<{ className: string }>): void
-  match?<K extends keyof T>(key: K, value: T[K], e: React.ReactElement<{ className: string }>): void
+  (
+    k: keyof T,
+    e: React.ReactElement<{className: string}>,
+    inverse?: React.ReactElement<{className: string}>
+  ): void;
+  match?<K extends keyof T>(
+    key: K,
+    value: T[K],
+    e: React.ReactElement<{className: string}>
+  ): void;
 }
 
-export function classNamesGeneratorFor<T extends ClassAndChildren>(initializer: (add: StyleAdder<T>) => void,
-                                                                   defaults: React.ReactElement<{ className: string }> = null,
-                                                                   ignoreGivenStyles = false): (properties: T) => string {
-  const classesForProps = {} as { [k: string]: string };
-  const classesForMatches = {} as { [k: string]: [any, string][] };
-  const classesForInverseProps = {} as { [k: string]: string };
-  const defaultStyle = defaults && defaults.props.className ? defaults.props.className : "";
+export function classNamesGeneratorFor<T extends ClassAndChildren>(
+  initializer: (add: StyleAdder<T>) => void,
+  defaults: React.ReactElement<{className: string}> = null,
+  ignoreGivenStyles = false
+): (properties: T) => string {
+  const classesForProps = {} as {[k: string]: string};
+  const classesForMatches = {} as {[k: string]: [any, string][]};
+  const classesForInverseProps = {} as {[k: string]: string};
+  const defaultStyle =
+    defaults && defaults.props.className ? defaults.props.className : "";
 
   const adder: StyleAdder<T> = (k, e, inverse) => {
     if (k in classesForProps) {
@@ -29,8 +40,15 @@ export function classNamesGeneratorFor<T extends ClassAndChildren>(initializer: 
     }
   };
 
-  adder.match = function <K extends keyof T>(key: K, value: T[K], e: React.ReactElement<{ className: string }>) {
-    (classesForMatches[key] = classesForMatches[key] || []).push([value, e.props.className]);
+  adder.match = function<K extends keyof T>(
+    key: K,
+    value: T[K],
+    e: React.ReactElement<{className: string}>
+  ) {
+    (classesForMatches[key] = classesForMatches[key] || []).push([
+      value,
+      e.props.className,
+    ]);
   };
 
   initializer(adder);
@@ -72,8 +90,9 @@ export function classNamesGeneratorFor<T extends ClassAndChildren>(initializer: 
       classNames += " " + unusedInverseClasses[k];
     }
 
-    if (props.className && !ignoreGivenStyles) classNames += " " + props.className;
+    if (props.className && !ignoreGivenStyles)
+      classNames += " " + props.className;
 
     return classNames;
-  }
+  };
 }

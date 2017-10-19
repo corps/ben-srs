@@ -1,23 +1,37 @@
 import {test, testModule} from "../qunit";
 import {newTerm} from "../../src/model";
 import {
-  findContentRange, findNextUniqueMarker, findTermRange, fullTermMarker, getTermFragment,
-  studyDetailsForCloze
+  findContentRange,
+  findNextUniqueMarker,
+  findTermRange,
+  fullTermMarker,
+  getTermFragment,
+  studyDetailsForCloze,
 } from "../../src/study";
 import {NoteFactory} from "../factories/notes-factories";
-import {denormalizedNote, indexesInitialState, loadIndexables} from "../../src/indexes";
+import {
+  denormalizedNote,
+  indexesInitialState,
+  loadIndexables,
+} from "../../src/indexes";
 import {genSomeText} from "../factories/general-factories";
 import {Indexer} from "redux-indexers";
+import {Term} from "../../src/model";
 
 testModule("unit/study");
 
-test("findNextUniqueMarker finds the next marker that is not present anywhere in the given note", (assert) => {
+test("findNextUniqueMarker finds the next marker that is not present anywhere in the given note", assert => {
   assert.equal(findNextUniqueMarker("some[0]values[1]with[2]thing"), "3");
 });
 
-test("findTermRange", (assert) => {
-  function testTermRange(reference: string, marker: string, text: string, expected: [number, number]) {
-    let term = {...newTerm};
+test("findTermRange", assert => {
+  function testTermRange(
+    reference: string,
+    marker: string,
+    text: string,
+    expected: [number, number]
+  ) {
+    let term: Term = {...newTerm};
     term.attributes = {...term.attributes};
     term.attributes.reference = reference;
     term.attributes.marker = marker;
@@ -34,10 +48,15 @@ test("findTermRange", (assert) => {
   testTermRange("word", "word1", "some word2 stuff", [-1, -1]);
 });
 
-test("findContentRange", (assert) => {
-  function testContentRange(reference: string, marker: string, text: string,
-                            grabCharacters: number, expected: string) {
-    let term = {...newTerm};
+test("findContentRange", assert => {
+  function testContentRange(
+    reference: string,
+    marker: string,
+    text: string,
+    grabCharacters: number,
+    expected: string
+  ) {
+    let term: Term = {...newTerm};
     term.attributes = {...term.attributes};
     term.attributes.reference = reference;
     term.attributes.marker = marker;
@@ -47,39 +66,76 @@ test("findContentRange", (assert) => {
   }
 
   testContentRange("notinhere", "1", "This is some text here", 5, "");
-  testContentRange("word", "1", "word[1]is this long.  And there would be more.  And more here", 100,
-    "word[1]is this long.  And there would be more.  And more here");
+  testContentRange(
+    "word",
+    "1",
+    "word[1]is this long.  And there would be more.  And more here",
+    100,
+    "word[1]is this long.  And there would be more.  And more here"
+  );
 
-  testContentRange("word", "1", "word[1]is this long.  And there would be more.  And more here", 25,
-    "word[1]is this long.  And there would");
+  testContentRange(
+    "word",
+    "1",
+    "word[1]is this long.  And there would be more.  And more here",
+    25,
+    "word[1]is this long.  And there would"
+  );
 
-  testContentRange("word", "1", "word[1]is this long.  And there would be more.  And more here", 21,
-    "word[1]is this long.  And there");
+  testContentRange(
+    "word",
+    "1",
+    "word[1]is this long.  And there would be more.  And more here",
+    21,
+    "word[1]is this long.  And there"
+  );
 
-  testContentRange("word", "1", "word[1]is this long.  And there would be more.  And more here", 12,
-    "word[1]is this long");
+  testContentRange(
+    "word",
+    "1",
+    "word[1]is this long.  And there would be more.  And more here",
+    12,
+    "word[1]is this long"
+  );
 
-  testContentRange("word", "1",
-    "Part , Yes Thing No No No.word[1]is this long.  And there would be more.  And more here", 100,
-    "Part , Yes Thing No No No.word[1]is this long.  And there would be more.  And more here");
+  testContentRange(
+    "word",
+    "1",
+    "Part , Yes Thing No No No.word[1]is this long.  And there would be more.  And more here",
+    100,
+    "Part , Yes Thing No No No.word[1]is this long.  And there would be more.  And more here"
+  );
 
-  testContentRange("word", "1",
-    "Part , Yes Thing No No No.word[1]is this long.  And there would be more.  And more here", 24,
-    "Part , Yes Thing No No No.word[1]is this long.  And there");
+  testContentRange(
+    "word",
+    "1",
+    "Part , Yes Thing No No No.word[1]is this long.  And there would be more.  And more here",
+    24,
+    "Part , Yes Thing No No No.word[1]is this long.  And there"
+  );
 
-  testContentRange("word", "1",
-    "Part , Yes Thing No No No.word[1]is this long.  And there would be more.  And more here", 13,
-    "Thing No No No.word[1]is this long.");
+  testContentRange(
+    "word",
+    "1",
+    "Part , Yes Thing No No No.word[1]is this long.  And there would be more.  And more here",
+    13,
+    "Thing No No No.word[1]is this long."
+  );
 });
 
-test("studyDetailsForCloze", (assert) => {
+test("studyDetailsForCloze", assert => {
   let indexes = {...indexesInitialState};
 
   let factory = new NoteFactory();
   let termFactory = factory.addTerm();
   termFactory.addCloze();
 
-  let denormalized = denormalizedNote(factory.note, genSomeText(), genSomeText(), "");
+  let denormalized = denormalizedNote(
+    factory.note,
+    genSomeText(),
+    genSomeText(),
+    ""
+  );
   indexes = loadIndexables(indexes, [denormalized]);
 
   factory = new NoteFactory();
@@ -97,14 +153,20 @@ test("studyDetailsForCloze", (assert) => {
   termFactory = factory.addTerm();
   termFactory.addCloze();
 
-  denormalized = denormalizedNote(factory.note, genSomeText(), genSomeText(), "");
+  denormalized = denormalizedNote(
+    factory.note,
+    genSomeText(),
+    genSomeText(),
+    ""
+  );
   indexes = loadIndexables(indexes, [denormalized]);
 
   let terms = factory.note.attributes.terms;
   let targetTerm = terms[1];
-  let clozes = Indexer.getAllMatching(indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [
-    denormalized.note.id, targetTerm.attributes.reference
-  ]);
+  let clozes = Indexer.getAllMatching(
+    indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx,
+    [denormalized.note.id, targetTerm.attributes.reference]
+  );
 
   assert.equal(clozes.length, 3);
 
@@ -113,7 +175,9 @@ test("studyDetailsForCloze", (assert) => {
 
   assert.deepEqual(studyDetailsForCloze(clozes[0], indexes), {
     afterCloze: targetTerm.attributes.reference.slice(1),
-    afterTerm: content.slice(content.indexOf(termPlusMarker) + termPlusMarker.length),
+    afterTerm: content.slice(
+      content.indexOf(termPlusMarker) + termPlusMarker.length
+    ),
     beforeCloze: "",
     beforeTerm: content.slice(0, content.indexOf(termPlusMarker)),
     cloze: clozes[0],
@@ -127,7 +191,9 @@ test("studyDetailsForCloze", (assert) => {
 
   assert.deepEqual(studyDetailsForCloze(clozes[1], indexes), {
     afterCloze: targetTerm.attributes.reference.slice(3),
-    afterTerm: content.slice(content.indexOf(termPlusMarker) + termPlusMarker.length),
+    afterTerm: content.slice(
+      content.indexOf(termPlusMarker) + termPlusMarker.length
+    ),
     beforeCloze: "ab",
     beforeTerm: content.slice(0, content.indexOf(termPlusMarker)),
     cloze: clozes[1],
@@ -141,7 +207,9 @@ test("studyDetailsForCloze", (assert) => {
 
   assert.deepEqual(studyDetailsForCloze(clozes[2], indexes), {
     afterCloze: targetTerm.attributes.reference.slice(4),
-    afterTerm: content.slice(content.indexOf(termPlusMarker) + termPlusMarker.length),
+    afterTerm: content.slice(
+      content.indexOf(termPlusMarker) + termPlusMarker.length
+    ),
     beforeCloze: "aba",
     beforeTerm: content.slice(0, content.indexOf(termPlusMarker)),
     cloze: clozes[2],

@@ -1,22 +1,27 @@
 import {
-  DropboxDeleteEntry, DropboxDownloadResponse, DropboxFileEntry,
-  DropboxListFolderResponse
-} from "../../src/reducers/sync-reducer";
+  DropboxDeleteEntry,
+  DropboxDownloadResponse,
+  DropboxFileEntry,
+  DropboxListFolderResponse,
+} from "../../src/services/dropbox";
+
 import {genSomeText} from "./general-factories";
 
-export function genDropboxListFolderResponse(has_more = false): DropboxListFolderResponse {
+export function genDropboxListFolderResponse(
+  has_more = false
+): DropboxListFolderResponse {
   return {
     cursor: genSomeText(),
     entries: [],
     has_more,
-  }
+  };
 }
 
 export function genDeleteEntry(): DropboxDeleteEntry {
   return {
     ".tag": "deleted",
     path_lower: genSomeText(),
-  }
+  };
 }
 
 export function genFileEntry(): DropboxFileEntry {
@@ -28,11 +33,13 @@ export function genFileEntry(): DropboxFileEntry {
     id: "id:" + genSomeText(),
     path_lower: genSomeText() + "/" + name,
     rev: genSomeText(),
-    size: 100
+    size: 100,
   };
 }
 
-export function genDownloadResponse(fileEntry: DropboxFileEntry): DropboxDownloadResponse {
+export function genDownloadResponse(
+  fileEntry: DropboxFileEntry
+): DropboxDownloadResponse {
   let {id, rev, path_lower} = fileEntry;
   return {id, rev, path_lower};
 }

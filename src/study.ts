@@ -1,56 +1,143 @@
-import {Cloze, ClozeType, Language, newNormalizedTerm, NormalizedNote, NormalizedTerm} from "./model";
+import {
+  Cloze,
+  ClozeType,
+  Language,
+  newNormalizedTerm,
+  NormalizedNote,
+  NormalizedTerm,
+} from "./model";
 import {Indexer} from "redux-indexers";
 import {State} from "./state";
 import {findNoteTree, normalizedNote} from "./indexes";
 
 export interface StudyDetails {
-  cloze: Cloze
-  content: string
-  spoken: string
-  beforeTerm: string
-  beforeCloze: string
-  clozed: string
-  afterCloze: string
-  afterTerm: string
-  hint: string
-  definition: string
-  type: ClozeType
+  cloze: Cloze;
+  content: string;
+  spoken: string;
+  beforeTerm: string;
+  beforeCloze: string;
+  clozed: string;
+  afterCloze: string;
+  afterTerm: string;
+  hint: string;
+  definition: string;
+  type: ClozeType;
 }
 
 export interface TermId {
   attributes: {
-    marker: string
-    reference: string
-  }
+    marker: string;
+    reference: string;
+  };
 }
 
 const divisible = [
-  "᠃", "᠉", "⳹", "⳾", "⸼", "。", "꓿", "꘎", "꛳", "︒", "﹒", "．", "｡", "𖫵",
-  "𛲟", ".", "։", "۔", "܁", "܂", "።", "᙮", "\n", "?", "!", "¿", ";", "՞", "؟", "፧", "፨",
-  "᥅", "⁇", "⁈", "⁉", "⳺", "⳻", "⸮", "꘏", "꛷", "︖", "﹖", "？", "𑅃", "¡", "՜", "߹", "᥄",
-  "‼", "︕", "﹗", "！", "、", ",", "."
+  "᠃",
+  "᠉",
+  "⳹",
+  "⳾",
+  "⸼",
+  "。",
+  "꓿",
+  "꘎",
+  "꛳",
+  "︒",
+  "﹒",
+  "．",
+  "｡",
+  "𖫵",
+  "𛲟",
+  ".",
+  "։",
+  "۔",
+  "܁",
+  "܂",
+  "።",
+  "᙮",
+  "\n",
+  "?",
+  "!",
+  "¿",
+  ";",
+  "՞",
+  "؟",
+  "፧",
+  "፨",
+  "᥅",
+  "⁇",
+  "⁈",
+  "⁉",
+  "⳺",
+  "⳻",
+  "⸮",
+  "꘏",
+  "꛷",
+  "︖",
+  "﹖",
+  "？",
+  "𑅃",
+  "¡",
+  "՜",
+  "߹",
+  "᥄",
+  "‼",
+  "︕",
+  "﹗",
+  "！",
+  "、",
+  ",",
+  ".",
 ];
-const divisibleRegex = new RegExp(divisible.map(stop => "\\" + stop).join("|") + "|\\s");
+const divisibleRegex = new RegExp(
+  divisible.map(stop => "\\" + stop).join("|") + "|\\s"
+);
 const allNotDivisibleRegex = new RegExp("[^" + divisibleRegex.source + "]*");
 const allNotDivisibleTailRegex = new RegExp(allNotDivisibleRegex.source + "$");
 const allNotDivisibleHeadRegex = new RegExp("^" + allNotDivisibleRegex.source);
 
-export function findNextStudyDetails(language: Language,
-                                     fromMinutes: number,
-                                     indexes: State["indexes"]): StudyDetails | 0 {
-  let nextCloze = Indexer.reverseIter(indexes.clozes.byLanguageNewAndNextDue, [language, true, fromMinutes], [language, true, null])();
-  nextCloze = nextCloze || Indexer.reverseIter(indexes.clozes.byLanguageNewAndNextDue, [language, false, fromMinutes], [language, false, null])();
-  nextCloze = nextCloze || Indexer.iterator(indexes.clozes.byLanguageAndNextDue, [language, fromMinutes], [language, Infinity])();
+export function findNextStudyDetails(
+  language: Language,
+  fromMinutes: number,
+  indexes: State["indexes"]
+): StudyDetails | 0 {
+  let nextCloze = Indexer.reverseIter(
+    indexes.clozes.byLanguageNewAndNextDue,
+    [language, true, fromMinutes],
+    [language, true, null]
+  )();
+  nextCloze =
+    nextCloze ||
+    Indexer.reverseIter(
+      indexes.clozes.byLanguageNewAndNextDue,
+      [language, false, fromMinutes],
+      [language, false, null]
+    )();
+  nextCloze =
+    nextCloze ||
+    Indexer.iterator(
+      indexes.clozes.byLanguageAndNextDue,
+      [language, fromMinutes],
+      [language, Infinity]
+    )();
 
   if (nextCloze) {
     return studyDetailsForCloze(nextCloze, indexes);
   }
 }
 
-export function studyDetailsForCloze(cloze: Cloze, indexes: State["indexes"]): StudyDetails | 0 {
-  let term = Indexer.getFirstMatching(indexes.terms.byNoteIdReferenceAndMarker, [cloze.noteId, cloze.reference, cloze.marker]);
+export function studyDetailsForCloze(
+  cloze: Cloze,
+  indexes: State["indexes"]
+): StudyDetails | 0 {
+  let term = Indexer.getFirstMatching(
+    indexes.terms.byNoteIdReferenceAndMarker,
+    [cloze.noteId, cloze.reference, cloze.marker]
+  );
   let note = Indexer.getFirstMatching(indexes.notes.byId, [cloze.noteId]);
-  let clozes = Indexer.getAllMatching(indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [cloze.noteId, cloze.reference, cloze.marker]);
+  let clozes = Indexer.getAllMatching(
+    indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx,
+    [cloze.noteId, cloze.reference, cloze.marker]
+  );
   let noteTree = findNoteTree(indexes, cloze.noteId);
 
   if (term && note && noteTree) {
@@ -66,15 +153,23 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: State["indexes"]): S
       cloze,
       definition: term.attributes.definition,
       content: content,
-      spoken: content.replace(fullTermMarker(term), term.attributes.pronounce || reference),
+      spoken: content.replace(
+        fullTermMarker(term),
+        term.attributes.pronounce || reference
+      ),
       beforeTerm: content.slice(0, termRange[0]),
-      beforeCloze: reference.slice(0, clozeSplits.slice(0, -1).reduce((sum, next) => sum + next.length, 0)),
+      beforeCloze: reference.slice(
+        0,
+        clozeSplits.slice(0, -1).reduce((sum, next) => sum + next.length, 0)
+      ),
       clozed: cloze.attributes.clozed,
-      afterCloze: reference.slice(clozeSplits.reduce((sum, next) => sum + next.length, 0)),
+      afterCloze: reference.slice(
+        clozeSplits.reduce((sum, next) => sum + next.length, 0)
+      ),
       afterTerm: content.slice(termRange[1]),
       hint: term.attributes.hint,
       type: cloze.attributes.type,
-    }
+    };
   }
 }
 
@@ -85,8 +180,7 @@ export function findTermRange(term: TermId, text: string): [number, number] {
   if (start === -1) {
     if (term.attributes.marker.indexOf(term.attributes.reference) === 0) {
       start = text.indexOf(term.attributes.marker);
-      if (start == -1)
-        return [-1, -1];
+      if (start == -1) return [-1, -1];
       return [start, start + term.attributes.marker.length];
     }
     return [-1, -1];
@@ -123,7 +217,11 @@ export function findNextUniqueMarker(content: string): string {
   }
 }
 
-export function findContentRange(term: TermId, content: string, grabCharsMax = 50): [number, number] {
+export function findContentRange(
+  term: TermId,
+  content: string,
+  grabCharsMax = 50
+): [number, number] {
   let [termStart, termEnd] = findTermRange(term, content);
   if (termStart === -1) return [-1, -1];
 
@@ -137,12 +235,21 @@ export function findContentRange(term: TermId, content: string, grabCharsMax = 5
   let rightSide = content.slice(termEnd);
   let unusedRight = rightSide.slice(grabCharsMax);
 
-  let rightSideIdx = Math.min(termEnd + grabCharsMax + unusedRight.match(allNotDivisibleHeadRegex)[0].length, content.length);
+  let rightSideIdx = Math.min(
+    termEnd +
+      grabCharsMax +
+      unusedRight.match(allNotDivisibleHeadRegex)[0].length,
+    content.length
+  );
 
   return [leftSideIdx, rightSideIdx];
 }
 
-export function addNewTerm(note: NormalizedNote, left: number, right: number): NormalizedNote {
+export function addNewTerm(
+  note: NormalizedNote,
+  left: number,
+  right: number
+): NormalizedNote {
   let content = note.attributes.content;
   let reference = content.slice(left, right);
   let marker = findNextUniqueMarker(content);
@@ -150,35 +257,48 @@ export function addNewTerm(note: NormalizedNote, left: number, right: number): N
   note = {...note};
   note.attributes = {...note.attributes};
 
-  let normalizedTerm = {...newNormalizedTerm};
+  let normalizedTerm: NormalizedTerm = {...newNormalizedTerm};
   normalizedTerm.attributes = {...normalizedTerm.attributes};
   normalizedTerm.attributes.reference = reference;
   normalizedTerm.attributes.marker = marker;
 
-  content = content.slice(0, left) + fullTermMarker(normalizedTerm) + content.slice(right);
+  content =
+    content.slice(0, left) +
+    fullTermMarker(normalizedTerm) +
+    content.slice(right);
   note.attributes.terms = note.attributes.terms.concat([normalizedTerm]);
   note.attributes.content = content;
 
   return note;
 }
 
-export function getTermFragment(note: NormalizedNote,
-                                term: TermId,
-                                termOverride = term.attributes.reference,
-                                grabCharsMax = 50) {
+export function getTermFragment(
+  note: NormalizedNote,
+  term: TermId,
+  termOverride = term.attributes.reference,
+  grabCharsMax = 50
+) {
   let content = note.attributes.content;
   for (let noteTerm of note.attributes.terms) {
-    if (noteTerm.attributes.reference === term.attributes.reference &&
-      noteTerm.attributes.marker === term.attributes.marker) {
+    if (
+      noteTerm.attributes.reference === term.attributes.reference &&
+      noteTerm.attributes.marker === term.attributes.marker
+    ) {
       continue;
     }
     let range = findTermRange(noteTerm, content);
     if (range[0] === -1) continue;
-    content = content.slice(0, range[0]) + noteTerm.attributes.reference + content.slice(range[1]);
+    content =
+      content.slice(0, range[0]) +
+      noteTerm.attributes.reference +
+      content.slice(range[1]);
   }
 
-
-  let contentRange = findContentRange(term, note.attributes.content, grabCharsMax);
+  let contentRange = findContentRange(
+    term,
+    note.attributes.content,
+    grabCharsMax
+  );
   if (contentRange[0] === -1) return "";
   content = content.slice(contentRange[0], contentRange[1]);
 
@@ -188,17 +308,33 @@ export function getTermFragment(note: NormalizedNote,
   return content.slice(0, range[0]) + termOverride + content.slice(range[1]);
 }
 
-export function findTermInNormalizedNote(note: NormalizedNote, reference: string, marker: string): NormalizedTerm | 0 {
+export function findTermInNormalizedNote(
+  note: NormalizedNote,
+  reference: string,
+  marker: string
+): NormalizedTerm | 0 {
   for (let term of note.attributes.terms) {
-    if (term.attributes.reference === reference, term.attributes.marker === marker) return term;
+    if (
+      (term.attributes.reference === reference,
+      term.attributes.marker === marker)
+    )
+      return term;
   }
 }
 
-export function findNextEditableNote(indexes: State["indexes"], lastNoteId = undefined as string) {
-  return Indexer.iterator(indexes.notes.byEditsComplete, [false, lastNoteId], [false, Infinity])();
+export function findNextEditableNote(
+  indexes: State["indexes"],
+  lastNoteId = undefined as string
+) {
+  return Indexer.iterator(
+    indexes.notes.byEditsComplete,
+    [false, lastNoteId],
+    [false, Infinity]
+  )();
 }
 
 export function fullTermMarker(term: TermId) {
-  if (term.attributes.marker.indexOf(term.attributes.reference) === 0) return term.attributes.marker;
+  if (term.attributes.marker.indexOf(term.attributes.reference) === 0)
+    return term.attributes.marker;
   return term.attributes.reference + "[" + term.attributes.marker + "]";
 }

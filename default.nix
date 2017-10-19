@@ -2,17 +2,10 @@
   system ? builtins.currentSystem,
   nodejs ? pkgs.nodejs }:
 
-let
-  npmInputs = import ./npm-env.nix {
-    inherit pkgs system nodejs;
-    packages = [ { typescript = "2.3.4"; } ];
-  };
-in
-
 with pkgs;
 stdenv.mkDerivation {
   name = "ben-srs";
-  buildInputs = npmInputs;
+  buildInputs = [ nodejs ];
 
   shellHook = ''
     PATH=$PWD/node_modules/.bin/:$PATH
