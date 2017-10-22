@@ -108,9 +108,9 @@ class SyncTestSetup {
       completeRequest(
         requestFileUpload(
           session.accessToken,
-          stringifyNote(normalized),
           path,
-          version
+          version,
+          stringifyNote(normalized),
         ),
         200,
         "",
@@ -130,9 +130,9 @@ class SyncTestSetup {
       completeRequest(
         requestFileUpload(
           session.accessToken,
-          stringifyNote(normalized),
           path,
-          version
+          version,
+          stringifyNote(normalized),
         ),
         409,
         "",

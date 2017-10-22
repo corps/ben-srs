@@ -64,7 +64,7 @@ export const initialState = {
     showBack: false,
   },
 
-  lastWindowVisible: Date.now(),
+  lastWindowVisible: 0,
 
   studyDetails: null as StudyDetails,
   studyStarted: Date.now(),

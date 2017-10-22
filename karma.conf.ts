@@ -2,44 +2,36 @@ import webpackConfig = require("./webpack.config");
 
 // http://airbnb.io/enzyme/docs/guides/karma.html
 webpackConfig.externals = {
-  'cheerio': 'window',
-  'react/addons': true,
-  'react/lib/ExecutionEnvironment': true,
-  'react/lib/ReactContext': true
+  cheerio: "window",
+  "react/addons": true,
+  "react/lib/ExecutionEnvironment": true,
+  "react/lib/ReactContext": true,
 };
 
-webpackConfig.devtool = 'sourcemap';
+webpackConfig.devtool = "sourcemap";
 
-export = function (config: any) {
+export = function(config: any) {
   config.set({
     // base path that will be used to resolve all patterns (eg. files, exclude)
-    basePath: '',
-
-    hostname: "0.0.0.0",
+    basePath: "",
 
     browserNoActivityTimeout: 30000,
 
     // frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
-    frameworks: ['qunit'],
-    plugins: [
-      'karma-qunit',
-      'karma-webpack',
-      'karma-chrome-launcher',
-    ],
+    frameworks: ["qunit"],
+    plugins: ["karma-qunit", "karma-webpack", "karma-chrome-launcher"],
 
     client: {
       clearContext: false,
       qunit: {
         showUI: true,
-        testTimeout: 5000
-      }
+        testTimeout: 5000,
+      },
     },
 
     // list of files / patterns to load in the browser
-    files: [
-      'tests/index.js',
-    ],
+    files: ["tests/index.js"],
 
     // list of files to exclude
     exclude: [],
@@ -47,13 +39,13 @@ export = function (config: any) {
     // preprocess matching files before serving them to the browser
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
     preprocessors: {
-      'tests/index.js': ['webpack'],
+      "tests/index.js": ["webpack"],
     },
 
     webpackMiddleware: {
       // webpack-dev-middleware configuration
       // i. e.
-      stats: 'errors-only'
+      stats: "errors-only",
     },
 
     webpack: webpackConfig,
@@ -61,7 +53,7 @@ export = function (config: any) {
     // test results reporter to use
     // possible values: 'dots', 'progress'
     // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-    reporters: ['progress'],
+    reporters: ["progress"],
 
     // web server port
     port: 9876,
@@ -78,7 +70,7 @@ export = function (config: any) {
 
     // start these browsers
     // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-    browsers: ['Chrome'],
+    browsers: ["Chrome"],
 
     // Continuous Integration mode
     // if true, Karma captures browsers, runs the tests and exits
@@ -86,6 +78,6 @@ export = function (config: any) {
 
     // Concurrency level
     // how many browser should be started simultaneous
-    concurrency: Infinity
-  })
+    concurrency: Infinity,
+  });
 };

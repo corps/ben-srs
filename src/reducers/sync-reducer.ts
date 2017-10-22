@@ -85,6 +85,7 @@ function completeListFolder(
   state: State,
   completeRequest: CompleteRequest
 ): ReductionWithEffect<State> {
+  console.log(completeRequest.name, completeRequest.status);
   if (completeRequest.name[0] !== listFolderRequestName) return {state};
 
   if (!completeRequest.success) {
@@ -431,9 +432,9 @@ function startSyncUpload(state: State): ReductionWithEffect<State> {
 
     let request = requestFileUpload(
       state.settings.session.accessToken,
-      stringifyNote(normalized),
       note.id,
-      note.version
+      note.version,
+      stringifyNote(normalized),
     );
     state.clearSyncEffects = sequence(
       state.clearSyncEffects,
@@ -448,9 +449,9 @@ function startSyncUpload(state: State): ReductionWithEffect<State> {
     let normalized = state.newNotes[key];
     let request = requestFileUpload(
       state.settings.session.accessToken,
-      stringifyNote(normalized),
       key,
-      ""
+      "",
+      stringifyNote(normalized),
     );
     state.clearSyncEffects = sequence(
       state.clearSyncEffects,

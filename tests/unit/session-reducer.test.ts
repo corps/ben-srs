@@ -15,6 +15,7 @@ import {RequestWork, WorkComplete} from "kamo-reducers/services/workers";
 import {genLocalStore} from "../factories/settings-factory";
 import {indexesInitialState, loadIndexables} from "../../src/indexes";
 import {authInitialized, authSuccess, checkLoginSession} from "../../src/services/login";
+import { updateTime } from 'kamo-reducers/services/time';
 
 let tester: BensrsTester;
 let subscription = new Subscription();
@@ -33,19 +34,36 @@ testModule("unit/session-reducer", {
 test("on initialization and window focus, loads localStore data", (assert) => {
   tester.start();
 
-  tester.dispatch(initialization);
+  tester.dispatch(initialization());
 
   let localDataRequests: RequestLocalData[] =
     tester.findEffects(requestLocalData("").effectType) as any[];
   assert.equal(localDataRequests.length, 1);
 
-  tester.dispatch(windowFocus);
+  tester.dispatch(updateTime(0, 0));
+  tester.dispatch(windowFocus());
 
   localDataRequests = tester.findEffects(requestLocalData("").effectType) as any[];
   assert.equal(localDataRequests.length, 1);
   assert.deepEqual(localDataRequests[0].key, localStoreKey);
 
   tester.dispatch({type: "no-op"});
+
+  localDataRequests = tester.findEffects(requestLocalData("").effectType) as any[];
+  assert.equal(localDataRequests.length, 0);
+});
+
+test("on a recent window focus, does not request a localStore data", (assert) => {
+  tester.start();
+
+  tester.dispatch(initialization());
+
+  let localDataRequests: RequestLocalData[] =
+    tester.findEffects(requestLocalData("").effectType) as any[];
+  assert.equal(localDataRequests.length, 1);
+
+  tester.dispatch(updateTime(5000, 5000));
+  tester.dispatch(windowFocus(5000));
 
   localDataRequests = tester.findEffects(requestLocalData("").effectType) as any[];
   assert.equal(localDataRequests.length, 0);

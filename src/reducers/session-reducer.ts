@@ -59,16 +59,18 @@ export function reduceSession(
   switch (action.type) {
     case "initialization":
     case "window-focus":
+      state = {...state};
+      state.now = action.when;
+
       if (
         action.type !== "window-focus" ||
-        state.lastWindowVisible < Date.now() - 15 * 60 * 1000
+        state.lastWindowVisible < state.now - 15 * 60 * 1000
       ) {
         ({state, effect} = sequenceReduction(
           effect,
           clearOtherSyncProcesses(state)
         ));
 
-        state = {...state};
         state.indexesReady = false;
         state.authReady = false;
 
@@ -78,6 +80,7 @@ export function reduceSession(
         );
         effect = sequence(effect, requestLocalData(localStoreKey));
       }
+
       break;
 
     case "load-local-data":
