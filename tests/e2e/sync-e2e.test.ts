@@ -317,51 +317,51 @@ function awaitDeletedSync() {
     0, "every cloze answer is deleted",
   );
 
-  setImmediate(function() {
-    let note = {...editedNotes[0]};
-    note.localEdits = true;
+//   setImmediate(function() {
+//     let note = {...editedNotes[0]};
+//     note.localEdits = true;
 
-    let term = {...newTerm};
-    term.noteId = note.id;
+//     let term = {...newTerm};
+//     term.noteId = note.id;
 
-    let cloze = {...newCloze};
-    cloze.noteId = note.id;
+//     let cloze = {...newCloze};
+//     cloze.noteId = note.id;
 
-    let clozeAnswer = {...newClozeAnswer};
-    clozeAnswer.noteId = note.id;
+//     let clozeAnswer = {...newClozeAnswer};
+//     clozeAnswer.noteId = note.id;
 
-    tester.state.indexes = loadIndexables(tester.state.indexes, [
-      {
-        note,
-        terms: [term],
-        clozes: [cloze],
-        clozeAnswers: [clozeAnswer],
-      },
-    ]);
+//     tester.state.indexes = loadIndexables(tester.state.indexes, [
+//       {
+//         note,
+//         terms: [term],
+//         clozes: [cloze],
+//         clozeAnswers: [clozeAnswer],
+//       },
+//     ]);
 
-    let {state, effect} = startSync(tester.state);
-    tester.state = state;
-    if (effect) {
-      tester.queued$.dispatch(effect);
-    }
-  });
-
-  return true;
-}
-
-function awaitConflictOfDeleteSync() {
-  if (tester.state.finishedSyncCount < 6) return false;
-
-  assert.equal(tester.state.indexes.notes.byPath.length, 0);
-  assert.equal(tester.state.indexes.terms.byLanguage.length, 0);
-  assert.equal(tester.state.indexes.clozes.byLanguageAndNextDue.length, 0);
-  assert.equal(
-    tester.state.indexes.clozeAnswers.byLanguageAndAnswered.length,
-    0
-  );
+//     let {state, effect} = startSync(tester.state);
+//     tester.state = state;
+//     if (effect) {
+//       tester.queued$.dispatch(effect);
+//     }
+//   });
 
   return true;
 }
+
+// function awaitConflictOfDeleteSync() {
+//   if (tester.state.finishedSyncCount < 6) return false;
+
+//   assert.equal(tester.state.indexes.notes.byPath.length, 0);
+//   assert.equal(tester.state.indexes.terms.byLanguage.length, 0);
+//   assert.equal(tester.state.indexes.clozes.byLanguageAndNextDue.length, 0);
+//   assert.equal(
+//     tester.state.indexes.clozeAnswers.byLanguageAndAnswered.length,
+//     0
+//   );
+
+//   return true;
+// }
 
 if (process.env.E2E_TEST) {
   test("syncing, saving new, editing, deleting", assert => {
@@ -373,7 +373,7 @@ if (process.env.E2E_TEST) {
       awaitEditedSyncComplete,
       awaitEditedWithOlderRevision,
       awaitDeletedSync,
-      awaitConflictOfDeleteSync,
+      // awaitConflictOfDeleteSync,
     ]);
 
     tester.queued$.buffering = false;
