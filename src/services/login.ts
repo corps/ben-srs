@@ -69,7 +69,7 @@ function getCurrentAccount(
     cb(undefined, JSON.parse(xhr.responseText));
   };
 
-  var config = dropboxApiRequestConfig(accessToken, "users/get_current_account", {});
+  var config = dropboxApiRequestConfig(accessToken, "users/get_current_account");
   executeXhrWithConfig(config, xhr);
 }
 

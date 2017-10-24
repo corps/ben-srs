@@ -70,12 +70,15 @@ export function dropboxApiRequestConfig(
   path: string,
   args: any = undefined
 ): AjaxConfig {
-  return {
+  let config: AjaxConfig = {
     url: "https://api.dropboxapi.com/2/" + path,
     method: "POST",
     headers: dropboxApiHeaders(accessToken),
-    json: args,
   };
+
+  if (args !== undefined) config.json = args;
+
+  return config;
 }
 
 export function dropboxContentRequestConfig(
