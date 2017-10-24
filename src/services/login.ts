@@ -62,14 +62,14 @@ function getCurrentAccount(
   var xhr = new XMLHttpRequest();
   xhr.withCredentials = false;
 
-  xhr.onerror = cb;
-  xhr.ontimeout = cb;
+  xhr.onerror = () => cb(new Error("get_current_account request failed"));
+  xhr.ontimeout = () => cb(new Error("Timeout calling get_current_account."));
 
   xhr.onload = () => {
     cb(undefined, JSON.parse(xhr.responseText));
   };
 
-  var config = dropboxApiRequestConfig(accessToken, "get_current_account");
+  var config = dropboxApiRequestConfig(accessToken, "users/get_current_account", {});
   executeXhrWithConfig(config, xhr);
 }
 
@@ -119,6 +119,7 @@ export function withLogin(
                           )
                         );
                     }
+
                     dispatch(authInitialized);
                   });
                 } else {
