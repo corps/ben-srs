@@ -3,7 +3,7 @@
     "module": "commonjs",
     "noImplicitAny": true,
     "moduleResolution": "node",
-    "target": "es6",
+    "target": "es5",
     "sourceMap": false,
     "jsx": "react",
     "importHelpers": true,
