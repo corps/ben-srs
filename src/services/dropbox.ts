@@ -76,7 +76,11 @@ export function dropboxApiRequestConfig(
     headers: dropboxApiHeaders(accessToken),
   };
 
-  if (args !== undefined) config.json = args;
+  if (args !== undefined) {
+    config.json = args;
+  } else {
+    delete config.headers['Content-Type'];
+  }
 
   return config;
 }
