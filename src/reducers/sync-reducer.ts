@@ -38,6 +38,7 @@ import {DropboxFileEntry} from "../services/dropbox";
 import {listFolderAjaxConfig} from "../services/dropbox";
 import {fileDownloadAjaxConfig} from "../services/dropbox";
 import {fileUploadAjaxConfig} from "../services/dropbox";
+import {dropboxRequestNames} from "../services/dropbox";
 
 export function requestListFolder(
   accessToken: string,
@@ -193,6 +194,8 @@ export function reduceSync(
 
   switch (action.type) {
     case "complete-request":
+      if (dropboxRequestNames.indexOf(action.name[0]) === -1) break;
+
       state = {...state};
       state.now = action.when;
 
@@ -234,7 +237,8 @@ function checkSyncDownloadComplete(
 
   if (state.settings.session.syncCursor == listFolderResponse.cursor)
     return {state, effect};
-  if (findNextDownload(state, listFolderResponse)) return {state, effect};
+  if (getUnfulfilledDownloads(state, listFolderResponse).length)
+    return {state, effect};
 
   state = {...state};
 
@@ -297,6 +301,8 @@ export function clearOtherSyncProcesses(
 
   effect = sequence(effect, state.clearSyncEffects);
   state.clearSyncEffects = null;
+  state.awaiting = {...state.awaiting};
+  state.awaiting["sync"] = 0;
 
   return {state, effect};
 }
@@ -330,13 +336,14 @@ export function startSync(state: State): ReductionWithEffect<State> {
   return {state, effect};
 }
 
-function findNextDownload(
+function getUnfulfilledDownloads(
   state: State,
   listFolderResponse: DropboxListFolderResponse
-): RequestAjax | void {
-  const token = state.settings.session.accessToken;
+): string[] {
+  var result: string[] = [];
 
   const notesByIdAndRev: {[id: string]: {[rev: string]: NoteTree}} = {};
+
   for (let downloaded of state.downloadedNotes) {
     let byRev = (notesByIdAndRev[downloaded.note.id] =
       notesByIdAndRev[downloaded.note.id] || {});
@@ -356,7 +363,7 @@ function findNextDownload(
   ) {
     if (notesByIdAndRev[conflictingNote.id]) continue;
 
-    return requestFileDownload(token, conflictingNote.id);
+    result.push(conflictingNote.id);
   }
 
   for (let entry of listFolderResponse.entries) {
@@ -365,36 +372,17 @@ function findNextDownload(
       let id = (entry as DropboxFileEntry).id;
       if (notesByIdAndRev[id] && notesByIdAndRev[id][rev]) continue;
 
-      return requestFileDownload(token, "rev:" + rev);
+      result.push("rev:" + rev);
     }
   }
+
+  return result;
 }
 
-function findNextUpload(state: State): RequestAjax | void {
-  const token = state.settings.session.accessToken;
-
-  let nextUpload = Indexer.getFirstMatching(
-    state.indexes.notes.byHasLocalEdits,
-    [true]
-  );
-
-  if (nextUpload) {
-    let noteTree = findNoteTree(state.indexes, nextUpload.id);
-    if (noteTree) {
-      let normalized = normalizedNote(noteTree);
-      return requestFileUpload(
-        token,
-        nextUpload.id,
-        nextUpload.version,
-        stringifyNote(normalized)
-      );
-    }
-  }
-
-  for (let key in state.newNotes) {
-    let normalized = state.newNotes[key];
-    return requestFileUpload(token, key, "", stringifyNote(normalized));
-  }
+function getUnfulfilledUploads(state: State): string[] {
+  return Indexer.getAllMatching(state.indexes.notes.byHasLocalEdits, [true])
+    .map(n => n.id)
+    .concat(Object.keys(state.newNotes));
 }
 
 function continueSync(state: State): ReductionWithEffect<State> {
@@ -424,9 +412,45 @@ function continueSync(state: State): ReductionWithEffect<State> {
   let nextRequest: RequestAjax | void = null;
 
   if (state.syncingListFolder) {
-    nextRequest = findNextDownload(state, state.syncingListFolder);
+    let downloadPaths = getUnfulfilledDownloads(state, state.syncingListFolder);
+    if (downloadPaths.length) {
+      nextRequest = requestFileDownload(
+        state.settings.session.accessToken,
+        downloadPaths[0]
+      );
+    }
+
+    state.awaiting = {...state.awaiting};
+    state.awaiting["sync"] = downloadPaths.length;
   } else {
-    nextRequest = findNextUpload(state);
+    let uploadPaths = getUnfulfilledUploads(state);
+    if (uploadPaths.length) {
+      const nextPath = uploadPaths[0];
+
+      if (nextPath in state.newNotes) {
+        let normalized = state.newNotes[nextPath];
+        nextRequest = requestFileUpload(
+          state.settings.session.accessToken,
+          nextPath,
+          "",
+          stringifyNote(normalized)
+        );
+      } else {
+        let noteTree = findNoteTree(state.indexes, nextPath);
+        if (noteTree) {
+          let normalized = normalizedNote(noteTree);
+          nextRequest = requestFileUpload(
+            state.settings.session.accessToken,
+            nextPath,
+            noteTree.note.version,
+            stringifyNote(normalized)
+          );
+        }
+      }
+    }
+
+    state.awaiting = {...state.awaiting};
+    state.awaiting["sync"] = uploadPaths.length;
   }
 
   if (!state.syncingListFolder || state.syncingListFolder.has_more) {
@@ -435,6 +459,9 @@ function continueSync(state: State): ReductionWithEffect<State> {
         state.settings.session.accessToken,
         state.settings.session.syncCursor
       );
+
+      state.awaiting = {...state.awaiting};
+      state.awaiting["sync"] = 1;
     }
   }
 
@@ -442,6 +469,8 @@ function continueSync(state: State): ReductionWithEffect<State> {
     state.clearSyncEffects = abortRequest(nextRequest.name);
     effect = sequence(effect, nextRequest);
   } else {
+    state.awaiting = {...state.awaiting};
+    state.awaiting["sync"] = 0;
     state.finishedSyncCount += 1;
   }
 

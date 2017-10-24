@@ -9,7 +9,6 @@ import {
 } from "kamo-reducers/reducers";
 import {NavigationAction} from "kamo-reducers/services/navigation";
 import {reduceSession, SessionActions} from "./reducers/session-reducer";
-import {reduceAwaiting} from "./reducers/awaiting-reducer";
 import {reduceSync} from "./reducers/sync-reducer";
 import {
   computeEndOfMonth,
@@ -59,7 +58,6 @@ export function reducer(
   ({state, effect} = reducerChain(state, action)
     .apply(reduceTime)
     .apply(reduceTick)
-    .apply(reduceAwaiting)
     .apply(reduceSession)
     .apply(reduceSync)
     .apply(reduceKeypresses)

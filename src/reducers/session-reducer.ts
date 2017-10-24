@@ -22,8 +22,8 @@ import {
   cancelWork,
   requestWork,
   WorkComplete,
+  WorkCanceled,
 } from "kamo-reducers/services/workers";
-import {withUpdatedAwaiting} from "./awaiting-reducer";
 
 export const settingsStoreKey = "settings";
 
@@ -44,6 +44,7 @@ export type SessionActions =
   | LoadLocalData
   | Initialization
   | WorkComplete
+  | WorkCanceled
   | ClickLogin
   | ClickLogout
   | AuthAction;
@@ -97,11 +98,10 @@ export function reduceSession(
       state.downloadedNotes = data.downloadedNotes;
       state.loadingIndexable = data.indexables;
 
+      state.awaiting = {...state.awaiting};
+      state.awaiting["auth"] = 1;
+
       effect = sequence(effect, checkLoginSession);
-      ({state, effect} = sequenceReduction(
-        effect,
-        withUpdatedAwaiting(state, true, "auth")
-      ));
       break;
 
     case "auth-success":
@@ -128,12 +128,11 @@ export function reduceSession(
       break;
 
     case "auth-initialized":
-      ({state, effect} = sequenceReduction(
-        effect,
-        withUpdatedAwaiting(state, false, "auth")
-      ));
-
       state = {...state};
+      state.awaiting = {...state.awaiting};
+      state.awaiting["auth"] = 0;
+      state.awaiting["work"] = 1;
+
       state.authReady = true;
 
       state.clearSyncEffects = cancelWork([loadIndexesWorkerName]);
@@ -152,6 +151,13 @@ export function reduceSession(
       state.indexesReady = true;
 
       ({state, effect} = sequenceReduction(effect, startSync(state)));
+      // deliberate fall through
+
+    case "work-canceled":
+      if (action.name[0] !== loadIndexesWorkerName) break;
+      state = {...state};
+      state.awaiting = {...state.awaiting};
+      state.awaiting["work"] = 0;
       break;
 
     case "click-login":

@@ -543,7 +543,7 @@ test("a list folder response with no downloads just completes the sync and updat
 
   tester.queued$.flushUntilEmpty();
 
-  assert.deepEqual(tester.state.awaiting, []);
+  assert.deepEqual(tester.state.awaiting["sync"], 0);
   assert.equal(tester.state.syncAuthBad, false);
   assert.equal(tester.state.syncOffline, false);
 });

@@ -116,30 +116,6 @@ test("on loading an a localStore object, eventually loads all the expected data 
   tester.dispatch(authInitialized);
 });
 
-test("multiple overlapping store loads would cancel each other's work", (assert) => {
-  tester.start();
-
-  let firstStore = genLocalStore();
-  let store = genLocalStore();
-
-  let finish = assert.async();
-
-  tester.update$.subscribe(([a, s]) => {
-    if (a.type === "work-complete") {
-      let work = a as WorkComplete;
-      assert.deepEqual(work.name, [loadIndexesWorkerName]);
-      assert.deepEqual(s.settings, store.settings);
-      assert.deepEqual(s.awaiting, []);
-      finish();
-    }
-  });
-
-  assert.expect(3);
-  tester.queued$.buffering = false;
-  tester.dispatch(loadLocalData(settingsStoreKey, firstStore));
-  tester.dispatch(loadLocalData(settingsStoreKey, store));
-});
-
 test("saves the current store on auth-success", (assert) => {
   tester.start();
 

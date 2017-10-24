@@ -35,7 +35,7 @@ export type Location = "main" | "edit-note" | "new-note" | "study";
 export type EditingNoteMode = "select" | "content" | "term";
 
 export const initialState = {
-  awaiting: [] as string[],
+  awaiting: {} as {[k: string]: number},
 
   indexes: indexesInitialState,
 
