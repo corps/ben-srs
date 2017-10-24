@@ -3,9 +3,12 @@ import {Subject, Subscriber, Subscription} from "kamo-reducers/subject";
 
 export interface WindowFocus {
   type: "window-focus"
+  when: number
 }
 
-export const windowFocus: WindowFocus = {type: "window-focus"};
+export function windowFocus(when = Date.now()): WindowFocus {
+  return { type: "window-focus", when };
+}
 
 export function withWindowFocus(effect$: Subject<SideEffect>): Subscriber<GlobalAction> {
   return {
@@ -13,7 +16,7 @@ export function withWindowFocus(effect$: Subject<SideEffect>): Subscriber<Global
       let subscription = new Subscription();
 
       function handler() {
-        dispatch(windowFocus);
+        dispatch(windowFocus());
       }
 
       window.addEventListener("focus", handler);

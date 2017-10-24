@@ -1,40 +1,63 @@
 import {reduceTime, UpdateTime} from "kamo-reducers/services/time";
 import {Inputs, State, Toggles} from "./state";
-import {computedFor, reducerChain, ReductionWithEffect, SideEffect, subReducersFor} from "kamo-reducers/reducers";
+import {
+  computedFor,
+  reducerChain,
+  ReductionWithEffect,
+  SideEffect,
+  subReducersFor,
+} from "kamo-reducers/reducers";
 import {NavigationAction} from "kamo-reducers/services/navigation";
 import {reduceSession, SessionActions} from "./reducers/session-reducer";
-import {reduceAwaiting} from "./reducers/awaiting-reducer";
 import {reduceSync} from "./reducers/sync-reducer";
 import {
-  computeEndOfMonth, computeStartOfDay, computeStartOfMonth, computeStartOfWeek, computeEndOfWeek,
-  computeEndOfDay
+  computeEndOfMonth,
+  computeStartOfDay,
+  computeStartOfMonth,
+  computeStartOfWeek,
+  computeEndOfWeek,
+  computeEndOfDay,
 } from "./reducers/time-computed";
 import {computeStudyData} from "./reducers/study-data-computed";
 import {reduceTick} from "./reducers/ticker-reducer";
-import {computeCurLanguageDefault, computeLanguages} from "./reducers/languages-computed";
+import {
+  computeCurLanguageDefault,
+  computeLanguages,
+} from "./reducers/languages-computed";
 import {computeHasEdits} from "./reducers/has-edits-computed";
 import {Keypress} from "./services/keypresses";
 import {reduceKeypresses} from "./reducers/keypresses-reducer";
-import {InputAction, reduceInputs} from "kamo-reducers/reducers/inputs";
+import {InputChange, reduceInputs} from "kamo-reducers/reducers/inputs";
 import {NewNoteActions, reduceNewNote} from "./reducers/new-note-reducer";
 import {MainMenuActions, reduceMainMenu} from "./reducers/main-menu-reducer";
 import {reduceStudy, StudyActions} from "./reducers/study-reducer";
 import {EditNoteActions, reduceEditNote} from "./reducers/edit-note-reducer";
 import {reduceToggle, Toggle} from "kamo-reducers/reducers/toggle";
 
-export type Action = UpdateTime | NavigationAction | SessionActions | Keypress | Toggle<Toggles> |
-  InputAction<Inputs> | NewNoteActions | MainMenuActions | StudyActions | EditNoteActions;
+export type Action =
+  | UpdateTime
+  | NavigationAction
+  | SessionActions
+  | Keypress
+  | Toggle<Toggles>
+  | InputChange<Inputs>
+  | NewNoteActions
+  | MainMenuActions
+  | StudyActions
+  | EditNoteActions;
 
 const computedProperty = computedFor<State>();
 const subreducer = subReducersFor<State>();
 
-export function reducer(state: State, action: Action): ReductionWithEffect<State> {
-  let effect: SideEffect | 0 = null;
+export function reducer(
+  state: State,
+  action: Action
+): ReductionWithEffect<State> {
+  let effect: SideEffect | void = null;
 
   ({state, effect} = reducerChain(state, action)
     .apply(reduceTime)
     .apply(reduceTick)
-    .apply(reduceAwaiting)
     .apply(reduceSession)
     .apply(reduceSync)
     .apply(reduceKeypresses)
@@ -56,11 +79,11 @@ export function reducer(state: State, action: Action): ReductionWithEffect<State
     .result());
 
   let curLanguage = computeCurLanguageDefault(state);
-  if (curLanguage !== state.inputs.curLanguage) {
+  if (curLanguage !== state.inputs.curLanguage.value) {
     state = {...state};
     state.inputs = {...state.inputs};
-    state.inputs.curLanguage = curLanguage;
+    state.inputs.curLanguage = {value: curLanguage};
   }
 
-  return {state, effect}
+  return {state, effect};
 }

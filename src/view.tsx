@@ -16,9 +16,14 @@ export function view(dispatch: (action: Action) => void) {
   const EditNoteContent = editNoteContent(dispatch);
 
   return (state: State) => {
+    let awaitingCount = 0;
+    for (let k in state.awaiting) {
+      awaitingCount += state.awaiting[k];
+    }
+
     return <div className="wf-mplus1p">
       <div className="fixed w-100 h0_3 top-0 left-0">
-        <ProgressBar tasksNum={state.awaiting.length}/>
+        <ProgressBar tasksNum={awaitingCount}/>
       </div>
       {
         (function () {

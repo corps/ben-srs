@@ -2,8 +2,11 @@ import {ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
 import {Action} from "../reducer";
 import {State} from "../state";
 
-export function reduceKeypresses(state: State, action: Action): ReductionWithEffect<State> {
-  let effect: SideEffect | 0 = null;
+export function reduceKeypresses(
+  state: State,
+  action: Action
+): ReductionWithEffect<State> {
+  let effect: SideEffect | void = null;
 
   switch (action.type) {
     case "keypress":
@@ -14,7 +17,6 @@ export function reduceKeypresses(state: State, action: Action): ReductionWithEff
       }
       break;
   }
-
 
   return {state, effect};
 }

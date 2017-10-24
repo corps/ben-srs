@@ -1,9 +1,15 @@
 import {Indexable, indexesInitialState, NoteTree} from "./indexes";
-import {Language, newNormalizedNote, newNote, newSettings, NormalizedNote} from "./model";
-import {DropboxListFolderResponse} from "./reducers/sync-reducer";
+import {
+  Language,
+  newNormalizedNote,
+  newNote,
+  newSettings,
+  NormalizedNote,
+} from "./model";
 import {SideEffect} from "kamo-reducers/reducers";
 import {SpeechVoice} from "./services/speech";
 import {StudyDetails} from "./study";
+import {DropboxListFolderResponse} from "./services/dropbox";
 
 export const newCounts = {
   today: 0,
@@ -24,30 +30,34 @@ export const newStudyData = {
 
 export type StudyData = typeof newStudyData;
 
-export type Location = "main" | "edit-note" | "new-note" | "study"
+export type Location = "main" | "edit-note" | "new-note" | "study";
 
-export type EditingNoteMode = "select" | "content" | "term"
+export type EditingNoteMode = "select" | "content" | "term";
 
 export const initialState = {
-  awaiting: [] as string[],
+  awaiting: {} as {[k: string]: number},
 
   indexes: indexesInitialState,
+
+  // from local data.
   settings: newSettings,
-  newNotes: {} as { [k: string]: NormalizedNote },
+  newNotes: {} as {[k: string]: NormalizedNote},
+  loadingIndexable: null as Indexable[],
+  downloadedNotes: [] as NoteTree[],
 
   inputs: {
-    curLanguage: "English" as Language,
-    newNoteContent: "",
-    newNoteLanguage: "" as Language,
+    curLanguage: {value: "English" as Language},
+    newNoteContent: {value: ""},
+    newNoteLanguage: {value: "" as Language | ""},
 
-    editingNoteContent: "",
-    editingNoteLanguage: "English" as Language,
+    editingNoteContent: {value: ""},
+    editingNoteLanguage: {value: "English" as Language},
 
-    termSearchBy: "",
-    termHint: "",
-    termPronounce: "",
-    termClozes: "",
-    termDefinition: "",
+    termSearchBy: {value: ""},
+    termHint: {value: ""},
+    termPronounce: {value: ""},
+    termClozes: {value: ""},
+    termDefinition: {value: ""},
   },
 
   toggles: {
@@ -58,7 +68,7 @@ export const initialState = {
     showBack: false,
   },
 
-  lastWindowVisible: Date.now(),
+  lastWindowVisible: 0,
 
   studyDetails: null as StudyDetails,
   studyStarted: Date.now(),
@@ -93,14 +103,8 @@ export const initialState = {
 
   startedSyncCount: 0,
   finishedSyncCount: 0,
-
-  loadingIndexable: null as Indexable[],
-
-  remainingUploads: [] as string[][],
-  executingDownloads: [] as string[][],
-  downloadedNotes: [] as NoteTree[],
-  syncingListFolder: null as DropboxListFolderResponse | 0,
-  clearSyncEffects: null as SideEffect | 0,
+  syncingListFolder: null as DropboxListFolderResponse | void,
+  clearSyncEffects: null as SideEffect | void,
 };
 
 export type State = typeof initialState;

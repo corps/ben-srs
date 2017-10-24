@@ -10,11 +10,12 @@ import {
 } from "kamo-reducers/services/local-storage";
 import {windowFocus} from "../../src/services/window";
 import {initialization} from "../../src/services/initialization";
-import {loadIndexesWorkerName, localStoreKey} from "../../src/reducers/session-reducer";
+import {loadIndexesWorkerName, settingsStoreKey} from "../../src/reducers/session-reducer";
 import {RequestWork, WorkComplete} from "kamo-reducers/services/workers";
 import {genLocalStore} from "../factories/settings-factory";
 import {indexesInitialState, loadIndexables} from "../../src/indexes";
 import {authInitialized, authSuccess, checkLoginSession} from "../../src/services/login";
+import { updateTime } from 'kamo-reducers/services/time';
 
 let tester: BensrsTester;
 let subscription = new Subscription();
@@ -33,19 +34,36 @@ testModule("unit/session-reducer", {
 test("on initialization and window focus, loads localStore data", (assert) => {
   tester.start();
 
-  tester.dispatch(initialization);
+  tester.dispatch(initialization());
 
   let localDataRequests: RequestLocalData[] =
     tester.findEffects(requestLocalData("").effectType) as any[];
   assert.equal(localDataRequests.length, 1);
 
-  tester.dispatch(windowFocus);
+  tester.dispatch(updateTime(0, 0));
+  tester.dispatch(windowFocus());
 
   localDataRequests = tester.findEffects(requestLocalData("").effectType) as any[];
   assert.equal(localDataRequests.length, 1);
-  assert.deepEqual(localDataRequests[0].key, localStoreKey);
+  assert.deepEqual(localDataRequests[0].key, settingsStoreKey);
 
   tester.dispatch({type: "no-op"});
+
+  localDataRequests = tester.findEffects(requestLocalData("").effectType) as any[];
+  assert.equal(localDataRequests.length, 0);
+});
+
+test("on a recent window focus, does not request a localStore data", (assert) => {
+  tester.start();
+
+  tester.dispatch(initialization());
+
+  let localDataRequests: RequestLocalData[] =
+    tester.findEffects(requestLocalData("").effectType) as any[];
+  assert.equal(localDataRequests.length, 1);
+
+  tester.dispatch(updateTime(5000, 5000));
+  tester.dispatch(windowFocus(5000));
 
   localDataRequests = tester.findEffects(requestLocalData("").effectType) as any[];
   assert.equal(localDataRequests.length, 0);
@@ -54,7 +72,7 @@ test("on initialization and window focus, loads localStore data", (assert) => {
 test("on loading an empty set of data, will load empty indexes", (assert) => {
   tester.start();
 
-  tester.dispatch(loadLocalData(localStoreKey, undefined));
+  tester.dispatch(loadLocalData(settingsStoreKey, undefined));
   let workRequests: RequestWork[] = tester.findEffects("request-work") as any[];
   assert.equal(workRequests.length, 0);
 
@@ -91,42 +109,18 @@ test("on loading an a localStore object, eventually loads all the expected data 
   });
 
   assert.expect(8);
-  tester.dispatch(loadLocalData(localStoreKey, store));
+  tester.dispatch(loadLocalData(settingsStoreKey, store));
   assert.equal(tester.findEffects(checkLoginSession.effectType).length, 1);
 
   tester.queued$.buffering = false;
   tester.dispatch(authInitialized);
 });
 
-test("multiple overlapping store loads would cancel each other's work", (assert) => {
-  tester.start();
-
-  let firstStore = genLocalStore();
-  let store = genLocalStore();
-
-  let finish = assert.async();
-
-  tester.update$.subscribe(([a, s]) => {
-    if (a.type === "work-complete") {
-      let work = a as WorkComplete;
-      assert.deepEqual(work.name, [loadIndexesWorkerName]);
-      assert.deepEqual(s.settings, store.settings);
-      assert.deepEqual(s.awaiting, []);
-      finish();
-    }
-  });
-
-  assert.expect(3);
-  tester.queued$.buffering = false;
-  tester.dispatch(loadLocalData(localStoreKey, firstStore));
-  tester.dispatch(loadLocalData(localStoreKey, store));
-});
-
 test("saves the current store on auth-success", (assert) => {
   tester.start();
 
   let store = genLocalStore();
-  tester.dispatch(loadLocalData(localStoreKey, store));
+  tester.dispatch(loadLocalData(settingsStoreKey, store));
   tester.dispatch(authSuccess(store.settings.session.login, "token", 1234));
   let stored: StoreLocalData[] = tester.findEffects("store-local-data") as any[];
 
@@ -134,7 +128,7 @@ test("saves the current store on auth-success", (assert) => {
   store.settings.session.sessionExpiresAt = 1234;
 
   assert.equal(stored.length, 1);
-  assert.equal(stored[0].key, localStoreKey);
+  assert.equal(stored[0].key, settingsStoreKey);
   assert.deepEqual(stored[0].data, store);
 });
 

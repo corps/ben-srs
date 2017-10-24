@@ -1,99 +1,142 @@
 import {State} from "../state";
-import {IgnoredAction, ReductionWithEffect, SideEffect} from "kamo-reducers/reducers";
-import {ClozeType, newNormalizeCloze, NormalizedCloze, NormalizedTerm, Note} from "../model";
-import {addNewTerm, findNextEditableNote, findTermInNormalizedNote, findTermRange, getTermFragment} from "../study";
+import {
+  IgnoredAction,
+  ReductionWithEffect,
+  SideEffect,
+} from "kamo-reducers/reducers";
+import {
+  ClozeType,
+  newNormalizeCloze,
+  NormalizedCloze,
+  NormalizedTerm,
+  Note,
+} from "../model";
+import {
+  addNewTerm,
+  findNextEditableNote,
+  findTermInNormalizedNote,
+  findTermRange,
+  getTermFragment,
+} from "../study";
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
 import {requestSpeech} from "../services/speech";
-import {denormalizedNote, findNoteTree, loadIndexables, normalizedNote, removeNote} from "../indexes";
+import {
+  denormalizedNote,
+  findNoteTree,
+  loadIndexables,
+  normalizedNote,
+  removeNote,
+} from "../indexes";
 import {requestLocalStoreUpdate} from "./session-reducer";
 import {startSync} from "./sync-reducer";
 
 export interface ApplyNoteEdits {
-  type: "apply-note-edits"
+  type: "apply-note-edits";
 }
 
-export const testPronounciation: TestPronounciation = {type: "test-pronounciation"};
+export const testPronounciation: TestPronounciation = {
+  type: "test-pronounciation",
+};
 
 export interface TestPronounciation {
-  type: "test-pronounciation"
+  type: "test-pronounciation";
 }
 
 export const applyNoteEdits: ApplyNoteEdits = {type: "apply-note-edits"};
 
 export interface StartContentEdit {
-  type: "start-content-edit"
+  type: "start-content-edit";
 }
 
 export const startContentEdit: StartContentEdit = {type: "start-content-edit"};
 
 export interface ReturnToTermSelect {
-  type: "return-to-term-select"
+  type: "return-to-term-select";
 }
 
-export const returnToTermSelect: ReturnToTermSelect = {type: "return-to-term-select"};
+export const returnToTermSelect: ReturnToTermSelect = {
+  type: "return-to-term-select",
+};
 
 export interface SelectTermCell {
-  type: "select-term-cell",
-  idx: number
+  type: "select-term-cell";
+  idx: number;
 }
 
 export function selectTermCell(idx: number): SelectTermCell {
   return {
     type: "select-term-cell",
-    idx
-  }
+    idx,
+  };
 }
 
 export interface SelectEditTerm {
-  type: "select-edit-term",
-  term: NormalizedTerm
+  type: "select-edit-term";
+  term: NormalizedTerm;
 }
 
 export function selectEditTerm(term: NormalizedTerm): SelectEditTerm {
   return {
     type: "select-edit-term",
-    term
-  }
+    term,
+  };
 }
 
 export interface CommitTerm {
-  type: "commit-term"
+  type: "commit-term";
 }
 
 export const commitTerm: CommitTerm = {type: "commit-term"};
 
 export interface DeleteTerm {
-  type: "delete-term"
+  type: "delete-term";
 }
 
 export const deleteTerm: DeleteTerm = {type: "delete-term"};
 
 export interface CommitNote {
-  type: "commit-note"
+  type: "commit-note";
 }
 
 export const commitNote: CommitNote = {type: "commit-note"};
 
 export interface SkipNote {
-  type: "skip-note"
+  type: "skip-note";
 }
 
 export const skipNote: SkipNote = {type: "skip-note"};
 
-export type EditNoteActions = ApplyNoteEdits | StartContentEdit |
-  ReturnToTermSelect | SelectTermCell | SelectEditTerm | TestPronounciation |
-  CommitTerm | DeleteTerm | CommitNote | SkipNote;
+export type EditNoteActions =
+  | ApplyNoteEdits
+  | StartContentEdit
+  | ReturnToTermSelect
+  | SelectTermCell
+  | SelectEditTerm
+  | TestPronounciation
+  | CommitTerm
+  | DeleteTerm
+  | CommitNote
+  | SkipNote;
 
-export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAction): ReductionWithEffect<State> {
-  let effect: SideEffect | 0 = null;
+export function reduceEditNote(
+  state: State,
+  action: EditNoteActions | IgnoredAction
+): ReductionWithEffect<State> {
+  let effect: SideEffect | void = null;
 
   let content = state.editingNoteNormalized.attributes.content;
 
   switch (action.type) {
     case "skip-note":
-      var editableNote = findNextEditableNote(state.indexes, state.editingNote.id);
+      var editableNote = findNextEditableNote(
+        state.indexes,
+        state.editingNote.id
+      );
       if (editableNote) {
-        ({state, effect} = sequenceReduction(effect, startEditingNote(state, editableNote)));
+        ({state, effect} = sequenceReduction(
+          effect,
+          startEditingNote(state, editableNote)
+        ));
       } else {
         state = {...state};
         state.location = "main";
@@ -109,15 +152,24 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
       state = {...state};
       state.editingNoteMode = "select";
 
-      var editingNote = state.editingNoteNormalized = {...state.editingNoteNormalized};
-      var term = findTermInNormalizedNote(editingNote, state.editingTermReference, state.editingTermMarker);
-      if (!term)  break;
+      var editingNote = (state.editingNoteNormalized = {
+        ...state.editingNoteNormalized,
+      });
+      var term = findTermInNormalizedNote(
+        editingNote,
+        state.editingTermReference,
+        state.editingTermMarker
+      );
+      if (!term) break;
 
-      let noteAttrs = editingNote.attributes = {...editingNote.attributes};
+      let noteAttrs = (editingNote.attributes = {...editingNote.attributes});
       var range = findTermRange(term, noteAttrs.content);
-      noteAttrs.content = noteAttrs.content.slice(0, range[0]) + term.attributes.reference + noteAttrs.content.slice(range[1]);
+      noteAttrs.content =
+        noteAttrs.content.slice(0, range[0]) +
+        term.attributes.reference +
+        noteAttrs.content.slice(range[1]);
 
-      let terms = noteAttrs.terms = noteAttrs.terms.slice();
+      let terms = (noteAttrs.terms = noteAttrs.terms.slice());
       terms.splice(terms.indexOf(term), 1);
       break;
 
@@ -126,7 +178,12 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
       state.location = "main";
 
       state.indexes = removeNote(state.indexes, state.editingNote);
-      var denormalized = denormalizedNote(state.editingNoteNormalized, state.editingNote.id, state.editingNote.path, state.editingNote.version);
+      var denormalized = denormalizedNote(
+        state.editingNoteNormalized,
+        state.editingNote.id,
+        state.editingNote.path,
+        state.editingNote.version
+      );
       denormalized.note = {...denormalized.note};
       denormalized.note.localEdits = true;
       denormalized.note.attributes = {...denormalized.note.attributes};
@@ -141,9 +198,15 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
       state = {...state};
       state.editingNoteMode = "select";
 
-      var editingNote = state.editingNoteNormalized = {...state.editingNoteNormalized};
-      var term = findTermInNormalizedNote(editingNote, state.editingTermReference, state.editingTermMarker);
-      if (!term)  break;
+      var editingNote = (state.editingNoteNormalized = {
+        ...state.editingNoteNormalized,
+      });
+      var term = findTermInNormalizedNote(
+        editingNote,
+        state.editingTermReference,
+        state.editingTermMarker
+      );
+      if (!term) break;
 
       let existingIdx = editingNote.attributes.terms.indexOf(term);
       if (existingIdx === -1) throw new Error("Bug");
@@ -153,14 +216,17 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
       editingNote.attributes.terms = editingNote.attributes.terms.slice();
       editingNote.attributes.terms.splice(existingIdx, 1, term);
 
+      let termAttrs = (term.attributes = {...term.attributes});
+      termAttrs.pronounce = state.inputs.termPronounce.value;
+      termAttrs.definition = state.inputs.termDefinition.value;
+      termAttrs.hint = state.inputs.termHint.value;
 
-      let termAttrs = term.attributes = {...term.attributes};
-      termAttrs.pronounce = state.inputs.termPronounce;
-      termAttrs.definition = state.inputs.termDefinition;
-      termAttrs.hint = state.inputs.termHint;
-
-      let newClozes = state.toggles.studyByProduce ? state.inputs.termClozes.split(",") : [];
-      let produced = termAttrs.clozes.filter(c => c.attributes.type === "produce");
+      let newClozes = state.toggles.studyByProduce
+        ? state.inputs.termClozes.value.split(",")
+        : [];
+      let produced = termAttrs.clozes.filter(
+        c => c.attributes.type === "produce"
+      );
 
       let next: NormalizedCloze;
 
@@ -177,7 +243,9 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
       });
 
       const addClozeType = (type: ClozeType) => {
-        let existing = termAttrs.clozes.filter(c => c.attributes.type === type)[0];
+        let existing = termAttrs.clozes.filter(
+          c => c.attributes.type === type
+        )[0];
         if (existing) {
           termAttrs.clozes.push(existing);
         } else {
@@ -206,35 +274,53 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
       state = {...state};
       state.editingNoteMode = "select";
       state.editingNoteNormalized = {...state.editingNoteNormalized};
-      state.editingNoteNormalized.attributes = {...state.editingNoteNormalized.attributes};
-      state.editingNoteNormalized.attributes.content = state.inputs.editingNoteContent;
-      state.editingNoteNormalized.attributes.language = state.inputs.editingNoteLanguage;
+      state.editingNoteNormalized.attributes = {
+        ...state.editingNoteNormalized.attributes,
+      };
+      state.editingNoteNormalized.attributes.content =
+        state.inputs.editingNoteContent.value;
+      state.editingNoteNormalized.attributes.language =
+        state.inputs.editingNoteLanguage.value;
       break;
 
     case "start-content-edit":
       state = {...state};
       state.inputs = {...state.inputs};
       state.editingNoteMode = "content";
-      state.inputs.editingNoteContent = content;
-      state.inputs.editingNoteLanguage = state.editingNoteNormalized.attributes.language;
+      state.inputs.editingNoteContent = {value: content};
+      state.inputs.editingNoteLanguage = {
+        value: state.editingNoteNormalized.attributes.language,
+      };
       break;
 
     case "test-pronounciation":
       var term = findTermInNormalizedNote(
         state.editingNoteNormalized,
         state.editingTermReference,
-        state.editingTermMarker);
+        state.editingTermMarker
+      );
 
       if (term) {
         let fragment = getTermFragment(
-          state.editingNoteNormalized, term,
-          state.inputs.termPronounce || term.attributes.reference);
-        effect = sequence(effect, requestSpeech(fragment, state.editingNoteNormalized.attributes.language));
+          state.editingNoteNormalized,
+          term,
+          state.inputs.termPronounce.value || term.attributes.reference
+        );
+        effect = sequence(
+          effect,
+          requestSpeech(
+            fragment,
+            state.editingNoteNormalized.attributes.language
+          )
+        );
       }
       break;
 
     case "select-edit-term":
-      ({state, effect} = sequenceReduction(effect, startEditingTerm(state, action.term)));
+      ({state, effect} = sequenceReduction(
+        effect,
+        startEditingTerm(state, action.term)
+      ));
       break;
 
     case "select-term-cell":
@@ -242,16 +328,23 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
 
       if (state.selectTermLeft >= 0) {
         if (action.idx >= state.selectTermLeft) {
-          state.editingNoteNormalized = addNewTerm(state.editingNoteNormalized, state.selectTermLeft, action.idx + 1);
+          state.editingNoteNormalized = addNewTerm(
+            state.editingNoteNormalized,
+            state.selectTermLeft,
+            action.idx + 1
+          );
           let terms = state.editingNoteNormalized.attributes.terms;
           let term = terms[terms.length - 1];
 
-          ({state, effect} = sequenceReduction(effect, startEditingTerm(state, term)));
+          ({state, effect} = sequenceReduction(
+            effect,
+            startEditingTerm(state, term)
+          ));
         }
 
         state.selectTermLeft = -1;
       } else {
-        state.selectTermLeft = action.idx
+        state.selectTermLeft = action.idx;
       }
       break;
   }
@@ -259,8 +352,11 @@ export function reduceEditNote(state: State, action: EditNoteActions | IgnoredAc
   return {state, effect};
 }
 
-export function startEditingNote(state: State, note: Note): ReductionWithEffect<State> {
-  let effect: SideEffect | 0 = null;
+export function startEditingNote(
+  state: State,
+  note: Note
+): ReductionWithEffect<State> {
+  let effect: SideEffect | void = null;
   state = {...state};
 
   state.editingNote = note;
@@ -275,8 +371,11 @@ export function startEditingNote(state: State, note: Note): ReductionWithEffect<
   return {state, effect};
 }
 
-export function startEditingTerm(state: State, term: NormalizedTerm): ReductionWithEffect<State> {
-  let effect: SideEffect | 0 = null;
+export function startEditingTerm(
+  state: State,
+  term: NormalizedTerm
+): ReductionWithEffect<State> {
+  let effect: SideEffect | void = null;
 
   state = {...state};
 
@@ -285,19 +384,31 @@ export function startEditingTerm(state: State, term: NormalizedTerm): ReductionW
   state.editingNoteMode = "term";
 
   state.inputs = {...state.inputs};
-  state.inputs.termHint = term.attributes.hint;
-  state.inputs.termPronounce = term.attributes.pronounce;
-  state.inputs.termSearchBy = term.attributes.reference;
-  state.inputs.termClozes = term.attributes.clozes
-      .filter(c => c.attributes.type === "produce")
-      .map(c => c.attributes.clozed).join(",") || term.attributes.reference;
-  state.inputs.termDefinition = term.attributes.definition;
+  state.inputs.termHint = {value: term.attributes.hint};
+  state.inputs.termPronounce = {value: term.attributes.pronounce};
+  state.inputs.termSearchBy = {value: term.attributes.reference};
+  state.inputs.termClozes = {
+    value:
+      term.attributes.clozes
+        .filter(c => c.attributes.type === "produce")
+        .map(c => c.attributes.clozed)
+        .join(",") || term.attributes.reference,
+  };
+  state.inputs.termDefinition = {value: term.attributes.definition};
 
   state.toggles = {...state.toggles};
-  state.toggles.studyByListen = !!term.attributes.clozes.filter(c => c.attributes.type === "listen").length;
-  state.toggles.studyByProduce = !!term.attributes.clozes.filter(c => c.attributes.type === "produce").length;
-  state.toggles.studyByRecognize = !!term.attributes.clozes.filter(c => c.attributes.type === "recognize").length;
-  state.toggles.studyBySpeak = !!term.attributes.clozes.filter(c => c.attributes.type === "speak").length;
+  state.toggles.studyByListen = !!term.attributes.clozes.filter(
+    c => c.attributes.type === "listen"
+  ).length;
+  state.toggles.studyByProduce = !!term.attributes.clozes.filter(
+    c => c.attributes.type === "produce"
+  ).length;
+  state.toggles.studyByRecognize = !!term.attributes.clozes.filter(
+    c => c.attributes.type === "recognize"
+  ).length;
+  state.toggles.studyBySpeak = !!term.attributes.clozes.filter(
+    c => c.attributes.type === "speak"
+  ).length;
 
   return {state, effect};
 }

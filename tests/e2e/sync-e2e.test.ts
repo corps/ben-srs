@@ -3,15 +3,23 @@ import {deletePath, setupDropbox, testPath} from "./dropbox-test-utils";
 import {Subscription} from "kamo-reducers/subject";
 import {BensrsTester} from "../tester";
 import {NoteFactory} from "../factories/notes-factories";
-import {newSettings, Term, Note, newTerm, newCloze, newClozeAnswer} from "../../src/model";
-import {localStoreKey, newLocalStore} from "../../src/reducers/session-reducer";
+import {
+  newSettings,
+  Term,
+  Note,
+} from "../../src/model";
+import {settingsStoreKey, newLocalStore} from "../../src/reducers/session-reducer";
 import uuid = require("uuid");
 import {storeLocalData} from "kamo-reducers/services/local-storage";
 import {windowFocus} from "../../src/services/window";
 import {Indexer} from "redux-indexers";
 import {isSideEffect} from "kamo-reducers/reducers";
 import {setImmediate} from "timers";
-import {findNoteTree, loadIndexables, normalizedNote, notesIndexer} from "../../src/indexes";
+import {
+  findNoteTree,
+  normalizedNote,
+  notesIndexer,
+} from "../../src/indexes";
 import {startSync} from "../../src/reducers/sync-reducer";
 
 let subscription = new Subscription();
@@ -20,7 +28,7 @@ let tester: BensrsTester;
 
 const testLocalStore = {...newLocalStore};
 
-let settings = testLocalStore.settings = {...newSettings};
+let settings = (testLocalStore.settings = {...newSettings});
 settings.session = {...settings.session};
 settings.session.accessToken = token;
 settings.session.sessionExpiresAt = Date.now() * 10;
@@ -43,11 +51,13 @@ for (var i = 0; i < initialSyncSize; ++i) {
   termFactory.addCloze();
   termFactory.addCloze();
 
-  testLocalStore.newNotes["/test/" + uuid.v4()] = JSON.parse(JSON.stringify(noteFactory.note));
+  testLocalStore.newNotes["/test/" + uuid.v4()] = JSON.parse(
+    JSON.stringify(noteFactory.note)
+  );
 }
 
 testModule("e2e/sync", {
-  beforeEach: (assert) => {
+  beforeEach: assert => {
     assert.timeout(15000);
     tester = new BensrsTester();
     subscription.add(tester.subscription.unsubscribe);
@@ -64,7 +74,7 @@ testModule("e2e/sync", {
 
   afterEach: () => {
     subscription.unsubscribe();
-  }
+  },
 });
 
 function sequenceChecks(assert: Assert, checks: Function[]) {
@@ -74,39 +84,43 @@ function sequenceChecks(assert: Assert, checks: Function[]) {
 
   let inCheck = false;
 
-  subscription.add(tester.queued$.subscribe(ea => {
-    if (isSideEffect(ea)) {
-      console.log("effect", ea);
-    } else {
-      console.log("action", ea);
-    }
-  }));
+  subscription.add(
+    tester.queued$.subscribe(ea => {
+      if (isSideEffect(ea)) {
+        console.log("effect", ea);
+      } else {
+        console.log("action", ea);
+      }
+    })
+  );
 
-  subscription.add(tester.update$.subscribe((u) => {
-    if (inCheck) return;
+  subscription.add(
+    tester.update$.subscribe(u => {
+      if (inCheck) return;
 
-    let next = checks.shift();
+      let next = checks.shift();
 
-    if (next) {
-      inCheck = true;
-      let result = next();
-      inCheck = false;
-      if (result) {
-        if (checks.length === 0) {
-          finish();
+      if (next) {
+        inCheck = true;
+        let result = next();
+        inCheck = false;
+        if (result) {
+          if (checks.length === 0) {
+            finish();
+          }
+        } else {
+          checks.unshift(next);
         }
       } else {
-        checks.unshift(next);
+        finish();
       }
-    } else {
-      finish();
-    }
-  }));
+    })
+  );
 }
 
 function loadCredentialsAndNewData() {
-  tester.queued$.dispatch(storeLocalData(localStoreKey, testLocalStore));
-  tester.queued$.dispatch(windowFocus);
+  tester.queued$.dispatch(storeLocalData(settingsStoreKey, testLocalStore));
+  tester.queued$.dispatch(windowFocus());
 }
 
 function awaitInitialBadSync() {
@@ -133,10 +147,17 @@ function awaitNewSyncComplete() {
   assert.equal(tester.state.syncOffline, false, "syncOffline");
 
   assert.deepEqual(tester.state.newNotes, {}, "newNotes");
-  assert.equal(tester.state.indexes.notes.byPath.length, initialSyncSize);
+  assert.equal(
+    tester.state.indexes.notes.byPath.length,
+    initialSyncSize,
+    "syncs all the original new notes"
+  );
 
   for (var path in testLocalStore.newNotes) {
-    let indexed = Indexer.getFirstMatching(tester.state.indexes.notes.byPath, path.split("/"));
+    let indexed = Indexer.getFirstMatching(
+      tester.state.indexes.notes.byPath,
+      path.split("/")
+    );
     let newNote = JSON.parse(JSON.stringify(testLocalStore.newNotes[path]));
 
     assert.notEqual(indexed, null, "Note " + path + " in index");
@@ -144,9 +165,9 @@ function awaitNewSyncComplete() {
     if (indexed && newNote) {
       newNote.attributes.terms.sort((a: Term, b: Term) => {
         if (a.attributes.reference != b.attributes.reference)
-          return a.attributes.reference.localeCompare(b.attributes.reference)
+          return a.attributes.reference.localeCompare(b.attributes.reference);
 
-        return a.attributes.marker.localeCompare(b.attributes.marker)
+        return a.attributes.marker.localeCompare(b.attributes.marker);
       });
 
       assert.notEqual(indexed.version, "", "Version is set");
@@ -154,15 +175,19 @@ function awaitNewSyncComplete() {
       assert.equal(indexed.localEdits, false, "No Local edits");
 
       let tree = findNoteTree(tester.state.indexes, indexed.id);
-      assert.ok(tree);
+      assert.ok(tree, "loaded into the state indexes");
       if (tree) {
         let normalized = normalizedNote(tree);
-        assert.deepEqual(JSON.parse(JSON.stringify(normalized)), newNote);
+        assert.deepEqual(
+          JSON.parse(JSON.stringify(normalized)),
+          newNote,
+          "Correctly deserialized the expected note"
+        );
       }
     }
   }
 
-  setImmediate(function () {
+  setImmediate(function() {
     var i = 0;
     var iter = Indexer.iterator(tester.state.indexes.notes.byId);
     for (var next = iter(); next && i < 6; next = iter()) {
@@ -175,8 +200,15 @@ function awaitNewSyncComplete() {
       ++i;
     }
     tester.state.indexes = {...tester.state.indexes};
-    tester.state.indexes.notes = notesIndexer.update(tester.state.indexes.notes, editedNotes);
-    assert.equal(tester.state.indexes.notes.byId.length, initialSyncSize);
+    tester.state.indexes.notes = notesIndexer.update(
+      tester.state.indexes.notes,
+      editedNotes
+    );
+    assert.equal(
+      tester.state.indexes.notes.byId.length,
+      initialSyncSize,
+      "test precondition"
+    );
 
     let {state, effect} = startSync(tester.state);
     tester.state = state;
@@ -193,29 +225,38 @@ var editedNotes: Note[] = [];
 function awaitEditedSyncComplete() {
   if (tester.state.finishedSyncCount < 3) return false;
 
-  assert.equal(tester.state.indexes.notes.byPath.length, initialSyncSize);
+  assert.equal(
+    tester.state.indexes.notes.byPath.length,
+    initialSyncSize,
+    "edited notes sync without creating new notes"
+  );
   assert.notEqual(editedNotes.length, 0);
 
   for (var i = 0; i < editedNotes.length; ++i) {
     let editedNote = editedNotes[i];
-    let indexed = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [editedNote.id]);
+    let indexed = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [
+      editedNote.id,
+    ]);
     assert.ok(indexed);
 
     if (indexed) {
       assert.deepEqual(indexed.attributes, editedNote.attributes);
       assert.notEqual(indexed.version, editedNote.version);
-      assert.equal(indexed.localEdits, false);
+      assert.equal(indexed.localEdits, false, "edited notes have localEdits set to false");
 
       editedNote = {...editedNote};
       editedNote.attributes = {...editedNote.attributes};
       editedNote.attributes.content = "more different content";
       editedNote.localEdits = true;
       tester.state.indexes = {...tester.state.indexes};
-      tester.state.indexes.notes = notesIndexer.update(tester.state.indexes.notes, [editedNote]);
+      tester.state.indexes.notes = notesIndexer.update(
+        tester.state.indexes.notes,
+        [editedNote]
+      );
     }
   }
 
-  setImmediate(function () {
+  setImmediate(function() {
     let {state, effect} = startSync(tester.state);
     tester.state = state;
     if (effect) {
@@ -234,7 +275,9 @@ function awaitEditedWithOlderRevision() {
 
   for (var i = 0; i < editedNotes.length; ++i) {
     let editedNote = editedNotes[i];
-    let indexed = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [editedNote.id]);
+    let indexed = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [
+      editedNote.id,
+    ]);
     assert.ok(indexed);
 
     if (indexed) {
@@ -244,8 +287,8 @@ function awaitEditedWithOlderRevision() {
     }
   }
 
-  setImmediate(function () {
-    deletePath(testPath, token, (err) => {
+  setImmediate(function() {
+    deletePath(testPath, token, err => {
       assert.notOk(err);
 
       let {state, effect} = startSync(tester.state);
@@ -262,54 +305,62 @@ function awaitEditedWithOlderRevision() {
 function awaitDeletedSync() {
   if (tester.state.finishedSyncCount < 5) return false;
 
-  assert.equal(tester.state.indexes.notes.byPath.length, 0);
-  assert.equal(tester.state.indexes.terms.byLanguage.length, 0);
-  assert.equal(tester.state.indexes.clozes.byLanguageAndNextDue.length, 0);
-  assert.equal(tester.state.indexes.clozeAnswers.byLanguageAndAnswered.length, 0);
+  assert.equal(tester.state.indexes.notes.byPath.length, 0, "every note was deleted");
+  assert.equal(tester.state.indexes.terms.byLanguage.length, 0, "every term was deleted");
+  assert.equal(tester.state.indexes.clozes.byLanguageAndNextDue.length, 0, "every close deleted");
+  assert.equal(
+    tester.state.indexes.clozeAnswers.byLanguageAndAnswered.length,
+    0, "every cloze answer is deleted",
+  );
 
-  setImmediate(function () {
-    let note = {...editedNotes[0]};
-    note.localEdits = true;
+//   setImmediate(function() {
+//     let note = {...editedNotes[0]};
+//     note.localEdits = true;
 
-    let term = {...newTerm};
-    term.noteId = note.id;
+//     let term = {...newTerm};
+//     term.noteId = note.id;
 
-    let cloze = {...newCloze};
-    cloze.noteId = note.id;
+//     let cloze = {...newCloze};
+//     cloze.noteId = note.id;
 
-    let clozeAnswer = {...newClozeAnswer};
-    clozeAnswer.noteId = note.id;
+//     let clozeAnswer = {...newClozeAnswer};
+//     clozeAnswer.noteId = note.id;
 
-    tester.state.indexes = loadIndexables(tester.state.indexes, [{
-      note,
-      terms: [term],
-      clozes: [cloze],
-      clozeAnswers: [clozeAnswer]
-    }]);
+//     tester.state.indexes = loadIndexables(tester.state.indexes, [
+//       {
+//         note,
+//         terms: [term],
+//         clozes: [cloze],
+//         clozeAnswers: [clozeAnswer],
+//       },
+//     ]);
 
-    let {state, effect} = startSync(tester.state);
-    tester.state = state;
-    if (effect) {
-      tester.queued$.dispatch(effect);
-    }
-  });
-
-  return true;
-}
-
-function awaitConflictOfDeleteSync() {
-  if (tester.state.finishedSyncCount < 6) return false;
-
-  assert.equal(tester.state.indexes.notes.byPath.length, 0);
-  assert.equal(tester.state.indexes.terms.byLanguage.length, 0);
-  assert.equal(tester.state.indexes.clozes.byLanguageAndNextDue.length, 0);
-  assert.equal(tester.state.indexes.clozeAnswers.byLanguageAndAnswered.length, 0);
+//     let {state, effect} = startSync(tester.state);
+//     tester.state = state;
+//     if (effect) {
+//       tester.queued$.dispatch(effect);
+//     }
+//   });
 
   return true;
 }
+
+// function awaitConflictOfDeleteSync() {
+//   if (tester.state.finishedSyncCount < 6) return false;
+
+//   assert.equal(tester.state.indexes.notes.byPath.length, 0);
+//   assert.equal(tester.state.indexes.terms.byLanguage.length, 0);
+//   assert.equal(tester.state.indexes.clozes.byLanguageAndNextDue.length, 0);
+//   assert.equal(
+//     tester.state.indexes.clozeAnswers.byLanguageAndAnswered.length,
+//     0
+//   );
+
+//   return true;
+// }
 
 if (process.env.E2E_TEST) {
-  test("syncing, saving new, editing, deleting", (assert) => {
+  test("syncing, saving new, editing, deleting", assert => {
     assert.timeout(600000);
 
     sequenceChecks(assert, [
@@ -318,7 +369,7 @@ if (process.env.E2E_TEST) {
       awaitEditedSyncComplete,
       awaitEditedWithOlderRevision,
       awaitDeletedSync,
-      awaitConflictOfDeleteSync,
+      // awaitConflictOfDeleteSync,
     ]);
 
     tester.queued$.buffering = false;
