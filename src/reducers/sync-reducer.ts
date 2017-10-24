@@ -85,7 +85,6 @@ function completeListFolder(
   state: State,
   completeRequest: CompleteRequest
 ): ReductionWithEffect<State> {
-  console.log(completeRequest.name, completeRequest.status);
   if (completeRequest.name[0] !== listFolderRequestName) return {state};
 
   if (!completeRequest.success) {
@@ -95,15 +94,11 @@ function completeListFolder(
   let effect: SideEffect | void;
   let response = getDropboxResult(completeRequest)
     .response as DropboxListFolderResponse;
+
   if (response) {
-    ({state, effect} = sequenceReduction(
-      effect,
-      startSyncDownload(state, response)
-    ));
-    ({state, effect} = sequenceReduction(
-      effect,
-      checkSyncDownloadComplete(state, false)
-    ));
+    state = {...state};
+    state.syncingListFolder = response;
+    state.downloadedNotes = [];
   }
 
   return {state, effect};
@@ -124,12 +119,6 @@ function completeFileUpload(
   let effect: SideEffect | void;
 
   state = {...state};
-  let idx = state.remainingUploads.indexOf(pathOrId);
-  if (idx !== -1) {
-    state.remainingUploads = state.remainingUploads.slice();
-    state.remainingUploads.splice(idx, 1);
-  }
-
   if (pathOrId.slice(0, 3) === "id:") {
     let note = Indexer.getFirstMatching(state.indexes.notes.byId, [pathOrId]);
     if (note) {
@@ -148,9 +137,6 @@ function completeFileUpload(
     delete state.newNotes[pathOrId];
   }
 
-  effect = sequence(effect, requestLocalStoreUpdate(state));
-  ({state, effect} = sequenceReduction(effect, checkUploadSyncComplete(state)));
-
   return {state, effect};
 }
 
@@ -161,7 +147,6 @@ function completeFileDownload(
   if (completeRequest.name[0] !== filesDownloadRequestName) return {state};
 
   const missingFile = completeRequest.status === 409;
-  const pathOrId = completeRequest.name[1];
   if (!completeRequest.success && !missingFile) {
     return reduceSyncRequestFailure(state);
   }
@@ -170,13 +155,7 @@ function completeFileDownload(
 
   state = {...state};
 
-  state.executingDownloads = state.executingDownloads.slice();
-  state.executingDownloads.splice(
-    state.executingDownloads.indexOf(pathOrId),
-    1
-  );
-
-  if (completeRequest.success) {
+  if (completeRequest.success && state.syncingListFolder) {
     const dropboxResult = getDropboxResult(completeRequest);
     let downloadedNote: NormalizedNote;
     try {
@@ -199,15 +178,9 @@ function completeFileDownload(
       downloadResponse.path_lower,
       downloadResponse.rev
     );
+
     state.downloadedNotes = state.downloadedNotes.concat([denormalized]);
-
-    effect = sequence(effect, requestLocalStoreUpdate(state));
   }
-
-  ({state, effect} = sequenceReduction(
-    effect,
-    checkSyncDownloadComplete(state, completeRequest.success)
-  ));
 
   return {state, effect};
 }
@@ -237,6 +210,17 @@ export function reduceSync(
         effect,
         completeFileDownload(state, action)
       ));
+
+      if (state.syncingListFolder) {
+        ({state, effect} = sequenceReduction(
+          effect,
+          checkSyncDownloadComplete(state, state.syncingListFolder)
+        ));
+      }
+
+      effect = sequence(effect, requestLocalStoreUpdate(state));
+      ({state, effect} = sequenceReduction(effect, continueSync(state)));
+      break;
   }
 
   return {state, effect};
@@ -244,30 +228,23 @@ export function reduceSync(
 
 function checkSyncDownloadComplete(
   state: State,
-  alreadyRequestingStore: boolean
+  listFolderResponse: DropboxListFolderResponse
 ): ReductionWithEffect<State> {
   let effect: SideEffect | void = null;
 
-  if (state.executingDownloads.length) {
+  if (state.settings.session.syncCursor == listFolderResponse.cursor)
     return {state, effect};
-  }
+  if (findNextDownload(state, listFolderResponse)) return {state, effect};
 
   state = {...state};
-  if (!state.syncingListFolder) {
-    return {state, effect};
+
+  const downloadedNotesById: {[id: string]: NoteTree} = {};
+  for (let tree of state.downloadedNotes) {
+    downloadedNotesById[tree.note.id] = tree;
   }
 
-  const downloadedNotes: {[k: string]: NoteTree} = {};
-  state.downloadedNotes.forEach(n => {
-    downloadedNotes[n.note.id] = n;
-  });
-
-  state.downloadedNotes = [];
-
-  state.indexes = {...state.indexes};
-
   function loadDownloaded(id: string) {
-    let downloaded = downloadedNotes[id];
+    let downloaded = downloadedNotesById[id];
     let existing = Indexer.getFirstMatching(state.indexes.notes.byId, [id]);
 
     if (existing) {
@@ -279,7 +256,16 @@ function checkSyncDownloadComplete(
     }
   }
 
-  state.syncingListFolder.entries.forEach(entry => {
+  let hasConflicts = Indexer.getAllMatching(
+    state.indexes.notes.byHasConflicts,
+    [true]
+  );
+
+  hasConflicts.forEach(note => {
+    loadDownloaded(note.id);
+  });
+
+  listFolderResponse.entries.forEach(entry => {
     if (entry[".tag"] === "deleted") {
       let notes = Indexer.getAllMatching(
         state.indexes.notes.byPath,
@@ -295,52 +281,9 @@ function checkSyncDownloadComplete(
     }
   });
 
-  let hasConflicts = Indexer.getAllMatching(
-    state.indexes.notes.byHasConflicts,
-    [true]
-  );
-  hasConflicts.forEach(note => {
-    loadDownloaded(note.id);
-  });
-
   state.settings = {...state.settings};
   state.settings.session = {...state.settings.session};
-  state.settings.session.syncCursor = state.syncingListFolder.cursor;
-
-  if (!alreadyRequestingStore)
-    effect = sequence(effect, requestLocalStoreUpdate(state));
-
-  if (state.syncingListFolder.has_more) {
-    effect = sequence(
-      effect,
-      requestListFolder(
-        state.settings.session.accessToken,
-        state.syncingListFolder.cursor
-      )
-    );
-  }
-
-  state.finishedSyncCount += 1;
-
-  return {state, effect};
-}
-
-function checkUploadSyncComplete(state: State): ReductionWithEffect<State> {
-  let effect: SideEffect | void = null;
-
-  if (state.remainingUploads.length) return {state, effect};
-
-  state = {...state};
-
-  let listFolderRequest = requestListFolder(
-    state.settings.session.accessToken,
-    state.settings.session.syncCursor
-  );
-  state.clearSyncEffects = sequence(
-    state.clearSyncEffects,
-    abortRequest(listFolderRequest.name)
-  );
-  effect = sequence(effect, listFolderRequest);
+  state.settings.session.syncCursor = listFolderResponse.cursor;
 
   return {state, effect};
 }
@@ -358,114 +301,6 @@ export function clearOtherSyncProcesses(
   return {state, effect};
 }
 
-function startSyncDownload(
-  state: State,
-  response: DropboxListFolderResponse
-): ReductionWithEffect<State> {
-  let effect: SideEffect | void = null;
-
-  state = {...state};
-
-  if (
-    !state.settings.session.accessToken ||
-    state.now / 1000 > state.settings.session.sessionExpiresAt
-  ) {
-    state.syncAuthBad = true;
-    return {state, effect};
-  }
-
-  let token = state.settings.session.accessToken;
-
-  state.syncingListFolder = response;
-  state.executingDownloads = [];
-  const downloadedNoteRevs: {[k: string]: boolean} = {};
-  state.downloadedNotes.forEach(
-    n => (downloadedNoteRevs[n.note.version] = true)
-  );
-
-  let hasConflicts = Indexer.getAllMatching(
-    state.indexes.notes.byHasConflicts,
-    [true]
-  );
-  for (let note of hasConflicts) {
-    let request = requestFileDownload(token, note.id);
-    state.clearSyncEffects = sequence(
-      state.clearSyncEffects,
-      abortRequest(request.name)
-    );
-    effect = sequence(effect, request);
-    state.executingDownloads.push(note.id);
-  }
-
-  for (let entry of response.entries) {
-    if (entry[".tag"] === "file") {
-      let rev = (entry as DropboxFileEntry).rev;
-      if (downloadedNoteRevs[rev]) continue;
-
-      let request = requestFileDownload(token, "rev:" + rev);
-      state.clearSyncEffects = sequence(
-        state.clearSyncEffects,
-        abortRequest(request.name)
-      );
-      effect = sequence(effect, request);
-      state.executingDownloads.push(entry.path_lower);
-    }
-  }
-
-  return {state, effect};
-}
-
-function startSyncUpload(state: State): ReductionWithEffect<State> {
-  let effect: SideEffect | void = null;
-
-  state = {...state};
-
-  let hasEdits = Indexer.getAllMatching(state.indexes.notes.byHasLocalEdits, [
-    true,
-  ]);
-  state.remainingUploads = [];
-
-  for (let note of hasEdits) {
-    let noteTree = findNoteTree(state.indexes, note.id);
-    if (!noteTree) continue;
-    let normalized = normalizedNote(noteTree);
-
-    let request = requestFileUpload(
-      state.settings.session.accessToken,
-      note.id,
-      note.version,
-      stringifyNote(normalized),
-    );
-    state.clearSyncEffects = sequence(
-      state.clearSyncEffects,
-      abortRequest(request.name)
-    );
-
-    state.remainingUploads.push(note.id);
-    effect = sequence(effect, request);
-  }
-
-  for (let key in state.newNotes) {
-    let normalized = state.newNotes[key];
-    let request = requestFileUpload(
-      state.settings.session.accessToken,
-      key,
-      "",
-      stringifyNote(normalized),
-    );
-    state.clearSyncEffects = sequence(
-      state.clearSyncEffects,
-      abortRequest(request.name)
-    );
-    state.remainingUploads.push(key);
-    effect = sequence(effect, request);
-  }
-
-  ({state, effect} = sequenceReduction(effect, checkUploadSyncComplete(state)));
-
-  return {state, effect};
-}
-
 export function startSync(state: State): ReductionWithEffect<State> {
   let effect: SideEffect | void = null;
 
@@ -479,6 +314,7 @@ export function startSync(state: State): ReductionWithEffect<State> {
   state.startedSyncCount += 1;
   state.syncOffline = false;
   state.syncAuthBad = false;
+  state.syncingListFolder = null;
 
   if (
     !state.settings.session.accessToken ||
@@ -489,7 +325,125 @@ export function startSync(state: State): ReductionWithEffect<State> {
     return {state, effect};
   }
 
-  ({state, effect} = sequenceReduction(effect, startSyncUpload(state)));
+  ({state, effect} = sequenceReduction(effect, continueSync(state)));
+
+  return {state, effect};
+}
+
+function findNextDownload(
+  state: State,
+  listFolderResponse: DropboxListFolderResponse
+): RequestAjax | void {
+  const token = state.settings.session.accessToken;
+
+  const notesByIdAndRev: {[id: string]: {[rev: string]: NoteTree}} = {};
+  for (let downloaded of state.downloadedNotes) {
+    let byRev = (notesByIdAndRev[downloaded.note.id] =
+      notesByIdAndRev[downloaded.note.id] || {});
+    byRev[downloaded.note.version] = downloaded;
+  }
+
+  let conflictingIter = Indexer.iterator(
+    state.indexes.notes.byHasConflicts,
+    [true],
+    [true, Infinity]
+  );
+
+  for (
+    let conflictingNote = conflictingIter();
+    conflictingNote;
+    conflictingNote = conflictingIter()
+  ) {
+    if (notesByIdAndRev[conflictingNote.id]) continue;
+
+    return requestFileDownload(token, conflictingNote.id);
+  }
+
+  for (let entry of listFolderResponse.entries) {
+    if (entry[".tag"] === "file") {
+      let rev = (entry as DropboxFileEntry).rev;
+      let id = (entry as DropboxFileEntry).id;
+      if (notesByIdAndRev[id] && notesByIdAndRev[id][rev]) continue;
+
+      return requestFileDownload(token, "rev:" + rev);
+    }
+  }
+}
+
+function findNextUpload(state: State): RequestAjax | void {
+  const token = state.settings.session.accessToken;
+
+  let nextUpload = Indexer.getFirstMatching(
+    state.indexes.notes.byHasLocalEdits,
+    [true]
+  );
+
+  if (nextUpload) {
+    let noteTree = findNoteTree(state.indexes, nextUpload.id);
+    if (noteTree) {
+      let normalized = normalizedNote(noteTree);
+      return requestFileUpload(
+        token,
+        nextUpload.id,
+        nextUpload.version,
+        stringifyNote(normalized)
+      );
+    }
+  }
+
+  for (let key in state.newNotes) {
+    let normalized = state.newNotes[key];
+    return requestFileUpload(token, key, "", stringifyNote(normalized));
+  }
+}
+
+function continueSync(state: State): ReductionWithEffect<State> {
+  let effect: SideEffect | void = null;
+
+  if (!state.indexesReady) {
+    // The clearSyncEffects may be missing a sync related side effect?
+    throw new Error("continueSync was called while indexesReady was false!");
+  }
+
+  if (!state.authReady) {
+    // The clearSyncEffects may be missing a sync related side effect?
+    throw new Error("continueSync was called while indexesReady was false!");
+  }
+
+  state = {...state};
+
+  if (
+    !state.settings.session.accessToken ||
+    state.now / 1000 > state.settings.session.sessionExpiresAt
+  ) {
+    state.syncAuthBad = true;
+    state.finishedSyncCount += 1;
+    return {state, effect};
+  }
+
+  let nextRequest: RequestAjax | void = null;
+
+  if (state.syncingListFolder) {
+    nextRequest = findNextDownload(state, state.syncingListFolder);
+  } else {
+    nextRequest = findNextUpload(state);
+  }
+
+  if (!state.syncingListFolder || state.syncingListFolder.has_more) {
+    if (!nextRequest) {
+      nextRequest = requestListFolder(
+        state.settings.session.accessToken,
+        state.settings.session.syncCursor
+      );
+    }
+  }
+
+  if (nextRequest) {
+    state.clearSyncEffects = abortRequest(nextRequest.name);
+    effect = sequence(effect, nextRequest);
+  } else {
+    state.finishedSyncCount += 1;
+  }
 
   return {state, effect};
 }

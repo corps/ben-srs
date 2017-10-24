@@ -3,7 +3,7 @@ import {Subscription} from "kamo-reducers/subject";
 import {assert, test, testModule} from "../qunit";
 import {
   loadIndexesWorkerName,
-  localStoreKey,
+  settingsStoreKey,
   requestLocalStoreUpdate,
 } from "../../src/reducers/session-reducer";
 import {genLocalStore} from "../factories/settings-factory";
@@ -29,7 +29,7 @@ import {
   encodeResponseHeaders,
 } from "kamo-reducers/services/ajax";
 import {authInitialized} from "../../src/services/login";
-import {isSideEffect, SideEffect} from "kamo-reducers/reducers";
+import {SideEffect} from "kamo-reducers/reducers";
 import {sequence} from "kamo-reducers/services/sequence";
 import {NoteFactory} from "../factories/notes-factories";
 import {NormalizedNote, Note, Session, stringifyNote} from "../../src/model";
@@ -49,6 +49,8 @@ import {
 import {requestFileDownload} from "../../src/reducers/sync-reducer";
 import {requestListFolder} from "../../src/reducers/sync-reducer";
 import {requestFileUpload} from "../../src/reducers/sync-reducer";
+import {newNormalizedNote} from "../../src/model";
+import { NoteTree } from '../../src/indexes';
 
 let tester: BensrsTester;
 let subscription = new Subscription();
@@ -84,7 +86,7 @@ class SyncTestSetup {
 
   prepareState = runOnce(() => {
     tester.start();
-    tester.dispatch(loadLocalData(localStoreKey, this.store));
+    tester.dispatch(loadLocalData(settingsStoreKey, this.store));
     tester.dispatch(
       workComplete(
         [loadIndexesWorkerName],
@@ -110,7 +112,7 @@ class SyncTestSetup {
           session.accessToken,
           path,
           version,
-          stringifyNote(normalized),
+          stringifyNote(normalized)
         ),
         200,
         "",
@@ -132,7 +134,7 @@ class SyncTestSetup {
           session.accessToken,
           path,
           version,
-          stringifyNote(normalized),
+          stringifyNote(normalized)
         ),
         409,
         "",
@@ -187,13 +189,11 @@ class SyncTestSetup {
     assert.ok(Object.keys(tester.state.newNotes).length);
   });
 
-  editedNotes: NormalizedNote[] = [];
+  editedNotes: NoteTree[] = [];
   addNote = (edited = false, path = genSomeText()): [Note, NormalizedNote] => {
     let factory = new NoteFactory();
     let term = factory.addTerm();
     term.addCloze();
-
-    this.editedNotes.push(factory.note);
 
     let denormalized = denormalizedNote(
       factory.note,
@@ -203,6 +203,7 @@ class SyncTestSetup {
     );
     denormalized.note.localEdits = edited;
     this.store.indexables.push(denormalized);
+    this.editedNotes.push(denormalized);
 
     return [denormalized.note, factory.note];
   };
@@ -345,7 +346,7 @@ test("completing a file upload with 409 clears localEdits and sets hasConflicts 
   }
 });
 
-test("a list folder response issues requests for each file entry, which is aborted on sync reset", assert => {
+test("a list folder response issues a request for the next file entry", assert => {
   setup.prepareState();
 
   let listFolderResponse = genDropboxListFolderResponse();
@@ -371,7 +372,7 @@ test("a list folder response issues requests for each file entry, which is abort
         .length,
       ajaxes.length
     );
-    assert.equal(ajaxes.length, 2);
+    assert.equal(ajaxes.length, 1);
   }
 });
 
@@ -386,6 +387,7 @@ test("removes hasConflicts from downloaded notes", assert => {
     "",
     ""
   );
+
   denormalized.note.hasConflicts = true;
   tester.state.indexes = loadIndexables(tester.state.indexes, [denormalized]);
 
@@ -444,11 +446,20 @@ test("applies deletes and updated notes after all requests complete, but stores 
   listFolderResponse.entries.push(newFileEntry2);
   listFolderResponse.entries.push(deleteNoteEntry);
   setup.completeListFolderRequest(listFolderResponse);
+  assert.strictEqual(
+    originalNotes,
+    tester.state.indexes.notes,
+    "test precondition"
+  );
 
   assert.strictEqual(originalNotes, tester.state.indexes.notes);
 
   setup.completeFileDownloadRequest(newFileEntry1);
-  assert.strictEqual(originalNotes, tester.state.indexes.notes);
+  assert.strictEqual(
+    originalNotes,
+    tester.state.indexes.notes,
+    "does not apply the download yet"
+  );
   assert.equal(tester.findEffects("store-local-data").length, 1);
 
   let note1 = Indexer.getFirstMatching(tester.state.indexes.notes.byId, [
@@ -544,6 +555,7 @@ test("starting sync first cancels other sync actions", assert => {
     sequence({effectType: "b"}, {effectType: "c"}),
     {effectType: "a"}
   );
+
   tester.state.clearSyncEffects = clearSyncEffects;
   setup.startSync();
 
@@ -560,48 +572,41 @@ test("starting sync first cancels other sync actions", assert => {
     tester.findEffects("c", [tester.state.clearSyncEffects]).length,
     0
   );
-
-  let effectNames: string[] = [];
-  while (!tester.queued$.isEmpty()) {
-    let head = tester.queued$.peek();
-
-    if (isSideEffect(head)) {
-      if (head.effectType === "request-ajax") break;
-      effectNames.push(head.effectType);
-    }
-
-    tester.queued$.flushNext();
-  }
-
-  assert.notEqual(effectNames.indexOf("a"), -1);
-  assert.notEqual(effectNames.indexOf("b"), -1);
-  assert.notEqual(effectNames.indexOf("c"), -1);
 });
 
-test("syncing with newNotes and localEdits requests writes for each of those that are added to clearSyncEffects", assert => {
+test("syncing with newNotes and localEdits requests writes for each of those", assert => {
   setup.prepareWithEdited();
   setup.startSync();
 
-  let ajaxes: RequestAjax[] = tester.findEffects("request-ajax") as any[];
+  const expectedUploadNotePaths: string[] = Object.keys(
+    tester.state.newNotes
+  ).concat(setup.editedNotes.map(n => n.note.id));
+
+  let uploadedNotePaths: string[] = [];
 
   assert.equal(tester.state.startedSyncCount, 1);
-  assert.ok(ajaxes.length);
 
-  assert.equal(
-    ajaxes.filter(a => a.name[0] === filesUploadRequestName).length,
-    ajaxes.length
-  );
-  assert.equal(
-    ajaxes.length,
-    setup.editedNotes.length + Object.keys(tester.state.newNotes).length
-  );
+  while (true) {
+    let ajaxes: RequestAjax[] = tester.findEffects("request-ajax") as any[];
+    if (ajaxes.length !== 1) break;
+    assert.equal(ajaxes.length, 1, "Makes one request at a time.");
+    if (ajaxes[0].name[0] !== filesUploadRequestName) break;
+    assert.deepEqual(
+      (tester.state.clearSyncEffects as AbortRequest).name,
+      ajaxes[0].name
+    );
+    assert.equal(
+      tester.state.clearSyncEffects && tester.state.clearSyncEffects.effectType,
+      "abort-request",
+    );
+    uploadedNotePaths.push(ajaxes[0].name[1]);
 
-  let aborts: AbortRequest[] =
-    tester.state.clearSyncEffects &&
-    (tester.findEffects("abort-request", [
-      tester.state.clearSyncEffects,
-    ]) as any[]);
-  assert.deepEqual(ajaxes.map(a => a.name), aborts.map(a => a.name));
+    setup.completeFileUploadRequest(newNormalizedNote, ajaxes[0].name[1]);
+  }
+
+  uploadedNotePaths.sort();
+  expectedUploadNotePaths.sort();
+  assert.deepEqual(uploadedNotePaths, expectedUploadNotePaths);
 });
 
 test("syncing without any newNotes or localEdits = true notes immediately starts the downloadSync", assert => {

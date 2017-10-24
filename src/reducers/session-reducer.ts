@@ -25,7 +25,7 @@ import {
 } from "kamo-reducers/services/workers";
 import {withUpdatedAwaiting} from "./awaiting-reducer";
 
-export const localStoreKey = "settings";
+export const settingsStoreKey = "settings";
 
 export interface ClickLogin {
   type: "click-login";
@@ -74,17 +74,14 @@ export function reduceSession(
         state.indexesReady = false;
         state.authReady = false;
 
-        state.clearSyncEffects = sequence(
-          state.clearSyncEffects,
-          cancelLocalLoad(localStoreKey)
-        );
-        effect = sequence(effect, requestLocalData(localStoreKey));
+        state.clearSyncEffects = cancelLocalLoad(settingsStoreKey);
+        effect = sequence(effect, requestLocalData(settingsStoreKey));
       }
 
       break;
 
     case "load-local-data":
-      if (action.key !== localStoreKey) break;
+      if (action.key !== settingsStoreKey) break;
 
       ({state, effect} = sequenceReduction(
         effect,
@@ -135,13 +132,11 @@ export function reduceSession(
         effect,
         withUpdatedAwaiting(state, false, "auth")
       ));
+
       state = {...state};
       state.authReady = true;
 
-      state.clearSyncEffects = sequence(
-        state.clearSyncEffects,
-        cancelWork([loadIndexesWorkerName])
-      );
+      state.clearSyncEffects = cancelWork([loadIndexesWorkerName]);
       effect = sequence(
         effect,
         requestWork([loadIndexesWorkerName], state.loadingIndexable)
@@ -201,7 +196,7 @@ export function requestLocalStoreUpdate(state: State) {
 
   localStore.newNotes = state.newNotes;
   localStore.downloadedNotes = state.downloadedNotes;
-  return storeLocalData(localStoreKey, localStore);
+  return storeLocalData(settingsStoreKey, localStore);
 }
 
 export const newLocalStore = {

@@ -38,8 +38,12 @@ export const initialState = {
   awaiting: [] as string[],
 
   indexes: indexesInitialState,
+
+  // from local data.
   settings: newSettings,
   newNotes: {} as {[k: string]: NormalizedNote},
+  loadingIndexable: null as Indexable[],
+  downloadedNotes: [] as NoteTree[],
 
   inputs: {
     curLanguage: {value: "English" as Language},
@@ -99,12 +103,6 @@ export const initialState = {
 
   startedSyncCount: 0,
   finishedSyncCount: 0,
-
-  loadingIndexable: null as Indexable[],
-
-  remainingUploads: [] as string[],
-  executingDownloads: [] as string[],
-  downloadedNotes: [] as NoteTree[],
   syncingListFolder: null as DropboxListFolderResponse | void,
   clearSyncEffects: null as SideEffect | void,
 };

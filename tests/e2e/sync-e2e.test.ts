@@ -7,11 +7,8 @@ import {
   newSettings,
   Term,
   Note,
-  newTerm,
-  newCloze,
-  newClozeAnswer,
 } from "../../src/model";
-import {localStoreKey, newLocalStore} from "../../src/reducers/session-reducer";
+import {settingsStoreKey, newLocalStore} from "../../src/reducers/session-reducer";
 import uuid = require("uuid");
 import {storeLocalData} from "kamo-reducers/services/local-storage";
 import {windowFocus} from "../../src/services/window";
@@ -20,7 +17,6 @@ import {isSideEffect} from "kamo-reducers/reducers";
 import {setImmediate} from "timers";
 import {
   findNoteTree,
-  loadIndexables,
   normalizedNote,
   notesIndexer,
 } from "../../src/indexes";
@@ -123,7 +119,7 @@ function sequenceChecks(assert: Assert, checks: Function[]) {
 }
 
 function loadCredentialsAndNewData() {
-  tester.queued$.dispatch(storeLocalData(localStoreKey, testLocalStore));
+  tester.queued$.dispatch(storeLocalData(settingsStoreKey, testLocalStore));
   tester.queued$.dispatch(windowFocus());
 }
 
