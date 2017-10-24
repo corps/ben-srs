@@ -44,6 +44,7 @@ export const initialState = {
   newNotes: {} as {[k: string]: NormalizedNote},
   loadingIndexable: null as Indexable[],
   downloadedNotes: [] as NoteTree[],
+  awaitingDownloadNotes: [] as string[],
 
   inputs: {
     curLanguage: {value: "English" as Language},

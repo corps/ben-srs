@@ -100,6 +100,7 @@ function completeListFolder(
     state = {...state};
     state.syncingListFolder = response;
     state.downloadedNotes = [];
+    state.awaitingDownloadNotes = getUnfulfilledDownloads(state, response);
   }
 
   return {state, effect};
@@ -181,6 +182,18 @@ function completeFileDownload(
     );
 
     state.downloadedNotes = state.downloadedNotes.concat([denormalized]);
+    let idx = state.awaitingDownloadNotes.indexOf(completeRequest.name[1]);
+
+    if (idx !== -1) {
+      state.awaitingDownloadNotes = state.awaitingDownloadNotes.slice();
+      state.awaitingDownloadNotes.splice(idx, 1);
+    } else {
+      throw new Error(
+        "Got response for download " +
+          completeRequest.name[1] +
+          " but it was not in awaitingDownloadNotes."
+      );
+    }
   }
 
   return {state, effect};
@@ -237,8 +250,8 @@ function checkSyncDownloadComplete(
 
   if (state.settings.session.syncCursor == listFolderResponse.cursor)
     return {state, effect};
-  if (getUnfulfilledDownloads(state, listFolderResponse).length)
-    return {state, effect};
+
+  if (state.awaitingDownloadNotes.length) return {state, effect};
 
   state = {...state};
 
@@ -379,12 +392,6 @@ function getUnfulfilledDownloads(
   return result;
 }
 
-function getUnfulfilledUploads(state: State): string[] {
-  return Indexer.getAllMatching(state.indexes.notes.byHasLocalEdits, [true])
-    .map(n => n.id)
-    .concat(Object.keys(state.newNotes));
-}
-
 function continueSync(state: State): ReductionWithEffect<State> {
   let effect: SideEffect | void = null;
 
@@ -412,45 +419,54 @@ function continueSync(state: State): ReductionWithEffect<State> {
   let nextRequest: RequestAjax | void = null;
 
   if (state.syncingListFolder) {
-    let downloadPaths = getUnfulfilledDownloads(state, state.syncingListFolder);
-    if (downloadPaths.length) {
+    if (state.awaitingDownloadNotes.length) {
       nextRequest = requestFileDownload(
         state.settings.session.accessToken,
-        downloadPaths[0]
+        state.awaitingDownloadNotes[0]
       );
     }
 
     state.awaiting = {...state.awaiting};
-    state.awaiting["sync"] = downloadPaths.length;
+    state.awaiting["sync"] = state.awaitingDownloadNotes.length;
   } else {
-    let uploadPaths = getUnfulfilledUploads(state);
-    if (uploadPaths.length) {
-      const nextPath = uploadPaths[0];
+    let localEditsNote = Indexer.getFirstMatching(
+      state.indexes.notes.byHasLocalEdits,
+      [true]
+    );
+    let hasLocalEditsRange = Indexer.getRangeFrom(
+      state.indexes.notes.byHasLocalEdits,
+      [true]
+    );
+    let newNoteKeys = Object.keys(state.newNotes);
 
-      if (nextPath in state.newNotes) {
-        let normalized = state.newNotes[nextPath];
+    if (localEditsNote) {
+      let noteTree = findNoteTree(state.indexes, localEditsNote.id);
+      if (noteTree) {
+        let normalized = normalizedNote(noteTree);
         nextRequest = requestFileUpload(
           state.settings.session.accessToken,
-          nextPath,
-          "",
+          localEditsNote.id,
+          localEditsNote.version,
           stringifyNote(normalized)
         );
-      } else {
-        let noteTree = findNoteTree(state.indexes, nextPath);
-        if (noteTree) {
-          let normalized = normalizedNote(noteTree);
-          nextRequest = requestFileUpload(
-            state.settings.session.accessToken,
-            nextPath,
-            noteTree.note.version,
-            stringifyNote(normalized)
-          );
-        }
       }
+    } else if (newNoteKeys.length) {
+      const nextPath = newNoteKeys[0];
+
+      let normalized = state.newNotes[nextPath];
+      nextRequest = requestFileUpload(
+        state.settings.session.accessToken,
+        nextPath,
+        "",
+        stringifyNote(normalized)
+      );
     }
 
     state.awaiting = {...state.awaiting};
-    state.awaiting["sync"] = uploadPaths.length;
+    state.awaiting["sync"] =
+      hasLocalEditsRange.endIdx -
+      hasLocalEditsRange.startIdx +
+      newNoteKeys.length;
   }
 
   if (!state.syncingListFolder || state.syncingListFolder.has_more) {

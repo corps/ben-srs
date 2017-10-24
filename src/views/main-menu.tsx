@@ -20,7 +20,7 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
             <span
               className="ml1 pointer blue hover-light-blue"
               onClick={() => dispatch(clickLogout)}>
-              (ロゴアウト)
+              (ログアウト)
             </span>
           </div>
 

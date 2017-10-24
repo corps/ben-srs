@@ -50,7 +50,7 @@ export const computeStudyData = memoizeBySomeProperties({
   endOfMonthMinutes: initialState.endOfMonthMinutes,
 }, (state) => {
   const result = {...newStudyData};
-  const language = state.inputs.curLanguage;
+  const language = state.inputs.curLanguage.value;
 
   let languageStartKey = [language];
 

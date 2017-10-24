@@ -49,7 +49,7 @@ export function editContentContent(dispatch: (action: Action) => void) {
                 !state.inputs.editingNoteContent ||
                 !state.inputs.editingNoteLanguage
               }>
-              適応
+              適用
             </button>
 
             <button

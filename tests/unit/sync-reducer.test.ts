@@ -156,6 +156,26 @@ class SyncTestSetup {
     );
   }
 
+  completeConflictedNoteFileDownloadRequest(note: Note) {
+    let session = tester.state.settings.session;
+
+    let noteFactory = new NoteFactory().withSomeData();
+    let normalized = noteFactory.note;
+
+    tester.dispatch(
+      completeRequest(
+        requestFileDownload(session.accessToken, note.id),
+        200,
+        stringifyNote(normalized),
+        encodeResponseHeaders({
+          "Dropbox-API-Result": JSON.stringify({id: note.id, rev: note.version, path_lower: "/" + genSomeText()}),
+        })
+      )
+    );
+
+    return normalized;
+  }
+
   completeFileDownloadRequest(fileEntry: DropboxFileEntry) {
     let session = tester.state.settings.session;
 
@@ -164,7 +184,7 @@ class SyncTestSetup {
 
     tester.dispatch(
       completeRequest(
-        requestFileDownload(session.accessToken, session.syncCursor),
+        requestFileDownload(session.accessToken, "rev:" + fileEntry.rev),
         200,
         stringifyNote(normalized),
         encodeResponseHeaders({
@@ -392,9 +412,9 @@ test("removes hasConflicts from downloaded notes", assert => {
   tester.state.indexes = loadIndexables(tester.state.indexes, [denormalized]);
 
   let listFolderResponse = genDropboxListFolderResponse();
-  // listFolderResponse.entries.push(newFileEntry1);
   setup.completeListFolderRequest(listFolderResponse);
-  let downloaded = setup.completeFileDownloadRequest(newFileEntry1);
+
+  let downloaded = setup.completeConflictedNoteFileDownloadRequest(denormalized.note);
   assert.deepEqual(
     downloaded,
     JSON.parse(
