@@ -99,7 +99,6 @@ function completeListFolder(
   if (response) {
     state = {...state};
     state.syncingListFolder = response;
-    state.downloadedNotes = [];
     state.awaitingDownloadNotes = getUnfulfilledDownloads(state, response);
   }
 
@@ -248,8 +247,12 @@ function checkSyncDownloadComplete(
 ): ReductionWithEffect<State> {
   let effect: SideEffect | void = null;
 
-  if (state.settings.session.syncCursor == listFolderResponse.cursor)
+  if (state.settings.session.syncCursor == listFolderResponse.cursor) {
+    state = {...state};
+    state.awaitingDownloadNotes = [];
+    state.downloadedNotes = [];
     return {state, effect};
+  }
 
   if (state.awaitingDownloadNotes.length) return {state, effect};
 
@@ -301,6 +304,7 @@ function checkSyncDownloadComplete(
   state.settings = {...state.settings};
   state.settings.session = {...state.settings.session};
   state.settings.session.syncCursor = listFolderResponse.cursor;
+  state.downloadedNotes = [];
 
   return {state, effect};
 }
