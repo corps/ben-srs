@@ -61,14 +61,7 @@ export const indexesInitialState = {
   clozeAnswers: clozeAnswersIndexer.empty()
 };
 
-export interface NoteTree extends Indexable {
-  note: Note,
-  terms: Term[],
-  clozes: Cloze[],
-  clozeAnswers: ClozeAnswer[],
-}
-
-export type Indexable = {
+export type SingleIndexable = {
   note?: Note | 0,
   terms?: Term[] | 0,
   clozes?: Cloze[] | 0,
@@ -76,11 +69,22 @@ export type Indexable = {
   notes?: Note[] | 0,
 }
 
+export interface NoteTree extends SingleIndexable {
+  note: Note,
+  terms: Term[],
+  clozes: Cloze[],
+  clozeAnswers: ClozeAnswer[],
+}
+
+export type Indexable = SingleIndexable | SingleIndexable[]
+
 export function loadIndexables(indexes: typeof indexesInitialState,
-                               indexables: Indexable[]): typeof indexesInitialState {
+                               indexables: Indexable): typeof indexesInitialState {
   indexes = {...indexes};
 
-  for (let indexable of indexables) {
+  let normalizedIndexable: SingleIndexable[] = indexables instanceof Array ? indexables : [indexables]; 
+
+  for (let indexable of normalizedIndexable) {
     if (indexable.note) indexes.notes = notesIndexer.update(indexes.notes, [indexable.note]);
     if (indexable.notes) indexes.notes = notesIndexer.update(indexes.notes, indexable.notes);
     if (indexable.terms) indexes.terms = termsIndexer.update(indexes.terms, indexable.terms);

@@ -399,6 +399,8 @@ function getUnfulfilledDownloads(
 function continueSync(state: State): ReductionWithEffect<State> {
   let effect: SideEffect | void = null;
 
+  if (state.syncOffline) return {state, effect};
+
   if (!state.indexesReady) {
     // The clearSyncEffects may be missing a sync related side effect?
     throw new Error("continueSync was called while indexesReady was false!");

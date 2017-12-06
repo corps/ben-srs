@@ -42,7 +42,7 @@ export const initialState = {
   // from local data.
   settings: newSettings,
   newNotes: {} as {[k: string]: NormalizedNote},
-  loadingIndexable: null as Indexable[],
+  loadingIndexable: null as Indexable | void,
   downloadedNotes: [] as NoteTree[],
   awaitingDownloadNotes: [] as string[],
 

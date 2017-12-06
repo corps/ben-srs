@@ -145,11 +145,13 @@ export function reduceEditNote(
 
     case "return-to-term-select":
       state = {...state};
+      state.selectTermLeft = -1;
       state.editingNoteMode = "select";
       break;
 
     case "delete-term":
       state = {...state};
+      state.selectTermLeft = -1;
       state.editingNoteMode = "select";
 
       var editingNote = (state.editingNoteNormalized = {
@@ -196,6 +198,7 @@ export function reduceEditNote(
 
     case "commit-term":
       state = {...state};
+      state.selectTermLeft = -1;
       state.editingNoteMode = "select";
 
       var editingNote = (state.editingNoteNormalized = {
@@ -272,6 +275,7 @@ export function reduceEditNote(
 
     case "apply-note-edits":
       state = {...state};
+      state.selectTermLeft = -1;
       state.editingNoteMode = "select";
       state.editingNoteNormalized = {...state.editingNoteNormalized};
       state.editingNoteNormalized.attributes = {
@@ -365,6 +369,7 @@ export function startEditingNote(
   if (tree) {
     state.editingNoteNormalized = normalizedNote(tree);
     state.location = "edit-note";
+    state.selectTermLeft = -1;
     state.editingNoteMode = "select";
   }
 

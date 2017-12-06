@@ -50,7 +50,7 @@ import {requestFileDownload} from "../../src/reducers/sync-reducer";
 import {requestListFolder} from "../../src/reducers/sync-reducer";
 import {requestFileUpload} from "../../src/reducers/sync-reducer";
 import {newNormalizedNote} from "../../src/model";
-import { NoteTree } from '../../src/indexes';
+import {NoteTree} from "../../src/indexes";
 
 let tester: BensrsTester;
 let subscription = new Subscription();
@@ -168,7 +168,11 @@ class SyncTestSetup {
         200,
         stringifyNote(normalized),
         encodeResponseHeaders({
-          "Dropbox-API-Result": JSON.stringify({id: note.id, rev: note.version, path_lower: "/" + genSomeText()}),
+          "Dropbox-API-Result": JSON.stringify({
+            id: note.id,
+            rev: note.version,
+            path_lower: "/" + genSomeText(),
+          }),
         })
       )
     );
@@ -222,7 +226,12 @@ class SyncTestSetup {
       genSomeText()
     );
     denormalized.note.localEdits = edited;
-    this.store.indexables.push(denormalized);
+
+    if (this.store.indexables instanceof Array) {
+      this.store.indexables.push(denormalized);
+    } else {
+      this.store.indexables = [this.store.indexables, denormalized];
+    }
     this.editedNotes.push(denormalized);
 
     return [denormalized.note, factory.note];
@@ -414,7 +423,9 @@ test("removes hasConflicts from downloaded notes", assert => {
   let listFolderResponse = genDropboxListFolderResponse();
   setup.completeListFolderRequest(listFolderResponse);
 
-  let downloaded = setup.completeConflictedNoteFileDownloadRequest(denormalized.note);
+  let downloaded = setup.completeConflictedNoteFileDownloadRequest(
+    denormalized.note
+  );
   assert.deepEqual(
     downloaded,
     JSON.parse(
@@ -617,7 +628,7 @@ test("syncing with newNotes and localEdits requests writes for each of those", a
     );
     assert.equal(
       tester.state.clearSyncEffects && tester.state.clearSyncEffects.effectType,
-      "abort-request",
+      "abort-request"
     );
     uploadedNotePaths.push(ajaxes[0].name[1]);
 

@@ -46,8 +46,8 @@ export function editContentContent(dispatch: (action: Action) => void) {
               className="mh1 pa2 br2"
               onClick={() => dispatch(applyNoteEdits)}
               disabled={
-                !state.inputs.editingNoteContent ||
-                !state.inputs.editingNoteLanguage
+                !state.inputs.editingNoteContent.value ||
+                !state.inputs.editingNoteLanguage.value
               }>
               適用
             </button>

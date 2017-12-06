@@ -80,7 +80,7 @@ test("on loading an empty set of data, will load empty indexes", (assert) => {
   workRequests = tester.findEffects("request-work") as any[];
   assert.equal(workRequests.length, 1);
   assert.deepEqual(workRequests[0].name, [loadIndexesWorkerName]);
-  assert.deepEqual(workRequests[0].data, []);
+  assert.deepEqual(workRequests[0].data, {});
 });
 
 test("on loading an a localStore object, eventually loads all the expected data into the state, and kicks off a sync", (assert) => {

@@ -112,7 +112,7 @@ export function reduceSession(
         state.settings.session.login !== action.login
       ) {
         effect = sequence(effect, clearLocalData);
-        state.loadingIndexable = [];
+        state.loadingIndexable = null;
         state.settings = newSettings;
         state.location = "main";
       }
@@ -184,7 +184,7 @@ export function requestLocalStoreUpdate(state: State) {
   localStore.settings = state.settings;
 
   if (state.indexesReady || !state.loadingIndexable) {
-    localStore.indexables = [
+    localStore.indexables =
       {
         notes: state.indexes.notes.byId.map(k => k[1]),
         terms: state.indexes.terms.byNoteIdReferenceAndMarker.map(k => k[1]),
@@ -194,8 +194,7 @@ export function requestLocalStoreUpdate(state: State) {
         clozeAnswers: state.indexes.clozeAnswers.byLanguageAndAnswered.map(
           k => k[1]
         ),
-      },
-    ];
+      };
   } else {
     localStore.indexables = state.loadingIndexable;
   }
@@ -207,7 +206,7 @@ export function requestLocalStoreUpdate(state: State) {
 
 export const newLocalStore = {
   settings: newSettings,
-  indexables: [] as Indexable[],
+  indexables: {} as Indexable,
   newNotes: {} as {[k: string]: NormalizedNote},
   downloadedNotes: [] as NoteTree[],
 };

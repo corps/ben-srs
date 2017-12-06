@@ -52,7 +52,7 @@ export class ProgressBar extends React.Component<ProgressBarProps, typeof initia
     if (prevNum !== nextNum) {
       this.setState((prev) => {
         return {
-          progress: nextNum ? prev.progress : 0,
+          progress: 0,
           maxTasks: nextNum ? Math.max(prev.maxTasks, nextNum) : 0
         };
       });

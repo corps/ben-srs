@@ -4,14 +4,15 @@ import {withLogin} from "./login";
 import {withInitialization} from "./initialization";
 import {withAjax} from "kamo-reducers/services/ajax";
 import {withSequenced} from "kamo-reducers/services/sequence";
-import {withAsyncStorage} from "kamo-reducers/services/async-storage";
+// import {withAsyncStorage} from "kamo-reducers/services/async-storage";
+import {withLedgerStorage} from "./ledger-storage";
 import {withWorkers} from "kamo-reducers/services/workers";
 import {withSpeech} from "./speech";
 import {withKeyPresses} from "./keypresses";
 import {withTime} from "kamo-reducers/services/time";
 
 export const newServiceConfig = {
-  storageService: withAsyncStorage as Service,
+  storageService: withLedgerStorage as Service,
   timeService: withTime(Date.now()) as Service,
   windowFocus: withWindowFocus,
 };

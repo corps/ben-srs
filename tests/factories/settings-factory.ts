@@ -12,7 +12,7 @@ export function genLanguage(): Language {
 }
 
 export function genLocalStore(): LocalStore {
-  let indexables: Indexable[] = [];
+  let indexables: Indexable = [];
   let newNotes: { [k: string]: NormalizedNote } = {};
   let downloadedNotes: NoteTree[] = [];
 
@@ -20,14 +20,14 @@ export function genLocalStore(): LocalStore {
     let noteFactory = new NoteFactory();
     let termFactory = noteFactory.addTerm();
     let clozeFactory = termFactory.addCloze();
-    let answerFactory = clozeFactory.addAnswer();
+    clozeFactory.addAnswer();
 
     indexables.push(denormalizedNote(noteFactory.note, genId(), genId(), genId()));
 
     noteFactory = new NoteFactory();
     termFactory = noteFactory.addTerm();
     clozeFactory = termFactory.addCloze();
-    answerFactory = clozeFactory.addAnswer();
+    clozeFactory.addAnswer();
 
     newNotes[genId()] = noteFactory.note;
   }
