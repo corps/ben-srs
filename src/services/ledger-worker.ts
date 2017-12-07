@@ -12,7 +12,7 @@ if (typeof importScripts === "function") {
 }
 
 function run() {
-  let openReq = indexedDB.open("ledger-storage", 1);
+  let openReq = indexedDB.open("ledger-storage-3", 1);
   let db: IDBDatabase | 0;
   let queuedRequests: Request[] = [];
   let keyStates = {} as {[k: string]: KeyState};
@@ -28,7 +28,7 @@ function run() {
       keyPath: "seq",
       autoIncrement: true,
     });
-    store.createIndex(INDEX_NAME, ["key", "seq"]);
+    store.createIndex(INDEX_NAME, "objKey");
   };
 
   openReq.onsuccess = e => {
@@ -51,22 +51,19 @@ function run() {
     var tx = db.transaction(STORE_NAME, "readwrite");
     var store = tx.objectStore(STORE_NAME);
     var index = store.index(INDEX_NAME);
-    var req = index.openKeyCursor(
-      IDBKeyRange.upperBound([key, Number.MAX_VALUE]),
-      "prev"
-    );
+    var req = index.openKeyCursor(IDBKeyRange.only(key) "prev");
 
     req.onsuccess = e => {
       let cursor = (e.target as any).result as IDBCursor;
       let req: IDBRequest;
-      if (cursor && (cursor.key as any)[1] === state.curSeq) {
+      if (cursor && cursor.primaryKey === state.curSeq) {
         var startDiff = Date.now();
         var diff = jd.diff(state.curVal, value, 30);
         console.log("putting diff", key, diff, Date.now() - startDiff);
-        req = store.put({key, diff});
+        req = store.put({objKey: key, diff});
       } else {
-        console.log("putting reet diff", key, value);
-        req = store.put({key, diff: [[[], value]]});
+        console.log("putting reet diff", cursor.key, cursor.primaryKey, state.curSeq, key, value);
+        req = store.put({objKey: key, diff: [[[], value]]});
       }
 
       req.onsuccess = e => {
@@ -129,9 +126,7 @@ function run() {
         var tx = db.transaction(STORE_NAME, "readwrite");
         var store = tx.objectStore(STORE_NAME);
         var index = store.index(INDEX_NAME);
-        var req = index.openCursor(
-          IDBKeyRange.bound([key, 0], [key, Number.MAX_VALUE], true, true)
-        );
+        var req = index.openCursor(IDBKeyRange.only(key));
 
         var result: any = null;
         var state = (keyStates[key] = {
@@ -148,7 +143,7 @@ function run() {
             cursor.continue();
           } else {
             console.log("putting finalized diff", result);
-            req = store.put({key, diff: [[[], result]]});
+            req = store.put({objKey: key, diff: [[[], result]]});
 
             req.onsuccess = e => {
               state.curSeq = req.result;

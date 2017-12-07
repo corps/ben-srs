@@ -32780,7 +32780,7 @@ module.exports = v4;
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = function() {
-	return new Worker(__webpack_require__.p + "db5d6899fdfae792641b.worker.js");
+	return new Worker(__webpack_require__.p + "d4231c62a0a3b62587e4.worker.js");
 };
 
 /***/ }),
