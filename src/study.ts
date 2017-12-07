@@ -151,7 +151,7 @@ export function studyDetailsForCloze(
 
     return {
       cloze,
-      definition: term.attributes.definition,
+      definition: term.attributes.definition || note.attributes.content,
       content: content,
       spoken: content.replace(
         fullTermMarker(term),
@@ -296,7 +296,7 @@ export function getTermFragment(
 
   let contentRange = findContentRange(
     term,
-    note.attributes.content,
+    content,
     grabCharsMax
   );
   if (contentRange[0] === -1) return "";

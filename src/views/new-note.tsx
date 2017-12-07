@@ -44,8 +44,8 @@ export function newNoteContent(dispatch: (action: Action) => void) {
               className="mh1 pa2 br2"
               onClick={() => dispatch(clickAddNewNote)}
               disabled={
-                !state.inputs.newNoteContent ||
-                !state.inputs.newNoteLanguage ||
+                !state.inputs.newNoteContent.value ||
+                !state.inputs.newNoteLanguage.value ||
                 !state.indexesReady
               }>
               追加
