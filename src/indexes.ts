@@ -8,6 +8,7 @@ export type NotesStore = {
   byHasLocalEdits: Index<Note>
   byHasConflicts: Index<Note>
   byEditsComplete: Index<Note>
+  byAudioFileId: Index<Note>
 }
 
 export type StoredFilesStore = {
@@ -39,6 +40,7 @@ notesIndexer.addIndex("byLanguage", note => [note.attributes.language]);
 notesIndexer.addIndex("byHasLocalEdits", note => [note.localEdits]);
 notesIndexer.addIndex("byHasConflicts", note => [note.hasConflicts]);
 notesIndexer.addIndex("byEditsComplete", note => [note.attributes.editsComplete]);
+notesIndexer.addIndex("byAudioFileId", note => [note.attributes.audioFileId]);
 
 export const storedFilesIndexer = new Indexer<StoredFile, StoredFilesStore>("byId");
 storedFilesIndexer.addIndex("byId", sf => [sf.id]);

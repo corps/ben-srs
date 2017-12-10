@@ -81,6 +81,9 @@ export function continueFileSync(state: State): ReductionWithEffect<State> {
   state = {...state};
   state.downloadingFileId = null;
 
+  state.awaiting = {...state.awaiting};
+  state.awaiting["file-sync-downloads"] = missingStoredFiles.length;
+
   if (missingStoredFiles.length > 0) {
     state.awaiting = {...state.awaiting};
 

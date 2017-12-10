@@ -1,5 +1,6 @@
 import {Indexable, indexesInitialState, NoteTree} from "./indexes";
 import {
+  StoredFile,
   Language,
   newNormalizedNote,
   newNote,
@@ -50,6 +51,7 @@ export const initialState = {
     curLanguage: {value: "English" as Language},
     newNoteContent: {value: ""},
     newNoteLanguage: {value: "" as Language | ""},
+    newNoteAudioId: {value: ""},
 
     editingNoteContent: {value: ""},
     editingNoteLanguage: {value: "English" as Language},
@@ -111,6 +113,8 @@ export const initialState = {
   awaitingDownloadFileIds: [] as string[],
   loadedFiles: false,
   downloadingFileId: null as string | void,
+
+  unusedStoredFiles: [] as StoredFile[],
 };
 
 export type State = typeof initialState;

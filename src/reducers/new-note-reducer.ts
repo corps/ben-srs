@@ -37,6 +37,7 @@ export function reduceNewNote(
       state.inputs = {...state.inputs};
       state.inputs.newNoteLanguage = {value: ""};
       state.inputs.newNoteContent = {value: ""};
+      state.inputs.newNoteAudioId = {value: ""};
       break;
 
     case "click-add-new-note":
