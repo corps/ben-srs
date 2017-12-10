@@ -51,7 +51,7 @@ function run() {
     var tx = db.transaction(STORE_NAME, "readwrite");
     var store = tx.objectStore(STORE_NAME);
     var index = store.index(INDEX_NAME);
-    var req = index.openKeyCursor(IDBKeyRange.only(key) "prev");
+    var req = index.openKeyCursor(IDBKeyRange.only(key), "prev");
 
     req.onsuccess = e => {
       let cursor = (e.target as any).result as IDBCursor;

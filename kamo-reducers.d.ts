@@ -45,7 +45,8 @@ export interface AjaxConfig {
     query?: {
         [k: string]: string | number;
     };
-    body?: string;
+    body?: string | Blob | ArrayBuffer;
+    responseType?: "arraybuffer" | "blob" | "json" | "text" | void;
     headers?: {
         [k: string]: string;
     };
@@ -68,15 +69,15 @@ export interface CompleteRequest {
     name: string[];
     success: boolean;
     status: number;
-    response: string;
+    response: string | Blob | ArrayBuffer;
     headers: string;
     when: number;
 }
-export  function completeRequest(requestEffect: RequestAjax, status: number, response: string, headers: string, when?: number): CompleteRequest;
+export  function completeRequest(requestEffect: RequestAjax, status: number, response: string | Blob | ArrayBuffer, headers: string, when?: number): CompleteRequest;
 export  function withAjax(queueSize?: number): (effect$: Subject<SideEffect>) => Subscriber<GlobalAction>;
 export  function executeXhrWithConfig(config: AjaxConfig, xhr: XMLHttpRequest): void;
 export  function getAjaxUrl(config: AjaxConfig): string;
-export  function getAjaxBody(config: AjaxConfig): string;
+export  function getAjaxBody(config: AjaxConfig): string | Blob | ArrayBuffer;
 export  function parseResponseHeaders(headerStr: string): {
     [k: string]: string;
 };
@@ -138,21 +139,6 @@ export  function flushDebounce(name: string): FlushDebounce;
 export  function clearDebounce(name: string): ClearDebounce;
 export  function debounce(action: GlobalAction, name: string, debounceMs?: number): Debounce;
 export  function withDebounce(effect$: Subject<SideEffect>): Subscriber<GlobalAction>;
-}
-declare module "kamo-reducers/services/input-debouncing" {
-import { GlobalAction, SideEffect } from "kamo-reducers/reducers";
-import { Subject, Subscriber } from "kamo-reducers/subject";
-export  const clearInputDebouncingEventName = "clear-input-debouncing";
-export  const flushInputDebouncingEventName = "flush-input-debouncing";
-export interface ClearInputDebouncing {
-    effectType: "clear-input-debouncing";
-}
-export interface FlushInputDebouncing {
-    effectType: "flush-input-debouncing";
-}
-export  function clearInputDebouncing(): ClearInputDebouncing;
-export  function flushInputDebouncing(): FlushInputDebouncing;
-export  function withInputDebouncing(effect$: Subject<SideEffect>): Subscriber<GlobalAction>;
 }
 declare module "kamo-reducers/services/local-storage" {
 export interface StoreLocalData {

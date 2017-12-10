@@ -33,6 +33,7 @@ import {MainMenuActions, reduceMainMenu} from "./reducers/main-menu-reducer";
 import {reduceStudy, StudyActions} from "./reducers/study-reducer";
 import {EditNoteActions, reduceEditNote} from "./reducers/edit-note-reducer";
 import {reduceToggle, Toggle} from "kamo-reducers/reducers/toggle";
+import {reduceFileSync} from "./reducers/file-sync-reducer";
 
 export type Action =
   | UpdateTime
@@ -65,6 +66,7 @@ export function reducer(
     .apply(reduceNewNote)
     .apply(reduceStudy)
     .apply(reduceEditNote)
+    .apply(reduceFileSync)
     .apply(subreducer("inputs", reduceInputs))
     .apply(subreducer("toggles", reduceToggle))
     .apply(computedProperty("startOfDayMinutes", computeStartOfDay))

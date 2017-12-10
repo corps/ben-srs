@@ -40,6 +40,6 @@ export function genFileEntry(): DropboxFileEntry {
 export function genDownloadResponse(
   fileEntry: DropboxFileEntry
 ): DropboxDownloadResponse {
-  let {id, rev, path_lower} = fileEntry;
-  return {id, rev, path_lower};
+  let {id, rev, path_lower, size} = fileEntry;
+  return {id, rev, path_lower, size};
 }

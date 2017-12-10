@@ -106,6 +106,11 @@ export const initialState = {
   finishedSyncCount: 0,
   syncingListFolder: null as DropboxListFolderResponse | void,
   clearSyncEffects: null as SideEffect | void,
+
+  fileNames: [] as string[],
+  awaitingDownloadFileIds: [] as string[],
+  loadedFiles: false,
+  downloadingFileId: null as string | void,
 };
 
 export type State = typeof initialState;

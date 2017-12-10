@@ -65,6 +65,10 @@ var config: any = {
         },
       },
       {
+        test: /\.mp3(\?v=\d+\.\d+\.\d+)?$/,
+        loader: "url-loader",
+      },
+      {
         test: /\.png(\?v=\d+\.\d+\.\d+)?$/,
         loader: "url-loader?name=imgs/[name].[ext]&limit=10240",
       },

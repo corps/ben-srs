@@ -12,11 +12,13 @@ import {
   DropboxDeleteEntry,
   DropboxFileEntry,
   DropboxListFolderResponse,
-  filesDownloadRequestName,
-  filesUploadRequestName,
-  listFolderRequestName,
 } from "../../src/services/dropbox";
-import {startSync} from "../../src/reducers/sync-reducer";
+import {
+  startSync,
+  noteDownloadRequestName,
+  noteUploadRequestName,
+  listFolderRequestName,
+} from "../../src/reducers/sync-reducer";
 import {State} from "../../src/state";
 import {workComplete} from "kamo-reducers/services/workers";
 import {doIndexesLoadingWork} from "../../src/services/worker";
@@ -268,7 +270,7 @@ test("completing a file upload saves the state", assert => {
 
   tester.dispatch(
     completeRequest(
-      requestAjax([filesUploadRequestName, "", ""], {
+      requestAjax([noteUploadRequestName, "", ""], {
         url: "/",
         method: "GET",
       }),
@@ -283,8 +285,8 @@ test("completing a file upload saves the state", assert => {
 });
 
 [
-  filesUploadRequestName,
-  filesDownloadRequestName,
+  noteUploadRequestName,
+  noteDownloadRequestName,
   listFolderRequestName,
 ].forEach(rn => {
   test(`failing a ${rn} cancels the sync`, assert => {
@@ -621,7 +623,7 @@ test("syncing with newNotes and localEdits requests writes for each of those", a
     let ajaxes: RequestAjax[] = tester.findEffects("request-ajax") as any[];
     if (ajaxes.length !== 1) break;
     assert.equal(ajaxes.length, 1, "Makes one request at a time.");
-    if (ajaxes[0].name[0] !== filesUploadRequestName) break;
+    if (ajaxes[0].name[0] !== noteUploadRequestName) break;
     assert.deepEqual(
       (tester.state.clearSyncEffects as AbortRequest).name,
       ajaxes[0].name
@@ -655,11 +657,11 @@ test("syncing without any newNotes or localEdits = true notes immediately starts
 
   assert.equal(tester.state.startedSyncCount, 1);
   assert.equal(
-    ajaxes.filter(x => x.name[0] === filesUploadRequestName).length,
+    ajaxes.filter(x => x.name[0] === noteUploadRequestName).length,
     0
   );
   assert.equal(
-    ajaxes.filter(x => x.name[0] === filesDownloadRequestName).length,
+    ajaxes.filter(x => x.name[0] === noteDownloadRequestName).length,
     0
   );
   assert.equal(
@@ -713,7 +715,7 @@ test("starting download begins with a list request added to the clear sync", ass
 
   assert.equal(tester.state.startedSyncCount, 1);
   assert.equal(
-    ajaxes.filter(x => x.name[0] === filesUploadRequestName).length,
+    ajaxes.filter(x => x.name[0] === noteUploadRequestName).length,
     0
   );
   assert.equal(
