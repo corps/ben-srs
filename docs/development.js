@@ -63,7 +63,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 258);
+/******/ 	return __webpack_require__(__webpack_require__.s = 263);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -35150,132 +35150,200 @@ exports.selectTermContent = selectTermContent;
 
 
 /***/ }),
-/* 253 */
+/* 253 */,
+/* 254 */
 /* no static exports found */
 /* all exports used */
-/*!****************************************!*\
-  !*** ./src/components/layout-utils.js ***!
-  \****************************************/
+/*!********************************************!*\
+  !*** ./~/kamo-reducers/track-mutations.js ***!
+  \********************************************/
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var React = __webpack_require__(/*! react */ 7);
-var class_names_for_1 = __webpack_require__(/*! ../utils/class-names-for */ 37);
-var classesForFlexContainer = class_names_for_1.classNamesGeneratorFor(function (add) {
-    add("topContainer", React.createElement("div", { className: "min-w8 min-vh-100" }));
-    add("vertical", React.createElement("div", { className: "flex-column" }));
-    add("horizontal", React.createElement("div", { className: "flex-row" }));
-}, React.createElement("div", { className: "flex flex-auto" }));
-function FlexContainer(props) {
-    return React.createElement("div", { className: classesForFlexContainer(props), key: props.key, id: props.id }, props.children);
-}
-exports.FlexContainer = FlexContainer;
-var classesForColumn = class_names_for_1.classNamesGeneratorFor(function (add) {
-    add("fixedColumn", React.createElement("div", { className: "flex-none" }));
-    add("stretchColumn", React.createElement("div", { className: "flex-auto" }));
-}, React.createElement("div", { className: "flex-column flex items-stretch" }));
-function Column(props) {
-    return React.createElement("div", { className: classesForColumn(props) }, props.children);
-}
-exports.Column = Column;
-var classesForRow = class_names_for_1.classNamesGeneratorFor(function (add) {
-    add("stretchRow", React.createElement("div", { className: "flex-auto" }));
-    add("fixedRow", React.createElement("div", { className: "flex-none" }));
-}, React.createElement("div", { className: "flex flex-row items-stretch" }));
-function Row(props) {
-    return React.createElement("div", { className: classesForRow(props) }, props.children);
-}
-exports.Row = Row;
-var classesForVCenteringContainer = class_names_for_1.classNamesGeneratorFor(function (add) {
-}, React.createElement("div", { className: "dt w-100 h-100" }));
-function VCenteringContainer(props) {
-    return React.createElement("div", { className: classesForVCenteringContainer(props) }, props.children);
-}
-exports.VCenteringContainer = VCenteringContainer;
-var classesForVCentered = class_names_for_1.classNamesGeneratorFor(function (add) {
-}, React.createElement("div", { className: "dtc v-mid" }));
-function VCentered(props) {
-    return React.createElement("div", { className: classesForVCentered(props) }, props.children);
-}
-exports.VCentered = VCentered;
-var classesForVBottomed = class_names_for_1.classNamesGeneratorFor(function (add) {
-}, React.createElement("div", { className: "dtc v-btm" }));
-function VBottomed(props) {
-    return React.createElement("div", { className: classesForVBottomed(props) }, props.children);
-}
-exports.VBottomed = VBottomed;
-
-
-/***/ }),
-/* 254 */,
-/* 255 */,
-/* 256 */
-/* no static exports found */
-/* all exports used */
-/*!*********************!*\
-  !*** ./src/view.js ***!
-  \*********************/
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var React = __webpack_require__(/*! react */ 7);
-var logged_out_1 = __webpack_require__(/*! ./views/logged-out */ 264);
-var main_menu_1 = __webpack_require__(/*! ./views/main-menu */ 265);
-var progress_bar_1 = __webpack_require__(/*! ./components/progress-bar */ 262);
-var new_note_1 = __webpack_require__(/*! ./views/new-note */ 266);
-var study_1 = __webpack_require__(/*! ./views/study */ 267);
-var edit_note_1 = __webpack_require__(/*! ./views/edit-note */ 250);
-function view(dispatch) {
-    var LoggedOutContent = logged_out_1.loggedOutContent(dispatch);
-    var MainMenuContent = main_menu_1.mainMenuContent(dispatch);
-    var NewNoteContent = new_note_1.newNoteContent(dispatch);
-    var StudyContent = study_1.studyContent(dispatch);
-    var EditNoteContent = edit_note_1.editNoteContent(dispatch);
-    return function (state) {
-        var awaitingCount = 0;
-        for (var k in state.awaiting) {
-            awaitingCount += state.awaiting[k];
+function findMutation(trace, next, path) {
+    if (path === void 0) { path = []; }
+    var sameAsTrace = trace.original === next;
+    var entries = trace.entries;
+    if (!entries) {
+        return undefined;
+    }
+    var k;
+    for (k in next) {
+        var entry = entries[k];
+        if (!entry) {
+            if (sameAsTrace)
+                return path.concat([k]);
+            continue;
         }
-        return React.createElement("div", { className: "wf-mplus1p" },
-            React.createElement("div", { className: "fixed w-100 h0_3 top-0 left-0" },
-                React.createElement(progress_bar_1.ProgressBar, { tasksNum: awaitingCount })),
-            (function () {
-                if (!state.settings.session.login) {
-                    if (state.authReady) {
-                        return LoggedOutContent(state);
-                    }
-                    else {
-                        return React.createElement("div", null);
-                    }
-                }
-                switch (state.location) {
-                    case "main":
-                        return MainMenuContent(state);
-                    case "new-note":
-                        return NewNoteContent(state);
-                    case "study":
-                        return StudyContent(state);
-                    case "edit-note":
-                        return EditNoteContent(state);
-                }
-            })());
+        if (sameAsTrace && entry.original !== next[k]) {
+            return path.concat([k]);
+        }
+        var mutation = findMutation(entry, next[k], path.concat([k]));
+        if (mutation)
+            return mutation;
+    }
+    if (sameAsTrace) {
+        for (k in entries) {
+            if (!(k in next)) {
+                return path.concat([k]);
+            }
+        }
+    }
+    return undefined;
+}
+function trace(obj) {
+    var tracked = { original: obj };
+    var seen = [];
+    if (isPrimitive(obj))
+        return tracked;
+    var queue = [tracked];
+    while (queue.length) {
+        var next = queue.shift();
+        next.entries = {};
+        for (var key in next.original) {
+            var val = next.original[key];
+            var entry = next.entries[key] = { original: val };
+            if (isPrimitive(val))
+                continue;
+            if (seen.indexOf(val) !== -1)
+                continue;
+            seen.push(val);
+            queue.push(entry);
+        }
+    }
+    return tracked;
+}
+function isPrimitive(value) {
+    return typeof value !== 'object' || value == null;
+}
+function trackMutations(f) {
+    var lastTrace = trace(undefined);
+    return function (state) {
+        var mutation = findMutation(lastTrace, state);
+        lastTrace = trace(state);
+        if (mutation) {
+            throw new Error("Found mutation in the state property: " + mutation.join("."));
+        }
+        return f.apply(null, arguments);
     };
 }
-exports.view = view;
+exports.trackMutations = trackMutations;
 
 
 /***/ }),
-/* 257 */,
-/* 258 */
+/* 255 */
 /* no static exports found */
 /* all exports used */
-/*!***********************!*\
-  !*** ./src/index.tsx ***!
-  \***********************/
+/*!*********************************!*\
+  !*** ./src/development-view.js ***!
+  \*********************************/
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var React = __webpack_require__(/*! react */ 7);
+var edit_note_1 = __webpack_require__(/*! ./views/edit-note */ 250);
+function developmentView(dispatch) {
+    var Study = edit_note_1.editNoteContent(dispatch);
+    return function (state) {
+        return React.createElement("div", null, Study(state));
+    };
+}
+exports.developmentView = developmentView;
+
+
+/***/ }),
+/* 256 */,
+/* 257 */
+/* no static exports found */
+/* all exports used */
+/*!********************************************!*\
+  !*** ./tests/factories/notes-factories.js ***!
+  \********************************************/
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(/*! tslib */ 5);
+var model_1 = __webpack_require__(/*! ../../src/model */ 17);
+var general_factories_1 = __webpack_require__(/*! ./general-factories */ 268);
+var study_1 = __webpack_require__(/*! ../../src/study */ 38);
+var NoteFactory = /** @class */ (function () {
+    function NoteFactory() {
+        this.note = JSON.parse(JSON.stringify(tslib_1.__assign({}, model_1.newNormalizedNote, { attributes: tslib_1.__assign({}, model_1.newNormalizedNote.attributes, { language: "Japanese", content: general_factories_1.genSomeText() }) })));
+    }
+    NoteFactory.prototype.addTerm = function (reference, postContent) {
+        if (reference === void 0) { reference = general_factories_1.genId(); }
+        if (postContent === void 0) { postContent = " " + general_factories_1.genSomeText() + " "; }
+        var factory = new TermFactory(reference);
+        this.note.attributes.content += study_1.fullTermMarker(factory.term);
+        this.note.attributes.content += postContent;
+        this.note.attributes.terms.push(factory.term);
+        return factory;
+    };
+    NoteFactory.prototype.withSomeData = function () {
+        var termFactory = this.addTerm();
+        var clozeFactory = termFactory.addCloze();
+        clozeFactory.addAnswer();
+        return this;
+    };
+    return NoteFactory;
+}());
+exports.NoteFactory = NoteFactory;
+var TermFactory = /** @class */ (function () {
+    function TermFactory(reference) {
+        if (reference === void 0) { reference = general_factories_1.genId(); }
+        this.reference = reference;
+        this.term = JSON.parse(JSON.stringify(tslib_1.__assign({}, model_1.newNormalizedTerm, { attributes: tslib_1.__assign({}, model_1.newNormalizedTerm.attributes, { marker: general_factories_1.genId(), reference: this.reference, pronounce: general_factories_1.genId(), definition: general_factories_1.genSomeText(), hint: general_factories_1.genSomeText() }) })));
+    }
+    TermFactory.prototype.addCloze = function () {
+        var factory = new ClozeFactory();
+        this.term.attributes.clozes.push(factory.cloze);
+        return factory;
+    };
+    return TermFactory;
+}());
+exports.TermFactory = TermFactory;
+var ClozeFactory = /** @class */ (function () {
+    function ClozeFactory() {
+        this.cloze = JSON.parse(JSON.stringify(tslib_1.__assign({}, model_1.newNormalizeCloze, { attributes: tslib_1.__assign({}, model_1.newNormalizeCloze.attributes, { schedule: tslib_1.__assign({}, model_1.newSchedule, { lastAnsweredMinutes: general_factories_1.genNum() }) }) })));
+    }
+    ClozeFactory.prototype.addAnswer = function () {
+        var factory = new AnswerFactory();
+        this.cloze.attributes.answers.push(factory.answer);
+        return factory;
+    };
+    return ClozeFactory;
+}());
+exports.ClozeFactory = ClozeFactory;
+var AnswerFactory = /** @class */ (function () {
+    function AnswerFactory() {
+        this.answer = [
+            general_factories_1.genPastTime(),
+            ["d", general_factories_1.genNum()],
+        ];
+    }
+    return AnswerFactory;
+}());
+exports.AnswerFactory = AnswerFactory;
+
+
+/***/ }),
+/* 258 */,
+/* 259 */,
+/* 260 */,
+/* 261 */,
+/* 262 */,
+/* 263 */
+/* no static exports found */
+/* all exports used */
+/*!****************************!*\
+  !*** ./src/development.js ***!
+  \****************************/
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -35289,8 +35357,11 @@ var state_1 = __webpack_require__(/*! ./state */ 19);
 var dom_1 = __webpack_require__(/*! kamo-reducers/dom */ 117);
 var reducers_1 = __webpack_require__(/*! kamo-reducers/reducers */ 69);
 var reducer_1 = __webpack_require__(/*! ./reducer */ 120);
-var view_1 = __webpack_require__(/*! ./view */ 256);
+var track_mutations_1 = __webpack_require__(/*! kamo-reducers/track-mutations */ 254);
 var services_1 = __webpack_require__(/*! ./services */ 121);
+var development_view_1 = __webpack_require__(/*! ./development-view */ 255);
+var indexes_1 = __webpack_require__(/*! ./indexes */ 29);
+var notes_factories_1 = __webpack_require__(/*! ../tests/factories/notes-factories */ 257);
 __webpack_require__(/*! index.css */ 119);
 if (false) {
     module.hot.accept();
@@ -35303,12 +35374,9 @@ var Root = /** @class */ (function (_super) {
     }
     Root.prototype.render = function () {
         if (this.view) {
-            return this.view(this.state.inner);
+            return this.view(this.state);
         }
         return null;
-    };
-    Root.prototype.shouldComponentUpdate = function (nextProps, nextState) {
-        return !this.state || this.state.inner !== nextState.inner;
     };
     return Root;
 }(React.Component));
@@ -35317,27 +35385,27 @@ subscription.add(dom_1.generateRootElement().subscribe(function (element) {
     var renderer = function (state, dispatch, next) {
         if (!root) {
             root = ReactDom.render(React.createElement(Root, null), element);
-            root.view = view_1.view(dispatch);
+            root.view = development_view_1.developmentView(dispatch);
         }
         if (state) {
-            root.setState({ inner: state }, next);
+            root.setState(state, next);
         }
     };
-    var start = [];
-    var startAction = [];
-    subscription.add(reducers_1.renderLoop(renderer, reducer_1.reducer, services_1.getServices(), state_1.initialState).subscribe(function (e) {
+    renderer = track_mutations_1.trackMutations(renderer);
+    var noteFactory = new notes_factories_1.NoteFactory();
+    var state = tslib_1.__assign({}, state_1.initialState);
+    state.indexes = indexes_1.loadIndexables(state.indexes, [indexes_1.denormalizedNote(noteFactory.note, "", "", "")]);
+    state.location = "edit-note";
+    subscription.add(reducers_1.renderLoop(renderer, reducer_1.reducer, services_1.getServices(), state).subscribe(function (e) {
         switch (e[0]) {
             case "a":
-                start.push(Date.now());
-                startAction.push(e[1]);
+                console.log("action", e[1]);
                 break;
-            case "c":
-                var time = Date.now() - start.pop();
-                var action = startAction.pop();
-                console.log("render in", time, "ms");
-                if (time > 50) {
-                    console.log("slow action:", action);
-                }
+            case "e":
+                console.log("effect", e[1]);
+                break;
+            case "s":
+                console.debug("next state", e[1]);
                 break;
         }
     }));
@@ -35348,440 +35416,64 @@ if (false) {
 
 
 /***/ }),
-/* 259 */
+/* 264 */,
+/* 265 */,
+/* 266 */,
+/* 267 */,
+/* 268 */
 /* no static exports found */
 /* all exports used */
-/*!***************************************!*\
-  !*** ./src/components/book-closed.js ***!
-  \***************************************/
+/*!**********************************************!*\
+  !*** ./tests/factories/general-factories.js ***!
+  \**********************************************/
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var React = __webpack_require__(/*! react */ 7);
-var path = "M163.7 3 c-11.1 5.8 -31.4 11.7 -49.7 14.4 -23.4 3.6 -72.9 6.8 -84 5.6 l-5.7 -0.7 -4.6 6.8 c-2.5 3.7 -8 11.7 -12.2 17.8 -4.1 6 -7.3 11.5 -7 12.3 0.2 0.7 2.3 10.3 4.5 21.5 2.2 11.1 4.4 22.4 5 25.2 3.8 18.8 7.5 37.4 17.6 88 1.8 9.3 4.3 21.2 5.4 26.4 1.1 5.2 2 9.7 2 10 0 0.3 0.5 0 1.1 -0.6 0.7 -0.7 2.2 -0.8 4.2 -0.2 1.8 0.4 17.2 1.3 34.2 1.9 17.1 0.6 32.4 1.3 34.1 1.6 2.8 0.5 3.2 1.1 4.2 5.6 2.5 10.4 0.6 17.2 -7.9 29.1 l-5.9 8.2 2.9 0.3 c6.4 0.7 17.5 -8.3 20.7 -16.6 0.9 -2.3 2.1 -4.2 2.6 -4.2 0.4 0 1.5 1.5 2.4 3.3 1.5 3.1 1.5 3.9 -0.5 11 -2.6 9.4 -2.6 8.7 0.2 8.7 9.5 0 15.3 -19.5 11.2 -37.6 -0.9 -3.6 -1.5 -6.7 -1.3 -6.9 0.2 -0.1 5.5 0.1 11.8 0.6 6.3 0.4 16.8 0.8 23.3 0.8 11.6 0.1 11.8 0.1 12.9 -2.4 0.6 -1.4 1.4 -2.5 1.7 -2.5 0.8 0 4.4 -6 3.9 -6.4 -0.1 -0.2 -10.4 -0.8 -22.8 -1.5 -30.5 -1.6 -38 -2.2 -38 -3.2 0 -0.5 1.7 -0.9 3.7 -0.9 4.8 0 23.7 -2.9 33.3 -5.2 11.2 -2.6 31.2 -9.7 33.4 -11.9 0.5 -0.5 -2.2 0.1 -6 1.2 -7.8 2.4 -10.1 2.9 -23.4 5.7 -13.4 2.8 -22.3 4.2 -25.6 4.1 -1.9 -0.1 -1.2 -0.4 2.1 -1 23.6 -4.2 41.7 -9.2 50.5 -14.1 3.9 -2.1 3.3 -2.1 -10 1.4 -5.2 1.4 -12.4 3.1 -16 3.7 -3.6 0.7 -8.7 1.6 -11.5 2.1 -18.1 3.4 -49.7 5.9 -75 6.1 -17.5 0.1 -16.1 1.2 3.2 2.4 8.2 0.5 11.3 1.1 11.7 2.1 0.4 1.2 -2.2 1.4 -15.7 1.5 -10 0.1 -14.7 0.5 -12.2 0.9 5.3 0.9 -13.2 1.3 -19.9 0.4 l-4.8 -0.7 8.2 -8.2 8.1 -8.2 23.6 0.5 c26.3 0.5 43.9 -0.7 67.8 -4.9 15.4 -2.7 43.9 -10.6 50.9 -14.1 1.9 -1 1.9 -1.5 -0.4 -11.8 -0.6 -2.5 -1.4 -6.5 -1.9 -9 -2.3 -12.2 -7.3 -35.6 -7.7 -36.2 -0.3 -0.4 -0.9 -3.1 -1.4 -6 -0.6 -2.9 -1.4 -7.1 -1.9 -9.3 -0.5 -2.2 -1.8 -8.5 -2.9 -14 -2.1 -10 -5.8 -27.4 -10.7 -50 -1.4 -6.6 -3 -14 -3.5 -16.5 -0.5 -2.5 -2 -9.9 -3.4 -16.5 -1.5 -6.5 -2.6 -12 -2.6 -12.2 0 -0.7 -1.8 -0.1 -6.3 2.3z m-131.3 28.6 c0.2 0.7 1.4 6.7 2.6 13.3 1.2 6.6 3.1 16 4.1 21 1.1 4.9 2.4 11.2 2.9 14 0.6 2.7 1.9 9.5 3.1 15 1.9 9.2 5.2 25.7 8 39.5 0.6 3 1.5 7.3 2 9.5 0.5 2.2 1.8 8.9 2.9 15 1.2 6 2.7 13.5 3.5 16.5 2.7 11.2 2.8 13 0.6 13 -2.2 0 -2.9 -2 -5.5 -15.5 -1.4 -7.2 -2.4 -12.2 -5.6 -28 -1.9 -9.4 -4.1 -20 -6.6 -32 -1.4 -6.6 -2.9 -14 -3.4 -16.5 -0.4 -2.5 -2.3 -12.4 -4.3 -22 -1.9 -9.6 -3.7 -18.6 -4 -20 -0.3 -1.4 -1.4 -6.7 -2.6 -11.9 -1.2 -5.2 -2.1 -10.1 -2.1 -10.8 0 -1.7 3.9 -1.7 4.4 -0.1z";
-function BookClosed(props) {
-    return React.createElement("svg", { viewBox: "0 0 218 285", preserveAspectRatio: "xMidYMid meet", className: props.className },
-        React.createElement("g", null,
-            React.createElement("path", { d: path })));
-}
-exports.BookClosed = BookClosed;
-
-
-/***/ }),
-/* 260 */
-/* no static exports found */
-/* all exports used */
-/*!*****************************************!*\
-  !*** ./src/components/circle-button.js ***!
-  \*****************************************/
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var React = __webpack_require__(/*! react */ 7);
-var class_names_for_1 = __webpack_require__(/*! ../utils/class-names-for */ 37);
-var circleClassNames = class_names_for_1.classNamesGeneratorFor(function (add) {
-    add("red", React.createElement("div", { className: "bg-red" }));
-    add("green", React.createElement("div", { className: "bg-green" }));
-    add("blue", React.createElement("div", { className: "bg-blue" }));
-    add("yellow", React.createElement("div", { className: "bg-yellow" }));
-}, React.createElement("div", { className: "br-100 dib f2 shadow-1 tc" }));
-function CircleButton(props) {
-    return React.createElement("div", { className: circleClassNames(props), onClick: props.onClick },
-        React.createElement("div", { className: "dt w4 h4 f2-ns f4" },
-            React.createElement("div", { className: "dtc v-mid tc white" }, props.children)));
-}
-exports.CircleButton = CircleButton;
-
-
-/***/ }),
-/* 261 */
-/* no static exports found */
-/* all exports used */
-/*!**************************************!*\
-  !*** ./src/components/counts-row.js ***!
-  \**************************************/
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var React = __webpack_require__(/*! react */ 7);
-var class_names_for_1 = __webpack_require__(/*! ../utils/class-names-for */ 37);
-var classNames = class_names_for_1.classNamesGeneratorFor(function (add) {
-}, React.createElement("div", { className: "f4 fw2 mb1" }));
-function CountsRow(props) {
-    return React.createElement("div", { className: classNames(props) },
-        props.children,
-        React.createElement("span", { className: "f5 ml1" }, "\u65E5"),
-        props.counts.today,
-        props.postfix,
-        React.createElement("span", { className: "f5 ml1" }, "\u9031"),
-        props.counts.week,
-        props.postfix,
-        React.createElement("span", { className: "f5 ml1" }, "\u6708"),
-        props.counts.month,
-        props.postfix);
-}
-exports.CountsRow = CountsRow;
-
-
-/***/ }),
-/* 262 */
-/* no static exports found */
-/* all exports used */
-/*!****************************************!*\
-  !*** ./src/components/progress-bar.js ***!
-  \****************************************/
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(/*! tslib */ 5);
-var React = __webpack_require__(/*! react */ 7);
-var timers_1 = __webpack_require__(/*! timers */ 122);
-var class_names_for_1 = __webpack_require__(/*! ../utils/class-names-for */ 37);
-var initialState = {
-    progress: 0,
-    maxTasks: 0,
-};
-var classNameGenerator = class_names_for_1.classNamesGeneratorFor(function (add) {
-    add("tasksNum", React.createElement("div", { className: "o-100" }), React.createElement("div", { className: "o-0" }));
-}, React.createElement("div", { className: "h-100 w-100 br2 br--right bg-light-red transition" }));
-var ProgressBar = /** @class */ (function (_super) {
-    tslib_1.__extends(ProgressBar, _super);
-    function ProgressBar() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this.state = initialState;
-        return _this;
+var lastId = 0;
+function genId() {
+    var id = lastId++;
+    var result = "";
+    for (var i = 0; i < 5; ++i) {
+        result = (id % 10) + result;
+        id = Math.floor(id / 10);
     }
-    ProgressBar.prototype.render = function () {
-        var progress = this.state.progress;
-        progress /= (progress + 2);
-        if (this.state.maxTasks > 0) {
-            progress = ((this.state.maxTasks - this.props.tasksNum) + progress) / this.state.maxTasks;
-        }
-        else {
-            progress = 1;
-        }
-        progress *= 100;
-        return React.createElement("div", { className: classNameGenerator(this.props), style: { width: progress + "%" } });
-    };
-    ProgressBar.prototype.componentDidMount = function () {
-        var _this = this;
-        this.handle = setInterval(function () {
-            _this.setState(function (prev) {
-                if (_this.props.tasksNum == 0)
-                    return prev;
-                if (prev.progress > 30)
-                    return prev;
-                return { progress: prev.progress + 0.4, maxTasks: prev.maxTasks };
-            });
-        }, 200);
-    };
-    ProgressBar.prototype.componentDidUpdate = function (prevProps) {
-        var prevNum = prevProps.tasksNum;
-        var nextNum = this.props.tasksNum;
-        if (prevNum !== nextNum) {
-            this.setState(function (prev) {
-                return {
-                    progress: 0,
-                    maxTasks: nextNum ? Math.max(prev.maxTasks, nextNum) : 0
-                };
-            });
-        }
-    };
-    ProgressBar.prototype.componentWillUnmount = function () {
-        timers_1.clearInterval(this.handle);
-    };
-    return ProgressBar;
-}(React.Component));
-exports.ProgressBar = ProgressBar;
-
-
-/***/ }),
-/* 263 */,
-/* 264 */
-/* no static exports found */
-/* all exports used */
-/*!*********************************!*\
-  !*** ./src/views/logged-out.js ***!
-  \*********************************/
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var React = __webpack_require__(/*! react */ 7);
-var layout_utils_1 = __webpack_require__(/*! ../components/layout-utils */ 253);
-var book_closed_1 = __webpack_require__(/*! ../components/book-closed */ 259);
-var session_reducer_1 = __webpack_require__(/*! ../reducers/session-reducer */ 36);
-function loggedOutContent(dispatch) {
-    return function (state) {
-        return React.createElement("div", { className: "vh-100" },
-            React.createElement(layout_utils_1.VCenteringContainer, null,
-                React.createElement(layout_utils_1.VCentered, null,
-                    React.createElement("div", { className: "f-6 tc wf-sawarabimincho" },
-                        React.createElement(book_closed_1.BookClosed, { className: "nb4 w4 h4" }),
-                        React.createElement("div", { className: "dib relative fw8" }, "\u5207"),
-                        "\u30FB",
-                        React.createElement("div", { className: "dib pointer relative elongate-child", onClick: function () { return dispatch(session_reducer_1.clickLogin); } },
-                            "\u5165",
-                            React.createElement("div", { className: "absolute w-100 top-0" },
-                                React.createElement("div", { className: "br3 dib ba w2 child center transition b--light-green" })))))));
-    };
+    return result;
 }
-exports.loggedOutContent = loggedOutContent;
-
-
-/***/ }),
-/* 265 */
-/* no static exports found */
-/* all exports used */
-/*!********************************!*\
-  !*** ./src/views/main-menu.js ***!
-  \********************************/
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var React = __webpack_require__(/*! react */ 7);
-var counts_row_1 = __webpack_require__(/*! ../components/counts-row */ 261);
-var circle_button_1 = __webpack_require__(/*! ../components/circle-button */ 260);
-var session_reducer_1 = __webpack_require__(/*! ../reducers/session-reducer */ 36);
-var select_single_1 = __webpack_require__(/*! ../components/select-single */ 112);
-var inputs_1 = __webpack_require__(/*! kamo-reducers/reducers/inputs */ 40);
-var new_note_reducer_1 = __webpack_require__(/*! ../reducers/new-note-reducer */ 114);
-var main_menu_reducer_1 = __webpack_require__(/*! ../reducers/main-menu-reducer */ 50);
-function mainMenuContent(dispatch) {
-    return function (state) {
-        return (React.createElement("div", null,
-            React.createElement("div", { className: "tc pt5-ns fw5 mb3" },
-                React.createElement("div", { className: "f1-ns f2" }, "\u3053\u3093\u306B\u3061\u306F,"),
-                React.createElement("div", { className: "f5 mb2" },
-                    state.settings.session.login,
-                    React.createElement("span", { className: "ml1 pointer blue hover-light-blue", onClick: function () { return dispatch(session_reducer_1.clickLogout); } }, "(\u30ED\u30B0\u30A2\u30A6\u30C8)")),
-                React.createElement("div", { className: "f5" },
-                    "\u8A00\u8A9E:",
-                    React.createElement("div", { className: "ml2 w4 dib" },
-                        React.createElement(select_single_1.SelectSingle, { onChange: function (lang) {
-                                return dispatch(inputs_1.inputChange("curLanguage", lang));
-                            }, value: state.inputs.curLanguage.value, values: state.languages })))),
-            React.createElement(counts_row_1.CountsRow, { counts: state.studyData.due, postfix: "枚", className: "tc" }, "\u4E88\u5B9A:"),
-            React.createElement(counts_row_1.CountsRow, { counts: state.studyData.studied, postfix: "枚", className: "tc" }, "\u5B9F\u7E3E:"),
-            React.createElement(counts_row_1.CountsRow, { counts: state.studyData.studyTimeMinutes, postfix: "分", className: "tc" }, "\u7D4C\u904E:"),
-            React.createElement("div", { className: "tc f4 fw4 mb3 red" },
-                state.syncOffline ? React.createElement("span", { className: "red mr1" }, "\u30AA\u30D5\u30E9\u30A4\u30F3") : null,
-                state.hasEdits ? React.createElement("span", { className: "black-70" }, "\u672A\u4FDD\u5B58\u5909\u66F4\u3042\u308A") : null),
-            React.createElement("div", { className: "tc" },
-                React.createElement("div", { className: "mv2" },
-                    React.createElement(circle_button_1.CircleButton, { onClick: function () { return dispatch(main_menu_reducer_1.visitStudy); }, red: true, className: "mh2 pointer dim" },
-                        React.createElement("span", { className: "fw6" }, "\u8A13"),
-                        React.createElement("span", { className: "fw3" }, "\u7DF4"),
-                        React.createElement("br", null),
-                        React.createElement("span", { className: "fw1" }, "\u958B"),
-                        React.createElement("span", { className: "fw4" }, "\u59CB")),
-                    React.createElement(circle_button_1.CircleButton, { onClick: function () { return dispatch(new_note_reducer_1.visitNewNote); }, green: true, className: "mh2 pointer dim" },
-                        React.createElement("span", { className: "fw4" }, "\u65B0"),
-                        React.createElement("span", { className: "fw2" }, "\u898F"),
-                        React.createElement("br", null),
-                        React.createElement("span", { className: "fw6" }, "\u8FFD"),
-                        React.createElement("span", { className: "fw3" }, "\u52A0"))),
-                React.createElement("div", { className: "mv2" },
-                    React.createElement(circle_button_1.CircleButton, { onClick: function () { return dispatch(main_menu_reducer_1.visitEditNote); }, yellow: true, className: "mh2 pointer dim" },
-                        React.createElement("span", { className: "fw3" }, "\u7DE8"),
-                        React.createElement("span", { className: "fw5" }, "\u96C6")),
-                    state.syncAuthBad ? (React.createElement(circle_button_1.CircleButton, { onClick: function () { return dispatch(session_reducer_1.clickLogin); }, blue: true, className: "mh2 pointer dim" },
-                        React.createElement("span", { className: "fw5" }, "\u518D"),
-                        React.createElement("br", null),
-                        React.createElement("span", { className: "fw1" }, "\u8A8D"),
-                        React.createElement("span", { className: "fw3" }, "\u8A3C"))) : null)),
-            React.createElement(counts_row_1.CountsRow, { counts: state.studyData.newStudy, postfix: "枚", className: "tc" }, "\u65B0\u898F:"),
-            React.createElement("div", { className: "tc f3 fw2 mb1" },
-                "\u8A00\u8449: ",
-                state.studyData.terms),
-            React.createElement("div", { className: "tc f3 fw2 mb1" },
-                "\u5408\u8A08: ",
-                state.studyData.clozes)));
-    };
+exports.genId = genId;
+function genNum() {
+    return ++lastId;
 }
-exports.mainMenuContent = mainMenuContent;
-
-
-/***/ }),
-/* 266 */
-/* no static exports found */
-/* all exports used */
-/*!*******************************!*\
-  !*** ./src/views/new-note.js ***!
-  \*******************************/
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var React = __webpack_require__(/*! react */ 7);
-var select_single_1 = __webpack_require__(/*! ../components/select-single */ 112);
-var inputs_1 = __webpack_require__(/*! kamo-reducers/reducers/inputs */ 40);
-var model_1 = __webpack_require__(/*! ../model */ 17);
-var debouncing_inputs_1 = __webpack_require__(/*! ../components/debouncing-inputs */ 71);
-var new_note_reducer_1 = __webpack_require__(/*! ../reducers/new-note-reducer */ 114);
-var main_menu_reducer_1 = __webpack_require__(/*! ../reducers/main-menu-reducer */ 50);
-var redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 12);
-function newNoteContent(dispatch) {
-    return function (state) {
-        return (React.createElement("div", null,
-            React.createElement("div", { className: "tc pt5-ns fw5 mb3" },
-                React.createElement("div", { className: "f5" },
-                    React.createElement("div", { className: "w4 dib" },
-                        React.createElement(select_single_1.SelectSingle, { placeholder: "言語を選択", onChange: function (lang) {
-                                return dispatch(inputs_1.inputChange("newNoteLanguage", lang));
-                            }, value: state.inputs.newNoteLanguage.value, values: model_1.allLanguages })),
-                    state.unusedStoredFiles.length && (React.createElement("div", { className: "ml2 w4 dib" },
-                        React.createElement(select_single_1.SelectSingle, { placeholder: "音声ファイルを選択", onChange: function (id) {
-                                return dispatch(inputs_1.inputChange("newNoteAudioId", id));
-                            }, value: state.inputs.newNoteAudioId.value, values: state.unusedStoredFiles.map(function (sf) { return sf.id; }), labeler: function (v) {
-                                var sf = redux_indexers_1.Indexer.getFirstMatching(state.indexes.storedFiles.byId, [v]);
-                                return sf ? sf.name : "";
-                            } }))))),
-            React.createElement("div", { className: "mw6 center" },
-                React.createElement("div", { className: "pa3" },
-                    React.createElement(debouncing_inputs_1.DebouncingTextArea, { className: "w-100 input-reset", rows: 6, onChange: inputs_1.inputChangeDispatcher(dispatch, "newNoteContent"), valueObject: state.inputs.newNoteContent })),
-                React.createElement("div", { className: "tr" },
-                    state.inputs.newNoteAudioId.value && (React.createElement("button", { className: "mh1 pa2 br", onClick: function () { return dispatch(new_note_reducer_1.testNewNoteAudioFile); } }, "\u97F3\u58F0\u8A66\u3057")),
-                    React.createElement("button", { className: "mh1 pa2 br2", onClick: function () { return dispatch(new_note_reducer_1.clickAddNewNote); }, disabled: !state.inputs.newNoteContent.value ||
-                            !state.inputs.newNoteLanguage.value ||
-                            !state.indexesReady }, "\u8FFD\u52A0"),
-                    React.createElement("button", { className: "mh1 pa2 br2", onClick: function () { return dispatch(main_menu_reducer_1.visitMainMenu); } }, "\u30AD\u30E3\u30F3\u30BB\u30EB")))));
-    };
+exports.genNum = genNum;
+function genSomeText() {
+    var amount = Math.floor(Math.random() * 4) * 10 + 1;
+    var result = "";
+    for (var i = 0; i < amount; ++i) {
+        result += String.fromCharCode("a".charCodeAt(0) + Math.floor(Math.random() * 26));
+    }
+    return result + genNum();
 }
-exports.newNoteContent = newNoteContent;
-
-
-/***/ }),
-/* 267 */
-/* no static exports found */
-/* all exports used */
-/*!****************************!*\
-  !*** ./src/views/study.js ***!
-  \****************************/
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var React = __webpack_require__(/*! react */ 7);
-var layout_utils_1 = __webpack_require__(/*! ../components/layout-utils */ 253);
-var simple_nav_link_1 = __webpack_require__(/*! ../components/simple-nav-link */ 72);
-var main_menu_reducer_1 = __webpack_require__(/*! ../reducers/main-menu-reducer */ 50);
-var time_1 = __webpack_require__(/*! ../utils/time */ 74);
-var study_reducer_1 = __webpack_require__(/*! ../reducers/study-reducer */ 73);
-var toggle_1 = __webpack_require__(/*! kamo-reducers/reducers/toggle */ 70);
-function studyContent(dispatch) {
-    return function (state) {
-        var dueTime = time_1.timeOfMinutes(state.studyDetails.cloze.attributes.schedule.nextDueMinutes);
-        return React.createElement(layout_utils_1.FlexContainer, { vertical: true, className: "vh-100 overflow-x-hidden overflow-y-hidden" },
-            React.createElement(layout_utils_1.Row, { fixedRow: true, className: "h3 w-100" },
-                React.createElement(layout_utils_1.VCenteringContainer, null,
-                    React.createElement(layout_utils_1.VCentered, { className: "tc" },
-                        React.createElement("div", null,
-                            React.createElement("span", { className: "dn dib-l" },
-                                React.createElement("span", { className: "pv1 ph2 br2 bg-gray white" }, "f")),
-                            React.createElement("span", { className: "mh2" }, "\u7D4C\u904E"),
-                            state.studyData.studied.today,
-                            "/",
-                            state.studyData.studied.today + state.studyData.due.today,
-                            React.createElement("span", { className: "mh2" }, time_1.describeDuration(state.now - state.studyStarted)),
-                            React.createElement(simple_nav_link_1.SimpleNavLink, { onClick: function () { return dispatch(main_menu_reducer_1.visitMainMenu); }, className: "mh2" }, "\u623B\u308B")),
-                        React.createElement("div", null,
-                            "\u671F\u65E5: ",
-                            time_1.describeDuration(state.now - dueTime, false))))),
-            React.createElement(layout_utils_1.Row, { stretchRow: true, className: "w-100 overflow-y-auto word-wrap" },
-                React.createElement("div", { className: "w-100 f3 pv2", onClick: function (e) { return e.target instanceof HTMLButtonElement ? null : dispatch(toggle_1.toggle("showBack")); } },
-                    React.createElement(layout_utils_1.VCenteringContainer, null,
-                        React.createElement(layout_utils_1.VCentered, null, state.toggles.showBack ? BackSide(state) : FrontSide(state))))));
-    };
-    function FrontSide(state) {
-        var studyDetails = state.studyDetails;
-        return React.createElement("div", { className: "tc ph3 mw6 center lh-copy" }, (function () {
-            switch (studyDetails.type) {
-                case "produce":
-                    return Produce(studyDetails);
-                case "speak":
-                    return Speak(studyDetails);
-                case "listen":
-                    return Listen(studyDetails);
-                case "recognize":
-                    return Recognize(studyDetails);
-            }
-        })());
+exports.genSomeText = genSomeText;
+function pick() {
+    var v = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+        v[_i] = arguments[_i];
     }
-    function Recognize(studyDetails) {
-        return React.createElement("div", null,
-            React.createElement("span", null, studyDetails.beforeTerm),
-            React.createElement("span", { className: "br2 pa1 bg-light-yellow fw9" },
-                studyDetails.beforeCloze,
-                studyDetails.clozed,
-                studyDetails.afterCloze),
-            React.createElement("span", null, studyDetails.afterTerm));
-    }
-    function Listen(studyDetails) {
-        return React.createElement("div", null,
-            React.createElement("div", { className: "f5 i mb3" }, studyDetails.hint),
-            React.createElement("div", null,
-                React.createElement("button", { className: "ml3 br2 f4", onClick: function () { return dispatch(study_reducer_1.readCard); } }, "\u8AAD\u307F\u4E0A\u3052")));
-    }
-    function Speak(studyDetails) {
-        return React.createElement("div", null,
-            React.createElement("div", { className: "f5 i mb3" }, studyDetails.hint),
-            React.createElement("span", null, studyDetails.beforeTerm),
-            React.createElement("span", { className: "br2 pa1 bg-light-yellow fw9" },
-                React.createElement("span", { className: "" },
-                    studyDetails.beforeCloze,
-                    studyDetails.clozed,
-                    studyDetails.afterCloze)),
-            React.createElement("span", null, studyDetails.afterTerm));
-    }
-    function Produce(studyDetails) {
-        return React.createElement("div", null,
-            React.createElement("div", { className: "f5 i mb3" }, studyDetails.hint),
-            React.createElement("span", null, studyDetails.beforeTerm),
-            React.createElement("span", { className: "br2 pa1 bg-light-yellow fw9" },
-                React.createElement("span", { className: "" }, studyDetails.beforeCloze),
-                React.createElement("span", { className: "ph3 pv1 br2 bb" }, "?"),
-                React.createElement("span", { className: "" }, studyDetails.afterCloze)),
-            React.createElement("span", null, studyDetails.afterTerm));
-    }
-    function BackSide(state) {
-        var timeToAnswer = state.now - state.studyStarted;
-        return React.createElement("div", { className: "mw6 center" },
-            React.createElement("div", { className: "f4 ph3 mb2 tc" },
-                state.studyDetails.beforeCloze,
-                React.createElement("span", { className: "fw8 mh1" }, state.studyDetails.clozed),
-                state.studyDetails.afterCloze,
-                React.createElement("button", { className: "mh1 pa1 br2 f5", onClick: function () { return dispatch(study_reducer_1.readCard); } }, "\u8AAD\u307F\u4E0A\u3052")),
-            React.createElement("div", { className: "f5 h5 overflow-x-hidden overflow-y-auto ph3" },
-                state.studyDetails.cloze.attributes.type === "listen" ? React.createElement("div", { className: "mb3" }, state.studyDetails.content.split("\n").map(function (s, i) { return React.createElement("span", { key: i + "" },
-                    s,
-                    React.createElement("br", null)); })) : null,
-                state.studyDetails.definition.split("\n").map(function (s, i) { return React.createElement("span", { key: i + "" },
-                    s,
-                    React.createElement("br", null)); })),
-            state.indexesReady ? React.createElement("div", { className: "f5 mt2 tc" },
-                React.createElement("button", { className: "mh1 pa1 br2", onClick: function () { return dispatch(study_reducer_1.answerCard(["f", timeToAnswer < 6 ? 3.0 : 2.0])); } }, "OK!"),
-                React.createElement("button", { className: "mh1 pa1 br2", onClick: function () { return dispatch(study_reducer_1.answerCard(["d", 60])); } }, "\u30B9\u30AD\u30C3\u30D7"),
-                React.createElement("button", { className: "mh1 pa1 br2", onClick: function () { return dispatch(study_reducer_1.answerCard(["f", 0.4])); } }, "\u9593\u9055\u3048\u305F\uFF01"),
-                React.createElement("button", { className: "mh1 pa1 br2", onClick: function () { return dispatch(study_reducer_1.editCard); } }, "\u7DE8\u96C6")) : null);
-    }
+    return v[Math.floor(Math.random() * v.length)];
 }
-exports.studyContent = studyContent;
+exports.pick = pick;
+var start = Date.now();
+function genFutureTime() {
+    return start + (1000 * 60 * 15) + genNum() * 100;
+}
+exports.genFutureTime = genFutureTime;
+function genPastTime() {
+    return start - (1000 * 60 * 15) + genNum() * 100;
+}
+exports.genPastTime = genPastTime;
 
 
 /***/ })
 /******/ ]);
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=development.js.map
