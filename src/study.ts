@@ -22,6 +22,7 @@ export interface StudyDetails {
   hint: string;
   definition: string;
   type: ClozeType;
+  audioFileId: string | void;
 }
 
 export interface TermId {
@@ -169,6 +170,7 @@ export function studyDetailsForCloze(
       afterTerm: content.slice(termRange[1]),
       hint: term.attributes.hint,
       type: cloze.attributes.type,
+      audioFileId: note.attributes.audioFileId,
     };
   }
 }

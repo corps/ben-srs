@@ -133,7 +133,10 @@ export function getMissingStoredFiles(state: State): StoredFile[] {
 
   let revsForIds = {} as {[k: string]: string};
   state.fileNames.forEach(fn => {
-    let [id, rev] = fn.split(".")[0].split("-");
+    let parts = fn.split(".");
+    parts = parts.slice(0, parts.length - 1).join(".").split("-");
+    let id = parts.slice(0, parts.length - 1).join("-");
+    let rev = parts[parts.length - 1];
     revsForIds[id] = rev;
   });
 
