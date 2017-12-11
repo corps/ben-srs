@@ -19,7 +19,7 @@ import {
   getTermFragment,
 } from "../study";
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
-import {requestSpeech} from "../services/speech";
+import {requestTermSpeech} from "../services/note-speech";
 import {
   denormalizedNote,
   findNoteTree,
@@ -310,11 +310,14 @@ export function reduceEditNote(
           term,
           state.inputs.termPronounce.value || term.attributes.reference
         );
+
         effect = sequence(
           effect,
-          requestSpeech(
-            fragment,
-            state.editingNoteNormalized.attributes.language
+          requestTermSpeech(
+            state,
+            state.editingNoteNormalized.attributes.audioFileId,
+            state.editingNoteNormalized.attributes.language,
+            fragment
           )
         );
       }

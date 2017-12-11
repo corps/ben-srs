@@ -22,7 +22,7 @@
     "hellojs": "^1.15.1",
     "history": "^4.6.3",
     "json-delta": "^1.0.1",
-    "kamo-reducers": "^1.14.0",
+    "kamo-reducers": "^2.0.0",
     "pace-progress": "^1.0.2",
     "perfectionist": "^2.4.0",
     "postcss-conditionals": "^2.1.0",

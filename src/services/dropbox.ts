@@ -5,7 +5,7 @@ import {
 } from "kamo-reducers/services/ajax";
 
 export interface DropboxRequestResult {
-  content?: string | void;
+  content?: AjaxConfig["body"];
   response?: any | void;
 }
 
@@ -19,6 +19,7 @@ export interface DropboxDownloadResponse {
   id: string;
   rev: string;
   path_lower: string;
+  size: number;
 }
 
 export interface DropboxFileEntry {
@@ -98,15 +99,6 @@ export function dropboxContentRequestConfig(
   };
 }
 
-export const listFolderRequestName = "list-folder";
-export const filesDownloadRequestName = "files-download";
-export const filesUploadRequestName = "files-upload";
-export const dropboxRequestNames = [
-  listFolderRequestName,
-  filesDownloadRequestName,
-  filesUploadRequestName,
-];
-
 export function listFolderAjaxConfig(
   accessToken: string,
   cursor = ""
@@ -129,7 +121,9 @@ export function listFolderAjaxConfig(
 
 export function fileDownloadAjaxConfig(
   accessToken: string,
-  pathOrId: string
+  pathOrId: string,
+  mimeType = "text/plain; charset=UTF-8",
+  responseType = undefined as AjaxConfig["responseType"]
 ): AjaxConfig {
   var config = dropboxContentRequestConfig(
     accessToken,
@@ -140,7 +134,8 @@ export function fileDownloadAjaxConfig(
     }
   );
 
-  config.overrideMimeType = "text/plain; charset=UTF-8";
+  if (responseType) config.responseType = responseType;
+  config.overrideMimeType = mimeType;
 
   return config;
 }
@@ -149,7 +144,7 @@ export function fileUploadAjaxConfig(
   accessToken: string,
   pathOrId: string,
   version: string | void,
-  body: string
+  body: string | Blob
 ): AjaxConfig {
   var config = dropboxContentRequestConfig(
     accessToken,
@@ -183,8 +178,24 @@ export function getDropboxResult(
     result.response = JSON.parse(headerApiResult);
     result.content = action.response;
   } else if (action.response) {
-    result.response = JSON.parse(action.response);
+    result.response = JSON.parse(action.response as string);
   }
 
   return result;
 }
+
+export function getMimeFromFileName(name: string): string | void {
+  let parts = name.split(".");
+  if (parts.length > 0) {
+    let ext = parts[parts.length - 1];
+    return contentTypes[ext.toLowerCase()];
+  }
+
+  return null;
+}
+
+export const contentTypes: {[k: string]: string} = {
+  "mp3": "audio/mpeg",
+  "ogg": "audio/ogg",
+  "wav": "audio/wav",
+};

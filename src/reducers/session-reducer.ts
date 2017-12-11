@@ -24,6 +24,7 @@ import {
   WorkComplete,
   WorkCanceled,
 } from "kamo-reducers/services/workers";
+import {requestFileList} from "../services/files";
 
 export const settingsStoreKey = "settings";
 
@@ -77,6 +78,10 @@ export function reduceSession(
 
         state.clearSyncEffects = cancelLocalLoad(settingsStoreKey);
         effect = sequence(effect, requestLocalData(settingsStoreKey));
+
+        state.awaiting = {...state.awaiting};
+        state.awaiting["file-list"] = 1;
+        effect = sequence(effect, requestFileList());
       }
 
       break;
@@ -151,7 +156,7 @@ export function reduceSession(
       state.indexesReady = true;
 
       ({state, effect} = sequenceReduction(effect, startSync(state)));
-      // deliberate fall through
+    // deliberate fall through
 
     case "work-canceled":
       if (action.name[0] !== loadIndexesWorkerName) break;
@@ -184,17 +189,17 @@ export function requestLocalStoreUpdate(state: State) {
   localStore.settings = state.settings;
 
   if (state.indexesReady || !state.loadingIndexable) {
-    localStore.indexables =
-      {
-        notes: state.indexes.notes.byId.map(k => k[1]),
-        terms: state.indexes.terms.byNoteIdReferenceAndMarker.map(k => k[1]),
-        clozes: state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx.map(
-          k => k[1]
-        ),
-        clozeAnswers: state.indexes.clozeAnswers.byLanguageAndAnswered.map(
-          k => k[1]
-        ),
-      };
+    localStore.indexables = {
+      storedFiles: state.indexes.storedFiles.byId.map(k => k[1]),
+      notes: state.indexes.notes.byId.map(k => k[1]),
+      terms: state.indexes.terms.byNoteIdReferenceAndMarker.map(k => k[1]),
+      clozes: state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx.map(
+        k => k[1]
+      ),
+      clozeAnswers: state.indexes.clozeAnswers.byLanguageAndAnswered.map(
+        k => k[1]
+      ),
+    };
   } else {
     localStore.indexables = state.loadingIndexable;
   }

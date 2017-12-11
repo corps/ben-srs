@@ -9,7 +9,7 @@ import {findNextStudyDetails, findTermInNormalizedNote} from "../study";
 import {requestTick, UpdateTime} from "kamo-reducers/services/time";
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
 import {Toggle} from "kamo-reducers/reducers/toggle";
-import {requestSpeech} from "../services/speech";
+import {requestTermSpeech} from "../services/note-speech";
 import {Answer, AnswerDetails, scheduledBy} from "../scheduler";
 import {startEditingNote, startEditingTerm} from "./edit-note-reducer";
 import {Indexer} from "redux-indexers";
@@ -67,7 +67,12 @@ export function reduceStudy(
     case "read-card":
       effect = sequence(
         effect,
-        requestSpeech(state.studyDetails.spoken, cloze.language)
+        requestTermSpeech(
+          state,
+          state.studyDetails.audioFileId,
+          cloze.language,
+          state.studyDetails.spoken
+        )
       );
       break;
 

@@ -18,6 +18,7 @@ import {
   loadIndexables,
   normalizedNote,
   notesIndexer,
+  storedFilesIndexer,
   NoteTree,
   removeNote,
 } from "../indexes";
@@ -28,17 +29,23 @@ import {
   newNormalizedNote,
 } from "../model";
 import {requestLocalStoreUpdate} from "./session-reducer";
-import {getDropboxResult} from "../services/dropbox";
-import {filesUploadRequestName} from "../services/dropbox";
-import {listFolderRequestName} from "../services/dropbox";
+import {getDropboxResult, getMimeFromFileName} from "../services/dropbox";
 import {DropboxListFolderResponse} from "../services/dropbox";
-import {filesDownloadRequestName} from "../services/dropbox";
 import {DropboxDownloadResponse} from "../services/dropbox";
 import {DropboxFileEntry} from "../services/dropbox";
 import {listFolderAjaxConfig} from "../services/dropbox";
 import {fileDownloadAjaxConfig} from "../services/dropbox";
 import {fileUploadAjaxConfig} from "../services/dropbox";
-import {dropboxRequestNames} from "../services/dropbox";
+import {continueFileSync} from "./file-sync-reducer";
+
+export const listFolderRequestName = "list-folder";
+export const noteDownloadRequestName = "notes-download";
+export const noteUploadRequestName = "notes-upload";
+export const syncRequestNames = [
+  listFolderRequestName,
+  noteDownloadRequestName,
+  noteUploadRequestName,
+];
 
 export function requestListFolder(
   accessToken: string,
@@ -55,7 +62,7 @@ export function requestFileDownload(
   pathOrId: string
 ): RequestAjax {
   return requestAjax(
-    [filesDownloadRequestName, pathOrId],
+    [noteDownloadRequestName, pathOrId],
     fileDownloadAjaxConfig(accessToken, pathOrId)
   );
 }
@@ -67,7 +74,7 @@ export function requestFileUpload(
   body: string
 ): RequestAjax {
   return requestAjax(
-    [filesUploadRequestName, pathOrId],
+    [noteUploadRequestName, pathOrId],
     fileUploadAjaxConfig(accessToken, pathOrId, version, body)
   );
 }
@@ -109,7 +116,7 @@ function completeFileUpload(
   state: State,
   completeRequest: CompleteRequest
 ): ReductionWithEffect<State> {
-  if (completeRequest.name[0] !== filesUploadRequestName) return {state};
+  if (completeRequest.name[0] !== noteUploadRequestName) return {state};
 
   const pathOrId = completeRequest.name[1];
   const conflict = completeRequest.status === 409;
@@ -145,7 +152,7 @@ function completeFileDownload(
   state: State,
   completeRequest: CompleteRequest
 ): ReductionWithEffect<State> {
-  if (completeRequest.name[0] !== filesDownloadRequestName) return {state};
+  if (completeRequest.name[0] !== noteDownloadRequestName) return {state};
 
   const missingFile = completeRequest.status === 409;
   if (!completeRequest.success && !missingFile) {
@@ -160,12 +167,12 @@ function completeFileDownload(
     const dropboxResult = getDropboxResult(completeRequest);
     let downloadedNote: NormalizedNote;
     try {
-      downloadedNote = parseNote(dropboxResult.content || "");
+      downloadedNote = parseNote((dropboxResult.content as string) || "");
     } catch (e) {
       if (process.env.NODE_ENV === "production") {
         downloadedNote = {...newNormalizedNote};
         downloadedNote.attributes = {...downloadedNote.attributes};
-        downloadedNote.attributes.content = dropboxResult.content || "";
+        downloadedNote.attributes.content = (dropboxResult.content as string) || "";
       } else {
         throw e;
       }
@@ -206,7 +213,7 @@ export function reduceSync(
 
   switch (action.type) {
     case "complete-request":
-      if (dropboxRequestNames.indexOf(action.name[0]) === -1) break;
+      if (syncRequestNames.indexOf(action.name[0]) === -1) break;
 
       state = {...state};
       state.now = action.when;
@@ -297,7 +304,23 @@ function checkSyncDownloadComplete(
       }
     } else if (entry[".tag"] === "file") {
       let file = entry as DropboxFileEntry;
-      loadDownloaded(file.id);
+
+      if (isFileStoredEntry(file)) {
+        state.indexes = {...state.indexes};
+        state.indexes.storedFiles = storedFilesIndexer.update(
+          state.indexes.storedFiles,
+          [
+            {
+              id: file.id,
+              revision: file.rev,
+              name: file.name,
+              size: file.size,
+            },
+          ]
+        );
+      } else {
+        loadDownloaded(file.id);
+      }
     }
   });
 
@@ -385,8 +408,11 @@ function getUnfulfilledDownloads(
 
   for (let entry of listFolderResponse.entries) {
     if (entry[".tag"] === "file") {
-      let rev = (entry as DropboxFileEntry).rev;
-      let id = (entry as DropboxFileEntry).id;
+      let fileEntry = entry as DropboxFileEntry;
+      let rev = fileEntry.rev;
+      let id = fileEntry.id;
+
+      if (isFileStoredEntry(fileEntry)) continue;
       if (notesByIdAndRev[id] && notesByIdAndRev[id][rev]) continue;
 
       result.push("rev:" + rev);
@@ -394,6 +420,11 @@ function getUnfulfilledDownloads(
   }
 
   return result;
+}
+
+export function isFileStoredEntry(entry: DropboxFileEntry) {
+  let mime = getMimeFromFileName(entry.name);
+  return mime && mime.split("/")[0] === "audio";
 }
 
 function continueSync(state: State): ReductionWithEffect<State> {
@@ -494,6 +525,8 @@ function continueSync(state: State): ReductionWithEffect<State> {
     state.awaiting = {...state.awaiting};
     state.awaiting["sync"] = 0;
     state.finishedSyncCount += 1;
+
+    ({state, effect} = sequenceReduction(effect, continueFileSync(state)));
   }
 
   return {state, effect};

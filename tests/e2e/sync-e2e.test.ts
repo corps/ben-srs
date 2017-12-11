@@ -1,25 +1,28 @@
 import {assert, Assert, test, testModule} from "../qunit";
-import {deletePath, setupDropbox, testPath} from "./dropbox-test-utils";
+import { playAudioFile, deleteFiles } from "../../src/services/files";
+import {
+  deletePath,
+  setupDropbox,
+  testPath,
+  uploadFile,
+  mp3One,
+  mp3Two,
+} from "./dropbox-test-utils";
 import {Subscription} from "kamo-reducers/subject";
 import {BensrsTester} from "../tester";
 import {NoteFactory} from "../factories/notes-factories";
+import {newSettings, Term, Note} from "../../src/model";
 import {
-  newSettings,
-  Term,
-  Note,
-} from "../../src/model";
-import {settingsStoreKey, newLocalStore} from "../../src/reducers/session-reducer";
+  settingsStoreKey,
+  newLocalStore,
+} from "../../src/reducers/session-reducer";
 import uuid = require("uuid");
 import {storeLocalData} from "kamo-reducers/services/local-storage";
 import {windowFocus} from "../../src/services/window";
 import {Indexer} from "redux-indexers";
 import {isSideEffect} from "kamo-reducers/reducers";
 import {setImmediate} from "timers";
-import {
-  findNoteTree,
-  normalizedNote,
-  notesIndexer,
-} from "../../src/indexes";
+import {findNoteTree, normalizedNote, notesIndexer} from "../../src/indexes";
 import {startSync} from "../../src/reducers/sync-reducer";
 
 let subscription = new Subscription();
@@ -67,8 +70,16 @@ testModule("e2e/sync", {
     let finish = assert.async();
     setupDropbox(token, (err: any, cursor: string) => {
       assert.ok(!err, "Got error setting up dropbox");
+
+      uploadFile("/test/first.mp3", token, mp3One, (e) => {
+        assert.ok(!err, "Got error uploading first.mp3"); 
+        uploadFile("/test/second.mp3", token, mp3Two, (e) => {
+          assert.ok(!err, "Got error uploading second.mp3"); 
+          finish();
+        });
+      });
+
       settings.session.syncCursor = cursor;
-      finish();
     });
   },
 
@@ -124,6 +135,7 @@ function loadCredentialsAndNewData() {
 }
 
 function awaitInitialBadSync() {
+  console.log("awaiting initial bad sync", tester.state.indexesReady, tester.state.finishedSyncCount);
   if (!tester.state.indexesReady || tester.state.finishedSyncCount < 1) {
     return false;
   }
@@ -133,12 +145,34 @@ function awaitInitialBadSync() {
   assert.equal(tester.state.syncAuthBad, true, "syncAuthBad");
   assert.equal(tester.state.syncOffline, false, "syncOffline");
 
-  setImmediate(loadCredentialsAndNewData);
+  setImmediate(() => {
+    tester.dispatch({type: "no-op"});
+  });
 
   return true;
 }
 
+function awaitFilesLoaded() {
+  console.log("awaiting files loaded", tester.state.loadedFiles);
+  if (!tester.state.loadedFiles) return false;
+
+  setImmediate(() => {
+    tester.queued$.dispatch(deleteFiles(tester.state.fileNames));
+  });
+
+  return true;
+}
+
+function awaitFilesDeleted() {
+  console.log("awaiting deleted...", tester.state.fileNames);
+  if (tester.state.fileNames.length) return false;
+
+  setImmediate(loadCredentialsAndNewData);
+  return true;
+}
+
 function awaitNewSyncComplete() {
+  console.log("awaiting new sync completion...");
   if (tester.state.finishedSyncCount < 2) return false;
 
   assert.equal(tester.state.authReady, true, "authReady");
@@ -242,7 +276,11 @@ function awaitEditedSyncComplete() {
     if (indexed) {
       assert.deepEqual(indexed.attributes, editedNote.attributes);
       assert.notEqual(indexed.version, editedNote.version);
-      assert.equal(indexed.localEdits, false, "edited notes have localEdits set to false");
+      assert.equal(
+        indexed.localEdits,
+        false,
+        "edited notes have localEdits set to false"
+      );
 
       editedNote = {...editedNote};
       editedNote.attributes = {...editedNote.attributes};
@@ -305,42 +343,64 @@ function awaitEditedWithOlderRevision() {
 function awaitDeletedSync() {
   if (tester.state.finishedSyncCount < 5) return false;
 
-  assert.equal(tester.state.indexes.notes.byPath.length, 0, "every note was deleted");
-  assert.equal(tester.state.indexes.terms.byLanguage.length, 0, "every term was deleted");
-  assert.equal(tester.state.indexes.clozes.byLanguageAndNextDue.length, 0, "every close deleted");
+  assert.equal(
+    tester.state.indexes.notes.byPath.length,
+    0,
+    "every note was deleted"
+  );
+  assert.equal(
+    tester.state.indexes.terms.byLanguage.length,
+    0,
+    "every term was deleted"
+  );
+  assert.equal(
+    tester.state.indexes.clozes.byLanguageAndNextDue.length,
+    0,
+    "every close deleted"
+  );
   assert.equal(
     tester.state.indexes.clozeAnswers.byLanguageAndAnswered.length,
-    0, "every cloze answer is deleted",
+    0,
+    "every cloze answer is deleted"
   );
 
-//   setImmediate(function() {
-//     let note = {...editedNotes[0]};
-//     note.localEdits = true;
+  //   setImmediate(function() {
+  //     let note = {...editedNotes[0]};
+  //     note.localEdits = true;
 
-//     let term = {...newTerm};
-//     term.noteId = note.id;
+  //     let term = {...newTerm};
+  //     term.noteId = note.id;
 
-//     let cloze = {...newCloze};
-//     cloze.noteId = note.id;
+  //     let cloze = {...newCloze};
+  //     cloze.noteId = note.id;
 
-//     let clozeAnswer = {...newClozeAnswer};
-//     clozeAnswer.noteId = note.id;
+  //     let clozeAnswer = {...newClozeAnswer};
+  //     clozeAnswer.noteId = note.id;
 
-//     tester.state.indexes = loadIndexables(tester.state.indexes, [
-//       {
-//         note,
-//         terms: [term],
-//         clozes: [cloze],
-//         clozeAnswers: [clozeAnswer],
-//       },
-//     ]);
+  //     tester.state.indexes = loadIndexables(tester.state.indexes, [
+  //       {
+  //         note,
+  //         terms: [term],
+  //         clozes: [cloze],
+  //         clozeAnswers: [clozeAnswer],
+  //       },
+  //     ]);
 
-//     let {state, effect} = startSync(tester.state);
-//     tester.state = state;
-//     if (effect) {
-//       tester.queued$.dispatch(effect);
-//     }
-//   });
+  //     let {state, effect} = startSync(tester.state);
+  //     tester.state = state;
+  //     if (effect) {
+  //       tester.queued$.dispatch(effect);
+  //     }
+  //   });
+
+  return true;
+}
+
+function awaitFileStoredDownloads() {
+  if (tester.state.indexes.storedFiles.byId.length < 2) return false;
+  if (tester.state.fileNames.length < 2) return false;
+
+  tester.queued$.dispatch(playAudioFile(tester.state.fileNames[0]));
 
   return true;
 }
@@ -365,10 +425,13 @@ if (process.env.E2E_TEST) {
 
     sequenceChecks(assert, [
       awaitInitialBadSync,
+      awaitFilesLoaded,
+      awaitFilesDeleted,
       awaitNewSyncComplete,
       awaitEditedSyncComplete,
       awaitEditedWithOlderRevision,
       awaitDeletedSync,
+      awaitFileStoredDownloads,
       // awaitConflictOfDeleteSync,
     ]);
 

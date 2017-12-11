@@ -1,5 +1,6 @@
 import {Indexable, indexesInitialState, NoteTree} from "./indexes";
 import {
+  StoredFile,
   Language,
   newNormalizedNote,
   newNote,
@@ -50,6 +51,7 @@ export const initialState = {
     curLanguage: {value: "English" as Language},
     newNoteContent: {value: ""},
     newNoteLanguage: {value: "" as Language | ""},
+    newNoteAudioId: {value: ""},
 
     editingNoteContent: {value: ""},
     editingNoteLanguage: {value: "English" as Language},
@@ -106,6 +108,13 @@ export const initialState = {
   finishedSyncCount: 0,
   syncingListFolder: null as DropboxListFolderResponse | void,
   clearSyncEffects: null as SideEffect | void,
+
+  fileNames: [] as string[],
+  awaitingDownloadFileIds: [] as string[],
+  loadedFiles: false,
+  downloadingFileId: null as string | void,
+
+  unusedStoredFiles: [] as StoredFile[],
 };
 
 export type State = typeof initialState;

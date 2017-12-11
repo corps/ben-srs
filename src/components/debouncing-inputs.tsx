@@ -71,6 +71,7 @@ class DebouncingInputBase<
       ref: this.setRef,
     };
     delete (props as any)["value"];
+    delete (props as any)["valueObject"];
 
     return this.renderInner(props);
   }

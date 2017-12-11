@@ -1,5 +1,5 @@
 import {Index, Indexer} from "redux-indexers";
-import {Cloze, ClozeAnswer, NormalizedCloze, NormalizedNote, NormalizedTerm, Note, Term} from "./model";
+import {Cloze, ClozeAnswer, NormalizedCloze, NormalizedNote, NormalizedTerm, Note, Term, StoredFile} from "./model";
 
 export type NotesStore = {
   byPath: Index<Note>
@@ -8,6 +8,12 @@ export type NotesStore = {
   byHasLocalEdits: Index<Note>
   byHasConflicts: Index<Note>
   byEditsComplete: Index<Note>
+  byAudioFileId: Index<Note>
+}
+
+export type StoredFilesStore = {
+  byId: Index<StoredFile>
+  byRev: Index<StoredFile>
 }
 
 export type TermsStore = {
@@ -34,6 +40,11 @@ notesIndexer.addIndex("byLanguage", note => [note.attributes.language]);
 notesIndexer.addIndex("byHasLocalEdits", note => [note.localEdits]);
 notesIndexer.addIndex("byHasConflicts", note => [note.hasConflicts]);
 notesIndexer.addIndex("byEditsComplete", note => [note.attributes.editsComplete]);
+notesIndexer.addIndex("byAudioFileId", note => [note.attributes.audioFileId]);
+
+export const storedFilesIndexer = new Indexer<StoredFile, StoredFilesStore>("byId");
+storedFilesIndexer.addIndex("byId", sf => [sf.id]);
+storedFilesIndexer.addIndex("byRev", sf => [sf.revision]);
 
 export const termsIndexer = new Indexer<Term, TermsStore>("byNoteIdReferenceAndMarker");
 termsIndexer.addIndex("byNoteIdReferenceAndMarker", term => [term.noteId, term.attributes.reference, term.attributes.marker]);
@@ -58,7 +69,8 @@ export const indexesInitialState = {
   notes: notesIndexer.empty(),
   terms: termsIndexer.empty(),
   clozes: clozesIndexer.empty(),
-  clozeAnswers: clozeAnswersIndexer.empty()
+  clozeAnswers: clozeAnswersIndexer.empty(),
+  storedFiles: storedFilesIndexer.empty()
 };
 
 export type SingleIndexable = {
@@ -67,6 +79,7 @@ export type SingleIndexable = {
   clozes?: Cloze[] | 0,
   clozeAnswers?: ClozeAnswer[] | 0,
   notes?: Note[] | 0,
+  storedFiles?: StoredFile[] | 0,
 }
 
 export interface NoteTree extends SingleIndexable {
@@ -90,6 +103,7 @@ export function loadIndexables(indexes: typeof indexesInitialState,
     if (indexable.terms) indexes.terms = termsIndexer.update(indexes.terms, indexable.terms);
     if (indexable.clozes) indexes.clozes = clozesIndexer.update(indexes.clozes, indexable.clozes);
     if (indexable.clozeAnswers) indexes.clozeAnswers = clozeAnswersIndexer.update(indexes.clozeAnswers, indexable.clozeAnswers);
+    if (indexable.storedFiles) indexes.storedFiles = storedFilesIndexer.update(indexes.storedFiles, indexable.storedFiles);
   }
 
   return indexes;

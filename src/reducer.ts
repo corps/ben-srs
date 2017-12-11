@@ -33,6 +33,8 @@ import {MainMenuActions, reduceMainMenu} from "./reducers/main-menu-reducer";
 import {reduceStudy, StudyActions} from "./reducers/study-reducer";
 import {EditNoteActions, reduceEditNote} from "./reducers/edit-note-reducer";
 import {reduceToggle, Toggle} from "kamo-reducers/reducers/toggle";
+import {reduceFileSync} from "./reducers/file-sync-reducer";
+import {computeUnusedStoredFiles} from "./reducers/unused-stored-files-computed";
 
 export type Action =
   | UpdateTime
@@ -65,6 +67,7 @@ export function reducer(
     .apply(reduceNewNote)
     .apply(reduceStudy)
     .apply(reduceEditNote)
+    .apply(reduceFileSync)
     .apply(subreducer("inputs", reduceInputs))
     .apply(subreducer("toggles", reduceToggle))
     .apply(computedProperty("startOfDayMinutes", computeStartOfDay))
@@ -76,6 +79,7 @@ export function reducer(
     .apply(computedProperty("studyData", computeStudyData))
     .apply(computedProperty("languages", computeLanguages))
     .apply(computedProperty("hasEdits", computeHasEdits))
+    .apply(computedProperty("unusedStoredFiles", computeUnusedStoredFiles))
     .result());
 
   let curLanguage = computeCurLanguageDefault(state);

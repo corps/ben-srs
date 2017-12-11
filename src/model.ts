@@ -31,12 +31,23 @@ export const newByLangPronunciationOverrides = {} as { [k: string]: Pronunciatio
 
 export type ByLangPronunciationOverrides = typeof newByLangPronunciationOverrides;
 
+export const newStoredFile = {
+  id: "",
+  revision: "",
+  name: "",
+  size: 0,
+};
+
+export type StoredFile = typeof newStoredFile;
+
 export const newNote = {
   attributes: {
     content: "This would be new note",
     language: "" as Language,
     editsComplete: false,
     terms: undefined as void,
+    // added
+    audioFileId: null as string | void,
   },
 
   id: "",
