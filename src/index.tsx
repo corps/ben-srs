@@ -78,7 +78,7 @@ subscription.add(
             console.log("render in", time, "ms");
 
             if (time > 50) {
-              console.log("slow action", action);
+              console.log("slow action:", action);
             }
 
             break;
