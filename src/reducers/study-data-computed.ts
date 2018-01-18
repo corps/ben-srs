@@ -72,7 +72,7 @@ export const computeStudyData = memoizeBySomeProperties({
     state, languageStartKey, [language, Infinity]);
 
   result.due = getFutureCounts(
-    state.indexes.clozes.byLanguageSpokenAndNextDue, state, languageStartKey, languageStartKey);
+    state.indexes.clozes.byLanguageSpokenAndNextDue, state, studyStartKey, studyStartKey);
 
   let answersIter = Indexer.iterator(
     state.indexes.clozeAnswers.byLanguageAndAnswered,
