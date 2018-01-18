@@ -169,7 +169,8 @@ export function startStudyingNextCard(
   let studyDetails = findNextStudyDetails(
     state.inputs.curLanguage.value,
     minutesOfTime(state.now),
-    state.indexes
+    state.indexes,
+    state.toggles.studySpoken
   );
   if (studyDetails) {
     state.studyDetails = studyDetails;

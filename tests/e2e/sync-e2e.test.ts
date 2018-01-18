@@ -354,7 +354,7 @@ function awaitDeletedSync() {
     "every term was deleted"
   );
   assert.equal(
-    tester.state.indexes.clozes.byLanguageAndNextDue.length,
+    tester.state.indexes.clozes.byLanguageSpokenAndNextDue.length,
     0,
     "every close deleted"
   );

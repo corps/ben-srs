@@ -8,14 +8,15 @@ import {SelectSingle} from "../components/select-single";
 import {inputChange} from "kamo-reducers/reducers/inputs";
 import {visitNewNote} from "../reducers/new-note-reducer";
 import {visitEditNote, visitStudy} from "../reducers/main-menu-reducer";
+import {toggleDispatcher} from "kamo-reducers/reducers/toggle";
 
 export function mainMenuContent(dispatch: (action: Action) => void) {
   return (state: State) => {
     return (
       <div>
         <div className="tc pt5-ns fw5 mb3">
-          <div className="f1-ns f2">こんにちは,</div>
           <div className="f5 mb2">
+            こんにちは,&nbsp;
             {state.settings.session.login}
             <span
               className="ml1 pointer blue hover-light-blue"
@@ -32,6 +33,16 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
                   dispatch(inputChange<Inputs>("curLanguage", lang))}
                 value={state.inputs.curLanguage.value}
                 values={state.languages}
+              />
+            </div>
+          </div>
+
+          <div className="f5">
+            音声:
+            <div className="ml2 w4 dib tl">
+              <input type="checkbox" className="pv2"
+                onChange={toggleDispatcher(dispatch, "studySpoken")}
+                checked={state.toggles.studySpoken}
               />
             </div>
           </div>

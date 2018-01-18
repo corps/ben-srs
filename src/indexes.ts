@@ -1,37 +1,48 @@
 import {Index, Indexer} from "redux-indexers";
-import {Cloze, ClozeAnswer, NormalizedCloze, NormalizedNote, NormalizedTerm, Note, Term, StoredFile} from "./model";
+import {
+  Cloze,
+  ClozeAnswer,
+  NormalizedCloze,
+  NormalizedNote,
+  NormalizedTerm,
+  Note,
+  Term,
+  StoredFile,
+} from "./model";
 
 export type NotesStore = {
-  byPath: Index<Note>
-  byId: Index<Note>
-  byLanguage: Index<Note>
-  byHasLocalEdits: Index<Note>
-  byHasConflicts: Index<Note>
-  byEditsComplete: Index<Note>
-  byAudioFileId: Index<Note>
-}
+  byPath: Index<Note>;
+  byId: Index<Note>;
+  byLanguage: Index<Note>;
+  byHasLocalEdits: Index<Note>;
+  byHasConflicts: Index<Note>;
+  byEditsComplete: Index<Note>;
+  byAudioFileId: Index<Note>;
+};
 
 export type StoredFilesStore = {
-  byId: Index<StoredFile>
-  byRev: Index<StoredFile>
-}
+  byId: Index<StoredFile>;
+  byRev: Index<StoredFile>;
+};
 
 export type TermsStore = {
-  byNoteIdReferenceAndMarker: Index<Term>
-  byLanguage: Index<Term>
-}
+  byNoteIdReferenceAndMarker: Index<Term>;
+  byLanguage: Index<Term>;
+};
 
 export type ClozesStore = {
-  byNoteIdReferenceMarkerAndClozeIdx: Index<Cloze>
-  byLanguageAndNextDue: Index<Cloze>
-  byLanguageNewAndNextDue: Index<Cloze>
-}
+  byNoteIdReferenceMarkerAndClozeIdx: Index<Cloze>;
+  byLanguageSpokenAndNextDue: Index<Cloze>;
+  byLanguageSpokenNewAndNextDue: Index<Cloze>;
+};
 
 export type ClozeAnswersStore = {
-  byNoteIdReferenceMarkerClozeIdxAndAnswerIdx: Index<ClozeAnswer>
-  byLanguageAndAnswered: Index<ClozeAnswer>
-  byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx: Index<ClozeAnswer>
-}
+  byNoteIdReferenceMarkerClozeIdxAndAnswerIdx: Index<ClozeAnswer>;
+  byLanguageAndAnswered: Index<ClozeAnswer>;
+  byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx: Index<
+    ClozeAnswer
+  >;
+};
 
 export const notesIndexer = new Indexer<Note, NotesStore>("byPath");
 notesIndexer.addIndex("byPath", note => note.path.split("/"));
@@ -39,82 +50,150 @@ notesIndexer.addIndex("byId", note => [note.id]);
 notesIndexer.addIndex("byLanguage", note => [note.attributes.language]);
 notesIndexer.addIndex("byHasLocalEdits", note => [note.localEdits]);
 notesIndexer.addIndex("byHasConflicts", note => [note.hasConflicts]);
-notesIndexer.addIndex("byEditsComplete", note => [note.attributes.editsComplete]);
+notesIndexer.addIndex("byEditsComplete", note => [
+  note.attributes.editsComplete,
+]);
 notesIndexer.addIndex("byAudioFileId", note => [note.attributes.audioFileId]);
 
-export const storedFilesIndexer = new Indexer<StoredFile, StoredFilesStore>("byId");
+export const storedFilesIndexer = new Indexer<StoredFile, StoredFilesStore>(
+  "byId"
+);
 storedFilesIndexer.addIndex("byId", sf => [sf.id]);
 storedFilesIndexer.addIndex("byRev", sf => [sf.revision]);
 
-export const termsIndexer = new Indexer<Term, TermsStore>("byNoteIdReferenceAndMarker");
-termsIndexer.addIndex("byNoteIdReferenceAndMarker", term => [term.noteId, term.attributes.reference, term.attributes.marker]);
+export const termsIndexer = new Indexer<Term, TermsStore>(
+  "byNoteIdReferenceAndMarker"
+);
+termsIndexer.addIndex("byNoteIdReferenceAndMarker", term => [
+  term.noteId,
+  term.attributes.reference,
+  term.attributes.marker,
+]);
 termsIndexer.addIndex("byLanguage", term => [term.language]);
 
-export const clozesIndexer = new Indexer<Cloze, ClozesStore>("byNoteIdReferenceMarkerAndClozeIdx");
-clozesIndexer.addIndex("byNoteIdReferenceMarkerAndClozeIdx", cloze => [cloze.noteId, cloze.reference, cloze.marker, cloze.clozeIdx]);
-clozesIndexer.addIndex("byLanguageAndNextDue", cloze => [cloze.language, cloze.attributes.schedule.nextDueMinutes]);
-clozesIndexer.addIndex("byLanguageNewAndNextDue", cloze => [cloze.language, cloze.attributes.schedule.isNew, cloze.attributes.schedule.nextDueMinutes]);
+export const clozesIndexer = new Indexer<Cloze, ClozesStore>(
+  "byNoteIdReferenceMarkerAndClozeIdx"
+);
+clozesIndexer.addIndex("byNoteIdReferenceMarkerAndClozeIdx", cloze => [
+  cloze.noteId,
+  cloze.reference,
+  cloze.marker,
+  cloze.clozeIdx,
+]);
+clozesIndexer.addIndex("byLanguageSpokenAndNextDue", cloze => [
+  cloze.language,
+  cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
+  cloze.attributes.schedule.nextDueMinutes,
+]);
+clozesIndexer.addIndex("byLanguageSpokenNewAndNextDue", cloze => [
+  cloze.language,
+  cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
+  cloze.attributes.schedule.isNew,
+  cloze.attributes.schedule.nextDueMinutes,
+]);
 
-export const clozeAnswersIndexer = new Indexer<ClozeAnswer, ClozeAnswersStore>("byNoteIdReferenceMarkerClozeIdxAndAnswerIdx");
-clozeAnswersIndexer.addIndex("byNoteIdReferenceMarkerClozeIdxAndAnswerIdx", answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx, answer.answerIdx])
-clozeAnswersIndexer.addIndex("byLanguageAndAnswered", answer => [answer.language, answer.answer[0]]);
+export const clozeAnswersIndexer = new Indexer<ClozeAnswer, ClozeAnswersStore>(
+  "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx"
+);
+clozeAnswersIndexer.addIndex(
+  "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx",
+  answer => [
+    answer.noteId,
+    answer.reference,
+    answer.marker,
+    answer.clozeIdx,
+    answer.answerIdx,
+  ]
+);
+clozeAnswersIndexer.addIndex("byLanguageAndAnswered", answer => [
+  answer.language,
+  answer.answer[0],
+]);
 clozeAnswersIndexer.addGroupedIndex(
   "byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx",
-  (answer) => [answer.language, answer.answer[0]],
+  answer => [answer.language, answer.answer[0]],
   "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx",
-  (answer) => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx],
-  (iter, reverseIter) => iter());
+  answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx],
+  (iter, reverseIter) => iter()
+);
 
 export const indexesInitialState = {
   notes: notesIndexer.empty(),
   terms: termsIndexer.empty(),
   clozes: clozesIndexer.empty(),
   clozeAnswers: clozeAnswersIndexer.empty(),
-  storedFiles: storedFilesIndexer.empty()
+  storedFiles: storedFilesIndexer.empty(),
 };
 
 export type SingleIndexable = {
-  note?: Note | 0,
-  terms?: Term[] | 0,
-  clozes?: Cloze[] | 0,
-  clozeAnswers?: ClozeAnswer[] | 0,
-  notes?: Note[] | 0,
-  storedFiles?: StoredFile[] | 0,
-}
+  note?: Note | 0;
+  terms?: Term[] | 0;
+  clozes?: Cloze[] | 0;
+  clozeAnswers?: ClozeAnswer[] | 0;
+  notes?: Note[] | 0;
+  storedFiles?: StoredFile[] | 0;
+};
 
 export interface NoteTree extends SingleIndexable {
-  note: Note,
-  terms: Term[],
-  clozes: Cloze[],
-  clozeAnswers: ClozeAnswer[],
+  note: Note;
+  terms: Term[];
+  clozes: Cloze[];
+  clozeAnswers: ClozeAnswer[];
 }
 
-export type Indexable = SingleIndexable | SingleIndexable[]
+export type Indexable = SingleIndexable | SingleIndexable[];
 
-export function loadIndexables(indexes: typeof indexesInitialState,
-                               indexables: Indexable): typeof indexesInitialState {
+export function loadIndexables(
+  indexes: typeof indexesInitialState,
+  indexables: Indexable
+): typeof indexesInitialState {
   indexes = {...indexes};
 
-  let normalizedIndexable: SingleIndexable[] = indexables instanceof Array ? indexables : [indexables]; 
+  let normalizedIndexable: SingleIndexable[] =
+    indexables instanceof Array ? indexables : [indexables];
 
   for (let indexable of normalizedIndexable) {
-    if (indexable.note) indexes.notes = notesIndexer.update(indexes.notes, [indexable.note]);
-    if (indexable.notes) indexes.notes = notesIndexer.update(indexes.notes, indexable.notes);
-    if (indexable.terms) indexes.terms = termsIndexer.update(indexes.terms, indexable.terms);
-    if (indexable.clozes) indexes.clozes = clozesIndexer.update(indexes.clozes, indexable.clozes);
-    if (indexable.clozeAnswers) indexes.clozeAnswers = clozeAnswersIndexer.update(indexes.clozeAnswers, indexable.clozeAnswers);
-    if (indexable.storedFiles) indexes.storedFiles = storedFilesIndexer.update(indexes.storedFiles, indexable.storedFiles);
+    if (indexable.note)
+      indexes.notes = notesIndexer.update(indexes.notes, [indexable.note]);
+    if (indexable.notes)
+      indexes.notes = notesIndexer.update(indexes.notes, indexable.notes);
+    if (indexable.terms)
+      indexes.terms = termsIndexer.update(indexes.terms, indexable.terms);
+    if (indexable.clozes)
+      indexes.clozes = clozesIndexer.update(indexes.clozes, indexable.clozes);
+    if (indexable.clozeAnswers)
+      indexes.clozeAnswers = clozeAnswersIndexer.update(
+        indexes.clozeAnswers,
+        indexable.clozeAnswers
+      );
+    if (indexable.storedFiles)
+      indexes.storedFiles = storedFilesIndexer.update(
+        indexes.storedFiles,
+        indexable.storedFiles
+      );
   }
 
   return indexes;
 }
 
-export function findNoteTree(indexes: typeof indexesInitialState, id: string): NoteTree | 0 {
+export function findNoteTree(
+  indexes: typeof indexesInitialState,
+  id: string
+): NoteTree | 0 {
   let note = Indexer.getFirstMatching(indexes.notes.byId, [id]);
   if (note) {
-    let terms = Indexer.getAllMatching(indexes.terms.byNoteIdReferenceAndMarker, [id]);
-    let clozes = Indexer.getAllMatching(indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [id]);
-    let clozeAnswers = Indexer.getAllMatching(indexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx, [id]);
+    let terms = Indexer.getAllMatching(
+      indexes.terms.byNoteIdReferenceAndMarker,
+      [id]
+    );
+    let clozes = Indexer.getAllMatching(
+      indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx,
+      [id]
+    );
+    let clozeAnswers = Indexer.getAllMatching(
+      indexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx,
+      [id]
+    );
 
     return {note, terms, clozes, clozeAnswers};
   }
@@ -129,7 +208,7 @@ export function normalizedNote(noteTree: NoteTree): NormalizedNote {
     ...note,
     attributes: {
       ...note.attributes,
-      terms: [] as NormalizedTerm[]
+      terms: [] as NormalizedTerm[],
     },
     id: undefined as void,
     version: undefined as void,
@@ -145,19 +224,21 @@ export function normalizedNote(noteTree: NoteTree): NormalizedNote {
       ...term,
       attributes: {
         ...term.attributes,
-        clozes: [] as NormalizedCloze[]
+        clozes: [] as NormalizedCloze[],
       },
       noteId: undefined as void,
-      language: undefined as void
+      language: undefined as void,
     };
 
     normalizedNote.attributes.terms.push(normalizedTerm);
 
     for (; idxOfClozes < clozes.length; ++idxOfClozes) {
       var cloze = clozes[idxOfClozes];
-      if (cloze.reference !== term.attributes.reference ||
+      if (
+        cloze.reference !== term.attributes.reference ||
         cloze.marker !== term.attributes.marker ||
-        cloze.noteId !== term.noteId) {
+        cloze.noteId !== term.noteId
+      ) {
         break;
       }
 
@@ -165,7 +246,7 @@ export function normalizedNote(noteTree: NoteTree): NormalizedNote {
         ...cloze,
         attributes: {
           ...cloze.attributes,
-          answers: []
+          answers: [],
         },
         noteId: undefined as void,
         reference: undefined as void,
@@ -177,10 +258,12 @@ export function normalizedNote(noteTree: NoteTree): NormalizedNote {
       for (; idxOfAnswers < clozeAnswers.length; ++idxOfAnswers) {
         let clozeAnswer = clozeAnswers[idxOfAnswers];
 
-        if (clozeAnswer.reference !== cloze.reference ||
+        if (
+          clozeAnswer.reference !== cloze.reference ||
           clozeAnswer.marker !== cloze.marker ||
           clozeAnswer.noteId !== cloze.noteId ||
-          clozeAnswer.clozeIdx !== cloze.clozeIdx) {
+          clozeAnswer.clozeIdx !== cloze.clozeIdx
+        ) {
           break;
         }
 
@@ -194,16 +277,21 @@ export function normalizedNote(noteTree: NoteTree): NormalizedNote {
   return normalizedNote;
 }
 
-export function denormalizedNote(normalizedNote: NormalizedNote,
-                                 id: string, path: string,
-                                 version: string): NoteTree {
+export function denormalizedNote(
+  normalizedNote: NormalizedNote,
+  id: string,
+  path: string,
+  version: string
+): NoteTree {
   let note: Note = {
     ...normalizedNote,
     attributes: {
       ...normalizedNote.attributes,
-      terms: undefined as void
+      terms: undefined as void,
     },
-    id, path, version,
+    id,
+    path,
+    version,
     localEdits: false,
     hasConflicts: false,
   };
@@ -224,15 +312,19 @@ export function denormalizedNote(normalizedNote: NormalizedNote,
       ...normalizedTerm,
       attributes: {
         ...normalizedTerm.attributes,
-        clozes: undefined as void
+        clozes: undefined as void,
       },
       language: note.attributes.language,
-      noteId: note.id
+      noteId: note.id,
     };
 
     terms.push(term);
 
-    for (let clozeIdx = 0; clozeIdx < normalizedTerm.attributes.clozes.length; ++clozeIdx) {
+    for (
+      let clozeIdx = 0;
+      clozeIdx < normalizedTerm.attributes.clozes.length;
+      ++clozeIdx
+    ) {
       let normalizedCloze = normalizedTerm.attributes.clozes[clozeIdx];
 
       let cloze: Cloze = {
@@ -241,13 +333,18 @@ export function denormalizedNote(normalizedNote: NormalizedNote,
         marker: term.attributes.marker,
         reference: term.attributes.reference,
         language: note.attributes.language,
-        noteId: note.id
+        noteId: note.id,
       };
 
       clozes.push(cloze);
 
-      for (let answerIdx = 0; answerIdx < normalizedCloze.attributes.answers.length; ++answerIdx) {
-        let normalizedClozeAnswer = normalizedCloze.attributes.answers[answerIdx];
+      for (
+        let answerIdx = 0;
+        answerIdx < normalizedCloze.attributes.answers.length;
+        ++answerIdx
+      ) {
+        let normalizedClozeAnswer =
+          normalizedCloze.attributes.answers[answerIdx];
 
         let clozeAnswer: ClozeAnswer = {
           answer: normalizedClozeAnswer,
@@ -256,7 +353,7 @@ export function denormalizedNote(normalizedNote: NormalizedNote,
           marker: term.attributes.marker,
           reference: term.attributes.reference,
           language: note.attributes.language,
-          noteId: note.id
+          noteId: note.id,
         };
 
         clozeAnswers.push(clozeAnswer);
@@ -267,19 +364,32 @@ export function denormalizedNote(normalizedNote: NormalizedNote,
   return noteTree;
 }
 
-export function removeNote(indexes: typeof indexesInitialState, note: Note): typeof indexesInitialState {
+export function removeNote(
+  indexes: typeof indexesInitialState,
+  note: Note
+): typeof indexesInitialState {
   indexes = {...indexes};
   indexes.notes = notesIndexer.removeAll(indexes.notes, [note]);
 
-  let terms = Indexer.getAllMatching(indexes.terms.byNoteIdReferenceAndMarker, [note.id]);
+  let terms = Indexer.getAllMatching(indexes.terms.byNoteIdReferenceAndMarker, [
+    note.id,
+  ]);
   indexes.terms = termsIndexer.removeAll(indexes.terms, terms);
 
-  let clozes = Indexer.getAllMatching(indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [note.id]);
+  let clozes = Indexer.getAllMatching(
+    indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx,
+    [note.id]
+  );
   indexes.clozes = clozesIndexer.removeAll(indexes.clozes, clozes);
 
-  let clozeAnswers = Indexer.getAllMatching(indexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx, [note.id]);
-  indexes.clozeAnswers = clozeAnswersIndexer.removeAll(indexes.clozeAnswers, clozeAnswers);
+  let clozeAnswers = Indexer.getAllMatching(
+    indexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx,
+    [note.id]
+  );
+  indexes.clozeAnswers = clozeAnswersIndexer.removeAll(
+    indexes.clozeAnswers,
+    clozeAnswers
+  );
 
   return indexes;
 }
-

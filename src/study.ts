@@ -99,26 +99,27 @@ const allNotDivisibleHeadRegex = new RegExp("^" + allNotDivisibleRegex.source);
 export function findNextStudyDetails(
   language: Language,
   fromMinutes: number,
-  indexes: State["indexes"]
+  indexes: State["indexes"],
+  spoken: boolean
 ): StudyDetails | 0 {
   let nextCloze = Indexer.reverseIter(
-    indexes.clozes.byLanguageNewAndNextDue,
-    [language, true, fromMinutes],
-    [language, true, null]
+    indexes.clozes.byLanguageSpokenNewAndNextDue,
+    [language, spoken, true, fromMinutes],
+    [language, spoken, true, null]
   )();
   nextCloze =
     nextCloze ||
     Indexer.reverseIter(
-      indexes.clozes.byLanguageNewAndNextDue,
-      [language, false, fromMinutes],
-      [language, false, null]
+      indexes.clozes.byLanguageSpokenNewAndNextDue,
+      [language, spoken, false, fromMinutes],
+      [language, spoken, false, null]
     )();
   nextCloze =
     nextCloze ||
     Indexer.iterator(
-      indexes.clozes.byLanguageAndNextDue,
-      [language, fromMinutes],
-      [language, Infinity]
+      indexes.clozes.byLanguageSpokenAndNextDue,
+      [language, spoken, fromMinutes],
+      [language, spoken, Infinity]
     )();
 
   if (nextCloze) {

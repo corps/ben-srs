@@ -178,6 +178,7 @@ test("studyDetailsForCloze", assert => {
     afterTerm: content.slice(
       content.indexOf(termPlusMarker) + termPlusMarker.length
     ),
+    audioFileId: null,
     beforeCloze: "",
     beforeTerm: content.slice(0, content.indexOf(termPlusMarker)),
     cloze: clozes[0],
@@ -194,6 +195,7 @@ test("studyDetailsForCloze", assert => {
     afterTerm: content.slice(
       content.indexOf(termPlusMarker) + termPlusMarker.length
     ),
+    audioFileId: null,
     beforeCloze: "ab",
     beforeTerm: content.slice(0, content.indexOf(termPlusMarker)),
     cloze: clozes[1],
@@ -210,6 +212,7 @@ test("studyDetailsForCloze", assert => {
     afterTerm: content.slice(
       content.indexOf(termPlusMarker) + termPlusMarker.length
     ),
+    audioFileId: null,
     beforeCloze: "aba",
     beforeTerm: content.slice(0, content.indexOf(termPlusMarker)),
     cloze: clozes[2],

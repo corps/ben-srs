@@ -69,6 +69,7 @@ export const initialState = {
     studyBySpeak: false,
     studyByListen: false,
     showBack: false,
+    studySpoken: false,
   },
 
   lastWindowVisible: 0,

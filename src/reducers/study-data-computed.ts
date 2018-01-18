@@ -42,6 +42,7 @@ function getFutureCounts(index: Index<any>, state: {
 export const computeStudyData = memoizeBySomeProperties({
   indexes: initialState.indexes,
   inputs: {curLanguage: initialState.inputs.curLanguage},
+  toggles: {studySpoken: initialState.toggles.studySpoken},
   startOfDayMinutes: initialState.startOfDayMinutes,
   startOfWeekMinutes: initialState.startOfWeekMinutes,
   startOfMonthMinutes: initialState.startOfMonthMinutes,
@@ -52,29 +53,29 @@ export const computeStudyData = memoizeBySomeProperties({
   const result = {...newStudyData};
   const language = state.inputs.curLanguage.value;
 
-  let languageStartKey = [language];
+  let languageStartKey = [language, state.toggles.studySpoken];
 
-  let range = Indexer.getRangeFrom(state.indexes.terms.byLanguage, languageStartKey, [language, Infinity]);
+  let range = Indexer.getRangeFrom(state.indexes.terms.byLanguage, languageStartKey, [language, state.toggles.studySpoken, Infinity]);
   result.terms = range.endIdx - range.startIdx;
 
-  range = Indexer.getRangeFrom(state.indexes.clozes.byLanguageAndNextDue, languageStartKey, [language, Infinity]);
+  range = Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, languageStartKey, [language, state.toggles.studySpoken, Infinity]);
   result.clozes = range.endIdx - range.startIdx;
 
   result.newStudy = getPastCounts(
     state.indexes.clozeAnswers.byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx,
-    state, languageStartKey, [language, Infinity]);
+    state, languageStartKey, [language, state.toggles.studySpoken, Infinity]);
 
   result.studied = getPastCounts(
     state.indexes.clozeAnswers.byLanguageAndAnswered,
-    state, languageStartKey, [language, Infinity]);
+    state, languageStartKey, [language, state.toggles.studySpoken, Infinity]);
 
   result.due = getFutureCounts(
-    state.indexes.clozes.byLanguageAndNextDue, state, languageStartKey, languageStartKey);
+    state.indexes.clozes.byLanguageSpokenAndNextDue, state, languageStartKey, languageStartKey);
 
   let answersIter = Indexer.iterator(
     state.indexes.clozeAnswers.byLanguageAndAnswered,
-    [language, state.startOfMonthMinutes],
-    [language, Infinity]);
+    [language, state.toggles.studySpoken, state.startOfMonthMinutes],
+    [language, state.toggles.studySpoken, Infinity]);
 
   let answerTimes: number[] = [];
 
