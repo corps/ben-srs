@@ -52,30 +52,32 @@ export const computeStudyData = memoizeBySomeProperties({
 }, (state) => {
   const result = {...newStudyData};
   const language = state.inputs.curLanguage.value;
+  const spoken = state.toggles.studySpoken;
 
-  let languageStartKey = [language, state.toggles.studySpoken];
+  let languageStartKey = [language];
+  let studyStartKey = [language, spoken];
 
-  let range = Indexer.getRangeFrom(state.indexes.terms.byLanguage, languageStartKey, [language, state.toggles.studySpoken, Infinity]);
+  let range = Indexer.getRangeFrom(state.indexes.terms.byLanguage, languageStartKey, [language, Infinity]);
   result.terms = range.endIdx - range.startIdx;
 
-  range = Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, languageStartKey, [language, state.toggles.studySpoken, Infinity]);
+  range = Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, studyStartKey, [language, spoken, Infinity]);
   result.clozes = range.endIdx - range.startIdx;
 
   result.newStudy = getPastCounts(
     state.indexes.clozeAnswers.byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx,
-    state, languageStartKey, [language, state.toggles.studySpoken, Infinity]);
+    state, languageStartKey, [language, Infinity]);
 
   result.studied = getPastCounts(
     state.indexes.clozeAnswers.byLanguageAndAnswered,
-    state, languageStartKey, [language, state.toggles.studySpoken, Infinity]);
+    state, languageStartKey, [language, Infinity]);
 
   result.due = getFutureCounts(
     state.indexes.clozes.byLanguageSpokenAndNextDue, state, languageStartKey, languageStartKey);
 
   let answersIter = Indexer.iterator(
     state.indexes.clozeAnswers.byLanguageAndAnswered,
-    [language, state.toggles.studySpoken, state.startOfMonthMinutes],
-    [language, state.toggles.studySpoken, Infinity]);
+    [language, state.startOfMonthMinutes],
+    [language, Infinity]);
 
   let answerTimes: number[] = [];
 
