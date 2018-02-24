@@ -205,26 +205,29 @@ export function withFiles(
 
       let dataUrlsOfFiles = {} as {[k: string]: string};
 
+      function playAudioFile(fileName: string): boolean {
+        let dataUrl = dataUrlsOfFiles[fileName];
+        if (dataUrl) {
+          let audio = new Audio(dataUrl);
+          audio.play();
+          return true;
+        }
+        return false;
+      }
+
       subscription.add(
         effect$.subscribe((effect: FileEffect | IgnoredSideEffect) => {
           switch (effect.effectType) {
             case "play-audio-file":
-              let dataUrl = dataUrlsOfFiles[effect.fileName];
-              if (dataUrl) {
-                let audio = new Audio(dataUrl);
-                audio.play();
-                break;
-              }
+              if (playAudioFile(effect.fileName)) break;
 
               withFs(fs => {
                 fs.root.getFile(effect.fileName, {}, entry => {
                   entry.file(f => {
                     let reader = new FileReader();
                     reader.onload = e => {
-                      let audio = new Audio(
-                        (dataUrlsOfFiles[effect.fileName] = reader.result)
-                      );
-                      audio.play();
+                      dataUrlsOfFiles[effect.fileName] = reader.result;
+                      setTimeout(() => playAudioFile(effect.fileName), 100);
                     };
 
                     reader.readAsDataURL(f);
