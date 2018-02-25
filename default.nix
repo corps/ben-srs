@@ -5,7 +5,7 @@
 with pkgs;
 stdenv.mkDerivation {
   name = "ben-srs";
-  buildInputs = [ nodejs ];
+  buildInputs = [ nodejs ffmpeg youtube-dl ];
 
   shellHook = ''
     PATH=$PWD/node_modules/.bin/:$PATH

@@ -1,0 +1,20 @@
+body {
+    font-size: 18pt;
+}
+
+label {
+    display: block;
+    margin-left: 20px;
+    margin-top: 10px;
+}
+
+input {
+    margin-left: 30px;
+    margin-right: 30px;
+    width: 300px;
+    font-size: 16pt;
+    margin-top: 20px;
+}
+
+input[type=submit] {
+}

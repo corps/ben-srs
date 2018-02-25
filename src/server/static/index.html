@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>title</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<form action="/make">
+    <label>
+        Url:
+        <input id="url" name="url" type="text"/>
+    </label>
+
+    <div id="player">
+    </div>
+
+    <div>
+        <button id="replay">Replay</button>
+    </div>
+
+    <label>
+        Start Time:
+        <input id="start" name="start" type="number"/>
+    </label>
+
+    <label>
+        End Time:
+        <input id="end" name="end" type="number"/>
+    </label>
+
+    <label>
+        Language:
+        <select id="language" name="language">
+            <option value="Cantonese">Cantonese</option>
+            <option value="Japanese">Japanese</option>
+            <option value="English">English</option>
+        </select>
+    </label>
+
+    <label>
+        Content:
+        <textarea id="content" name="content" rows="4"></textarea>
+    </label>
+
+    <input type="submit" id="submit" disabled/>
+</form>
+
+<script src="script.js"></script>
+
+</body>
+</html>
