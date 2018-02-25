@@ -22,6 +22,14 @@ export interface DropboxDownloadResponse {
   size: number;
 }
 
+export interface DropboxUploadResponse {
+  name: string;
+  id: string;
+  rev: string;
+  path_lower: string;
+  size: number;
+}
+
 export interface DropboxFileEntry {
   ".tag": "file";
   name: string;

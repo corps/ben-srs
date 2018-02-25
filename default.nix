@@ -1,12 +1,11 @@
 { pkgs ? import <nixpkgs> { inherit system; },
   system ? builtins.currentSystem,
-  purescript ? pkgs.purescript,
   nodejs ? pkgs.nodejs }:
 
 with pkgs;
 stdenv.mkDerivation {
   name = "ben-srs";
-  buildInputs = [ nodejs purescript ];
+  buildInputs = [ nodejs ffmpeg youtube-dl ];
 
   shellHook = ''
     PATH=$PWD/node_modules/.bin/:$PATH
