@@ -30,7 +30,9 @@ export function splitAudio(
     let sourceFilePath = path.join(urlDir, fs.readdirSync(urlDir)[0]);
     let extParts = path.basename(sourceFilePath).split(".");
     let ext = extParts[extParts.length - 1];
-    let cutFilePath = path.join(urlDir, "cut." + ext);
+
+    const cutOutDir = fs.mkdtempSync("youtube-out");
+    let cutFilePath = path.join(cutOutDir, "cut." + ext);
 
     let result = child_process.spawnSync("ffmpeg", [
       "-ss", startTime + "", "-t", (endTime - startTime) + "",
