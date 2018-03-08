@@ -206,4 +206,5 @@ export const contentTypes: {[k: string]: string} = {
   "mp3": "audio/mpeg",
   "ogg": "audio/ogg",
   "wav": "audio/wav",
+  "opus": "audio/opus",
 };
