@@ -15,6 +15,12 @@ export interface VisitMainMenu {
 
 export const visitMainMenu: VisitMainMenu = {type: "visit-main-menu"};
 
+export interface VisitSearch {
+  type: "visit-search";
+}
+
+export const visitSearch: VisitSearch = {type: "visit-search"};
+
 export interface VisitEditNote {
   type: "visit-edit-note";
 }
@@ -29,7 +35,7 @@ export const visitStudy: VisitStudy = {
   type: "visit-study",
 };
 
-export type MainMenuActions = VisitMainMenu | VisitEditNote | VisitStudy;
+export type MainMenuActions = VisitMainMenu | VisitEditNote | VisitStudy | VisitSearch;
 
 export function reduceMainMenu(
   state: State,
@@ -41,6 +47,11 @@ export function reduceMainMenu(
     case "visit-main-menu":
       state = {...state};
       state.location = "main";
+      break;
+
+    case "visit-search":
+      state = {...state};
+      state.location = "search";
       break;
 
     case "visit-edit-note":

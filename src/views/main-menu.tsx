@@ -7,7 +7,7 @@ import {clickLogin, clickLogout} from "../reducers/session-reducer";
 import {SelectSingle} from "../components/select-single";
 import {inputChange} from "kamo-reducers/reducers/inputs";
 import {visitNewNote} from "../reducers/new-note-reducer";
-import {visitEditNote, visitStudy} from "../reducers/main-menu-reducer";
+import {visitEditNote, visitSearch, visitStudy} from "../reducers/main-menu-reducer";
 import {toggleDispatcher} from "kamo-reducers/reducers/toggle";
 
 export function mainMenuContent(dispatch: (action: Action) => void) {
@@ -41,8 +41,8 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
             音声:
             <div className="ml2 w4 dib tl">
               <input type="checkbox" className="pv2"
-                onChange={toggleDispatcher(dispatch, "studySpoken")}
-                checked={state.toggles.studySpoken}
+                     onChange={toggleDispatcher(dispatch, "studySpoken")}
+                     checked={state.toggles.studySpoken}
               />
             </div>
           </div>
@@ -76,7 +76,7 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
               className="mh2 pointer dim">
               <span className="fw6">訓</span>
               <span className="fw3">練</span>
-              <br />
+              <br/>
               <span className="fw1">開</span>
               <span className="fw4">始</span>
             </CircleButton>
@@ -87,7 +87,7 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
               className="mh2 pointer dim">
               <span className="fw4">新</span>
               <span className="fw2">規</span>
-              <br />
+              <br/>
               <span className="fw6">追</span>
               <span className="fw3">加</span>
             </CircleButton>
@@ -108,11 +108,20 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
                 blue
                 className="mh2 pointer dim">
                 <span className="fw5">再</span>
-                <br />
+                <br/>
                 <span className="fw1">認</span>
                 <span className="fw3">証</span>
               </CircleButton>
-            ) : null}
+            ) : (
+              <CircleButton
+                onClick={() => dispatch(visitSearch)}
+                purple
+                className="mh2 pointer dim">
+                <span className="fw5">検</span>
+                <br/>
+                <span className="fw1">索</span>
+              </CircleButton>
+            )}
           </div>
         </div>
 

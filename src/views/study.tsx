@@ -6,9 +6,8 @@ import {SimpleNavLink} from "../components/simple-nav-link";
 import {visitMainMenu} from "../reducers/main-menu-reducer";
 import {describeDuration, timeOfMinutes} from "../utils/time";
 import {StudyDetails} from "../study";
-import {answerCard, editCard, readCard} from "../reducers/study-reducer";
+import {answerCard, answerMiss, answerOk, answerSkip, editCard, readCard} from "../reducers/study-reducer";
 import {toggle} from "kamo-reducers/reducers/toggle";
-import {ClozeType} from "../model";
 
 export function studyContent(dispatch: (action: Action) => void) {
   return (state: State) => {
@@ -156,9 +155,6 @@ export function studyContent(dispatch: (action: Action) => void) {
   }
 
   function BackSide(state: State) {
-    const timeToAnswer = state.now - state.studyStarted;
-
-
     return <div className="mw6 center">
       <div className="f4 ph3 mb2 tc">
         {state.studyDetails.beforeCloze}
@@ -184,38 +180,21 @@ export function studyContent(dispatch: (action: Action) => void) {
 
       { state.indexesReady ? <div className="f5 mt2 tc">
         <button className="mh1 pa1 br2"
-                onClick={() => dispatch(answerCard(["f", okFactory(timeToAnswer, state.studyDetails.type)]))}>
+                onClick={() => dispatch(answerCard(answerOk(state)))}>
           OK!
         </button>
         <button className="mh1 pa1 br2"
-                onClick={() => dispatch(answerCard(["d", 60]))}>
+                onClick={() => dispatch(answerCard(answerSkip(state)))}>
           スキップ
         </button>
         <button className="mh1 pa1 br2"
-                onClick={() => dispatch(answerCard(["f", 0.4]))}>
+                onClick={() => dispatch(answerCard(answerMiss(state)))}>
           間違えた！
         </button>
-        <button className="mh1 pa1 br2"
-                onClick={() => dispatch(editCard)}>
+        <button className="mh1 pa1 br2" onClick={() => dispatch(editCard)}>
           編集
         </button>
       </div> : null }
     </div>
-  }
-}
-
-function okFactory(timeToAnswer: number, type: ClozeType) {
-  switch(type) {
-    case "produce":
-      return timeToAnswer < 6 ? 3.0 : 2.0;
-
-    case "recognize":
-      return timeToAnswer < 3 ? 3.0 : 2.0;
-
-    case "listen":
-      return timeToAnswer < 10 ? 3.0 : 2.0;
-
-    case "speak":
-      return timeToAnswer < 10 ? 3.0 : 2.0;
   }
 }

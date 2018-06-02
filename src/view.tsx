@@ -7,6 +7,7 @@ import {ProgressBar} from "./components/progress-bar";
 import {newNoteContent} from "./views/new-note";
 import {studyContent} from "./views/study";
 import {editNoteContent} from "./views/edit-note";
+import {searchContent} from "./views/search";
 
 export function view(dispatch: (action: Action) => void) {
   const LoggedOutContent = loggedOutContent(dispatch);
@@ -14,6 +15,7 @@ export function view(dispatch: (action: Action) => void) {
   const NewNoteContent = newNoteContent(dispatch);
   const StudyContent = studyContent(dispatch);
   const EditNoteContent = editNoteContent(dispatch);
+  const SearchContent = searchContent(dispatch);
 
   return (state: State) => {
     let awaitingCount = 0;
@@ -44,6 +46,8 @@ export function view(dispatch: (action: Action) => void) {
               return StudyContent(state);
             case "edit-note":
               return EditNoteContent(state);
+            case "search":
+              return SearchContent(state);
           }
         })()
       }
