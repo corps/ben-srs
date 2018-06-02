@@ -8,6 +8,7 @@ import {describeDuration, timeOfMinutes} from "../utils/time";
 import {StudyDetails} from "../study";
 import {answerCard, editCard, readCard} from "../reducers/study-reducer";
 import {toggle} from "kamo-reducers/reducers/toggle";
+import {ClozeType} from "../model";
 
 export function studyContent(dispatch: (action: Action) => void) {
   return (state: State) => {
@@ -183,7 +184,7 @@ export function studyContent(dispatch: (action: Action) => void) {
 
       { state.indexesReady ? <div className="f5 mt2 tc">
         <button className="mh1 pa1 br2"
-                onClick={() => dispatch(answerCard(["f", timeToAnswer < 6 ? 3.0 : 2.0]))}>
+                onClick={() => dispatch(answerCard(["f", okFactory(timeToAnswer, state.studyDetails.type)]))}>
           OK!
         </button>
         <button className="mh1 pa1 br2"
@@ -200,5 +201,21 @@ export function studyContent(dispatch: (action: Action) => void) {
         </button>
       </div> : null }
     </div>
+  }
+}
+
+function okFactory(timeToAnswer: number, type: ClozeType) {
+  switch(type) {
+    case "produce":
+      return timeToAnswer < 6 ? 3.0 : 2.0;
+
+    case "recognize":
+      return timeToAnswer < 3 ? 3.0 : 2.0;
+
+    case "listen":
+      return timeToAnswer < 10 ? 3.0 : 2.0;
+
+    case "speak":
+      return timeToAnswer < 10 ? 3.0 : 2.0;
   }
 }
