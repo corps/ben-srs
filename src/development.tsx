@@ -8,8 +8,6 @@ import {Action, reducer} from "./reducer";
 import {trackMutations} from "kamo-reducers/track-mutations";
 import {getServices} from "./services";
 import {developmentView} from "./development-view";
-import {denormalizedNote, loadIndexables} from "./indexes";
-import {NoteFactory} from "../tests/factories/notes-factories";
 
 declare var require: any;
 
@@ -49,11 +47,7 @@ subscription.add(generateRootElement().subscribe((element: HTMLElement) => {
 
   renderer = trackMutations(renderer);
 
-  let noteFactory = new NoteFactory();
-
   let state = {...initialState};
-  state.indexes = loadIndexables(state.indexes, [denormalizedNote(noteFactory.note, "", "", "")]);
-  state.location = "edit-note";
 
   subscription.add(renderLoop<State, Action>(renderer, reducer, getServices(), state).subscribe(e => {
     switch (e[0]) {

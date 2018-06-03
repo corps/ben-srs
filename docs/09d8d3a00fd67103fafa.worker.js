@@ -130,6 +130,7 @@ exports.clozeAnswersIndexer.addIndex("byLanguageAndAnswered", answer => [
     answer.answer[0],
 ]);
 exports.clozeAnswersIndexer.addGroupedIndex("byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx", answer => [answer.language, answer.answer[0]], "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx", answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx], (iter, reverseIter) => iter());
+exports.clozeAnswersIndexer.addGroupedIndex("byLanguageAndLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx", answer => [answer.language, answer.answer[0]], "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx", answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx], (iter, reverseIter) => reverseIter());
 exports.indexesInitialState = {
     notes: exports.notesIndexer.empty(),
     terms: exports.termsIndexer.empty(),
@@ -566,3 +567,4 @@ exports.doIndexesLoadingWork = doIndexesLoadingWork;
 
 /***/ })
 /******/ ]);
+//# sourceMappingURL=09d8d3a00fd67103fafa.worker.js.map

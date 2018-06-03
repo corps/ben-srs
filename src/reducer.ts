@@ -35,6 +35,7 @@ import {EditNoteActions, reduceEditNote} from "./reducers/edit-note-reducer";
 import {reduceToggle, Toggle} from "kamo-reducers/reducers/toggle";
 import {reduceFileSync} from "./reducers/file-sync-reducer";
 import {computeUnusedStoredFiles} from "./reducers/unused-stored-files-computed";
+import {reduceSearch, SearchAction} from "./reducers/search-reducer";
 
 export type Action =
   | UpdateTime
@@ -46,6 +47,7 @@ export type Action =
   | NewNoteActions
   | MainMenuActions
   | StudyActions
+  | SearchAction
   | EditNoteActions;
 
 const computedProperty = computedFor<State>();
@@ -70,6 +72,7 @@ export function reducer(
     .apply(reduceFileSync)
     .apply(subreducer("inputs", reduceInputs))
     .apply(subreducer("toggles", reduceToggle))
+    .apply(reduceSearch)
     .apply(computedProperty("startOfDayMinutes", computeStartOfDay))
     .apply(computedProperty("startOfWeekMinutes", computeStartOfWeek))
     .apply(computedProperty("startOfMonthMinutes", computeStartOfMonth))

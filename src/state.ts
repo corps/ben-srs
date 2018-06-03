@@ -5,7 +5,7 @@ import {
   newNormalizedNote,
   newNote,
   newSettings,
-  NormalizedNote,
+  NormalizedNote, Note,
 } from "./model";
 import {SideEffect} from "kamo-reducers/reducers";
 import {SpeechVoice} from "./services/speech";
@@ -31,18 +31,21 @@ export const newStudyData = {
 
 export type StudyData = typeof newStudyData;
 
-export type Location = "main" | "edit-note" | "new-note" | "study";
+export type Location = "main" | "edit-note" | "new-note" | "study" | "search";
 
 export type EditingNoteMode = "select" | "content" | "term";
 
+export type SearchMode = "term" | "content" | "note";
+export type SearchResult = ["cloze", StudyDetails] | ["note", Note]
+
 export const initialState = {
-  awaiting: {} as {[k: string]: number},
+  awaiting: {} as { [k: string]: number },
 
   indexes: indexesInitialState,
 
   // from local data.
   settings: newSettings,
-  newNotes: {} as {[k: string]: NormalizedNote},
+  newNotes: {} as { [k: string]: NormalizedNote },
   loadingIndexable: null as Indexable | void,
   downloadedNotes: [] as NoteTree[],
   awaitingDownloadNotes: [] as string[],
@@ -61,6 +64,9 @@ export const initialState = {
     termPronounce: {value: ""},
     termClozes: {value: ""},
     termDefinition: {value: ""},
+
+    searchBar: {value: ""},
+    searchMode: {value: "term" as SearchMode},
   },
 
   toggles: {
@@ -116,6 +122,7 @@ export const initialState = {
   downloadingFileId: null as string | void,
 
   unusedStoredFiles: [] as StoredFile[],
+  searchResults: [] as SearchResult[]
 };
 
 export type State = typeof initialState;

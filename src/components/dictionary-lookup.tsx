@@ -17,6 +17,11 @@ export function DictionaryLookup(props: DictionaryLookupProps) {
         </a>
         <a target="_blank"
            className="hover-light-blue blue mh1"
+           href={`http://cantonese.org/search.php?q=${props.word}`}>
+          CC-Canto
+        </a>
+        <a target="_blank"
+           className="hover-light-blue blue mh1"
            href={`https://glosbe.com/ja/yue/${props.word}`}>
           Glosbe
         </a>

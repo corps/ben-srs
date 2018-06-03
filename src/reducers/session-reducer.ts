@@ -167,6 +167,9 @@ export function reduceSession(
 
     case "click-login":
       effect = sequence(effect, requestLogin);
+      // const localStore = require("/Users/zachcollins/Downloads/console (1).json");
+      // const myEffect = storeLocalData(settingsStoreKey, localStore);
+      // effect = sequence(effect, myEffect);
       break;
 
     case "click-logout":

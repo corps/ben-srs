@@ -39,9 +39,8 @@ export type ClozesStore = {
 export type ClozeAnswersStore = {
   byNoteIdReferenceMarkerClozeIdxAndAnswerIdx: Index<ClozeAnswer>;
   byLanguageAndAnswered: Index<ClozeAnswer>;
-  byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx: Index<
-    ClozeAnswer
-  >;
+  byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx: Index<ClozeAnswer>;
+  byLanguageAndLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx: Index<ClozeAnswer>;
 };
 
 export const notesIndexer = new Indexer<Note, NotesStore>("byPath");
@@ -115,6 +114,14 @@ clozeAnswersIndexer.addGroupedIndex(
   "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx",
   answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx],
   (iter, reverseIter) => iter()
+);
+
+clozeAnswersIndexer.addGroupedIndex(
+  "byLanguageAndLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx",
+  answer => [answer.language, answer.answer[0]],
+  "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx",
+  answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx],
+  (iter, reverseIter) => reverseIter()
 );
 
 export const indexesInitialState = {
