@@ -97,7 +97,6 @@ export function updateSearchResults(state: State): ReductionWithEffect<State> {
   state = {...state};
 
   const value = state.inputs.searchBar.value;
-  state.searchResults = [];
 
   const termIter = state.inputs.searchMode.value === "term-new" ?
     state.indexes.clozeAnswers.byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx :
@@ -112,53 +111,69 @@ export function updateSearchResults(state: State): ReductionWithEffect<State> {
   const foundNoteIdSet: { [k: string]: boolean } = {};
   const foundTermSet: { [k: string]: boolean } = {};
 
+  const filteredClozeAnswerIter = () => {
+    for (let nextClozeAnswer = clozeAnswerIter(); nextClozeAnswer; nextClozeAnswer = clozeAnswerIter()) {
+      const termName = nextClozeAnswer.reference + "-" + nextClozeAnswer.marker;
+      if (foundTermSet[termName]) continue;
+
+      if (state.inputs.searchMode.value == "term") {
+        if (nextClozeAnswer.reference.indexOf(value) === -1) continue;
+      }
+
+      const cloze = Indexer.getFirstMatching(state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx,
+        [nextClozeAnswer.noteId, nextClozeAnswer.reference, nextClozeAnswer.marker, nextClozeAnswer.clozeIdx]);
+      if (!cloze) continue;
+      const details = studyDetailsForCloze(cloze, state.indexes);
+      if (!details) continue;
+
+      if (state.inputs.searchMode.value == "content") {
+        if (details.content.indexOf(value) === -1) continue;
+      }
+
+      foundTermSet[termName] = true;
+      return details;
+    }
+  };
+
+  const filteredNoteIter = () => {
+    for (let nextNote = noteIter(); nextNote; nextNote = noteIter()) {
+      if (foundNoteIdSet[nextNote.id]) continue;
+      if (nextNote.attributes.content.indexOf(value) === -1) continue;
+
+      foundNoteIdSet[nextNote.id] = true;
+      state.searchResults.push(["note", nextNote]);
+
+      return nextNote;
+    }
+  };
+
   switch (state.inputs.searchMode.value) {
     case "term":
     case "term-new":
     case "content":
       for (let i = 0; i <= state.searchPage; ++i) {
-        for (let nextClozeAnswer = clozeAnswerIter();
-             nextClozeAnswer && state.searchResults.length < maxSearchResults;
-             nextClozeAnswer = clozeAnswerIter()) {
-          const termName = nextClozeAnswer.reference + "-" + nextClozeAnswer.marker;
-          if (foundTermSet[termName]) continue;
-
-          if (state.inputs.searchMode.value == "term") {
-            if (nextClozeAnswer.reference.indexOf(value) === -1) continue;
-          }
-
-          const cloze = Indexer.getFirstMatching(state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx,
-            [nextClozeAnswer.noteId, nextClozeAnswer.reference, nextClozeAnswer.marker, nextClozeAnswer.clozeIdx]);
-          if (!cloze) continue;
-          const details = studyDetailsForCloze(cloze, state.indexes);
-          if (!details) continue;
-
-          if (state.inputs.searchMode.value == "content") {
-            if (details.content.indexOf(value) === -1) continue;
-          }
-
-          foundTermSet[termName] = true;
-          state.searchResults.push(["cloze", details]);
+        state.searchResults = [];
+        for (let nextDetails = filteredClozeAnswerIter();
+             nextDetails && state.searchResults.length < maxSearchResults;
+             nextDetails = filteredClozeAnswerIter()) {
+          state.searchResults.push(["cloze", nextDetails]);
         }
       }
 
-      state.searchHasMore = !!clozeAnswerIter();
+      state.searchHasMore = !!filteredClozeAnswerIter();
       break;
 
     case "note":
       for (let i = 0; i <= state.searchPage; ++i) {
-        for (let nextNote = noteIter();
+        state.searchResults = [];
+        for (let nextNote = filteredNoteIter();
              nextNote && state.searchResults.length < maxSearchResults;
-             nextNote = noteIter()) {
-          if (foundNoteIdSet[nextNote.id]) continue;
-          if (nextNote.attributes.content.indexOf(value) === -1) continue;
-
-          foundNoteIdSet[nextNote.id] = true;
+             nextNote = filteredNoteIter()) {
           state.searchResults.push(["note", nextNote]);
         }
       }
 
-      state.searchHasMore = !!noteIter();
+      state.searchHasMore = !!filteredNoteIter();
       break
   }
 
