@@ -12,6 +12,7 @@ import {loadIndexesWorkerName} from "./session-reducer";
 import {sequenceReduction} from "kamo-reducers/services/sequence";
 import {startEditingNote, startEditingTerm} from "./edit-note-reducer";
 import {Note} from "../model";
+import {VisitSearch} from "./main-menu-reducer";
 
 export interface SelectSearchResult {
   type: "select-search-result",
@@ -27,6 +28,7 @@ export type SearchAction =
   | InputChange<Inputs>
   | WorkComplete
   | SelectSearchResult
+  | VisitSearch
 
 const maxSearchResults = 150;
 
@@ -54,7 +56,8 @@ export function reduceSearch(state: State, action: SearchAction | IgnoredAction)
     return {state, effect};
   }
 
-  if (action.type === "input-change") {
+  if (action.type === "visit-search") {
+  } else if (action.type === "input-change") {
     if (action.target !== "searchBar" && action.target !== "searchMode") return {state, effect};
   } else if (action.type === "work-complete") {
     if (action.name[0] !== loadIndexesWorkerName) return {state, effect};
