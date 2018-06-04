@@ -122,7 +122,9 @@ export const initialState = {
   downloadingFileId: null as string | void,
 
   unusedStoredFiles: [] as StoredFile[],
-  searchResults: [] as SearchResult[]
+  searchResults: [] as SearchResult[],
+  searchPage: 0,
+  searchHasMore: false,
 };
 
 export type State = typeof initialState;

@@ -8,7 +8,7 @@ import {inputChange, inputChangeDispatcher} from "kamo-reducers/reducers/inputs"
 import {SelectSingle} from "../components/select-single";
 import {Note} from "../model";
 import {StudyDetails} from "../study";
-import {selectSearchResult} from "../reducers/search-reducer";
+import {pageSearch, selectSearchResult} from "../reducers/search-reducer";
 
 export function searchContent(dispatch: (action: Action) => void) {
   return (state: State) => {
@@ -17,6 +17,14 @@ export function searchContent(dispatch: (action: Action) => void) {
           <SimpleNavLink onClick={() => dispatch(visitMainMenu)}>
             戻る
           </SimpleNavLink>
+          {state.searchPage > 0 &&
+          <SimpleNavLink onClick={() => dispatch(pageSearch(-1))}>
+            前
+          </SimpleNavLink>}
+          {state.searchHasMore &&
+          <SimpleNavLink onClick={() => dispatch(pageSearch(1))}>
+            次
+          </SimpleNavLink>}
         </div>
 
         <div className="lh-copy f4 mt3">

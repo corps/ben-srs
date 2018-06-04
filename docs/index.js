@@ -2595,7 +2595,9 @@ exports.initialState = {
     loadedFiles: false,
     downloadingFileId: null,
     unusedStoredFiles: [],
-    searchResults: []
+    searchResults: [],
+    searchPage: 0,
+    searchHasMore: false,
 };
 
 
@@ -14075,39 +14077,57 @@ function selectSearchResult(result) {
     return { type: "select-search-result", result };
 }
 exports.selectSearchResult = selectSearchResult;
-const maxSearchResults = 150;
+function pageSearch(dir) {
+    return {
+        type: "page-search",
+        dir
+    };
+}
+exports.pageSearch = pageSearch;
+const maxSearchResults = 50;
 function reduceSearch(state, action) {
     let effect;
-    if (action.type === "select-search-result") {
-        if (action.result[0] === "note") {
-            ({ state, effect } = sequence_1.sequenceReduction(effect, edit_note_reducer_1.startEditingNote(state, action.result[1])));
-        }
-        else {
-            let details = action.result[1];
-            let note = redux_indexers_1.Indexer.getFirstMatching(state.indexes.notes.byId, [details.cloze.noteId]);
-            if (note) {
-                ({ state, effect } = sequence_1.sequenceReduction(effect, edit_note_reducer_1.startEditingNote(state, note)));
-                let term = study_1.findTermInNormalizedNote(state.editingNoteNormalized, details.cloze.reference, details.cloze.marker);
-                if (term) {
-                    ({ state, effect } = sequence_1.sequenceReduction(effect, edit_note_reducer_1.startEditingTerm(state, term)));
+    let needsSearchUpdate = false;
+    switch (action.type) {
+        case "select-search-result":
+            if (action.result[0] === "note") {
+                ({ state, effect } = sequence_1.sequenceReduction(effect, edit_note_reducer_1.startEditingNote(state, action.result[1])));
+            }
+            else {
+                let details = action.result[1];
+                let note = redux_indexers_1.Indexer.getFirstMatching(state.indexes.notes.byId, [details.cloze.noteId]);
+                if (note) {
+                    ({ state, effect } = sequence_1.sequenceReduction(effect, edit_note_reducer_1.startEditingNote(state, note)));
+                    let term = study_1.findTermInNormalizedNote(state.editingNoteNormalized, details.cloze.reference, details.cloze.marker);
+                    if (term) {
+                        ({ state, effect } = sequence_1.sequenceReduction(effect, edit_note_reducer_1.startEditingTerm(state, term)));
+                    }
                 }
             }
-        }
-        return { state, effect };
+            break;
+        case "input-change":
+            if (action.target === "searchBar" || action.target !== "searchMode")
+                needsSearchUpdate = true;
+            break;
+        case "work-complete":
+            if (action.name[0] === session_reducer_1.loadIndexesWorkerName)
+                needsSearchUpdate = true;
+            break;
+        case "page-search":
+            state = Object.assign({}, state);
+            state.searchPage += action.dir;
+        case "visit-search":
+            needsSearchUpdate = true;
+            break;
     }
-    if (action.type === "visit-search") {
+    if (needsSearchUpdate) {
+        ({ state, effect } = sequence_1.sequenceReduction(effect, updateSearchResults(state)));
     }
-    else if (action.type === "input-change") {
-        if (action.target !== "searchBar" && action.target !== "searchMode")
-            return { state, effect };
-    }
-    else if (action.type === "work-complete") {
-        if (action.name[0] !== session_reducer_1.loadIndexesWorkerName)
-            return { state, effect };
-    }
-    else {
-        return { state, effect };
-    }
+    return { state, effect };
+}
+exports.reduceSearch = reduceSearch;
+function updateSearchResults(state) {
+    let effect;
     state = Object.assign({}, state);
     const value = state.inputs.searchBar.value;
     state.searchResults = [];
@@ -14118,42 +14138,48 @@ function reduceSearch(state, action) {
     switch (state.inputs.searchMode.value) {
         case "term":
         case "content":
-            for (let nextClozeAnswer = clozeAnswerIter(); nextClozeAnswer && state.searchResults.length < maxSearchResults; nextClozeAnswer = clozeAnswerIter()) {
-                const termName = nextClozeAnswer.reference + "-" + nextClozeAnswer.marker;
-                if (foundTermSet[termName])
-                    continue;
-                if (state.inputs.searchMode.value == "term") {
-                    if (nextClozeAnswer.reference.indexOf(value) === -1)
+            for (let i = 0; i <= state.searchPage; ++i) {
+                for (let nextClozeAnswer = clozeAnswerIter(); nextClozeAnswer && state.searchResults.length < maxSearchResults; nextClozeAnswer = clozeAnswerIter()) {
+                    const termName = nextClozeAnswer.reference + "-" + nextClozeAnswer.marker;
+                    if (foundTermSet[termName])
                         continue;
-                }
-                const cloze = redux_indexers_1.Indexer.getFirstMatching(state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [nextClozeAnswer.noteId, nextClozeAnswer.reference, nextClozeAnswer.marker, nextClozeAnswer.clozeIdx]);
-                if (!cloze)
-                    continue;
-                const details = study_1.studyDetailsForCloze(cloze, state.indexes);
-                if (!details)
-                    continue;
-                if (state.inputs.searchMode.value == "content") {
-                    if (details.content.indexOf(value) === -1)
+                    if (state.inputs.searchMode.value == "term") {
+                        if (nextClozeAnswer.reference.indexOf(value) === -1)
+                            continue;
+                    }
+                    const cloze = redux_indexers_1.Indexer.getFirstMatching(state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [nextClozeAnswer.noteId, nextClozeAnswer.reference, nextClozeAnswer.marker, nextClozeAnswer.clozeIdx]);
+                    if (!cloze)
                         continue;
+                    const details = study_1.studyDetailsForCloze(cloze, state.indexes);
+                    if (!details)
+                        continue;
+                    if (state.inputs.searchMode.value == "content") {
+                        if (details.content.indexOf(value) === -1)
+                            continue;
+                    }
+                    foundTermSet[termName] = true;
+                    state.searchResults.push(["cloze", details]);
                 }
-                foundTermSet[termName] = true;
-                state.searchResults.push(["cloze", details]);
             }
+            state.searchHasMore = !!clozeAnswerIter();
             break;
         case "note":
-            for (let nextNote = noteIter(); nextNote && state.searchResults.length < maxSearchResults; nextNote = noteIter()) {
-                if (foundNoteIdSet[nextNote.id])
-                    continue;
-                if (nextNote.attributes.content.indexOf(value) === -1)
-                    continue;
-                foundNoteIdSet[nextNote.id] = true;
-                state.searchResults.push(["note", nextNote]);
+            for (let i = 0; i <= state.searchPage; ++i) {
+                for (let nextNote = noteIter(); nextNote && state.searchResults.length < maxSearchResults; nextNote = noteIter()) {
+                    if (foundNoteIdSet[nextNote.id])
+                        continue;
+                    if (nextNote.attributes.content.indexOf(value) === -1)
+                        continue;
+                    foundNoteIdSet[nextNote.id] = true;
+                    state.searchResults.push(["note", nextNote]);
+                }
             }
+            state.searchHasMore = !!noteIter();
             break;
     }
     return { state, effect };
 }
-exports.reduceSearch = reduceSearch;
+exports.updateSearchResults = updateSearchResults;
 
 
 /***/ }),
@@ -35627,7 +35653,11 @@ function searchContent(dispatch) {
     return (state) => {
         return (React.createElement("div", { className: "mw6 center" },
             React.createElement("div", { className: "tc" },
-                React.createElement(simple_nav_link_1.SimpleNavLink, { onClick: () => dispatch(main_menu_reducer_1.visitMainMenu) }, "\u623B\u308B")),
+                React.createElement(simple_nav_link_1.SimpleNavLink, { onClick: () => dispatch(main_menu_reducer_1.visitMainMenu) }, "\u623B\u308B"),
+                state.searchPage > 0 &&
+                    React.createElement(simple_nav_link_1.SimpleNavLink, { onClick: () => dispatch(search_reducer_1.pageSearch(-1)) }, "\u524D"),
+                state.searchHasMore &&
+                    React.createElement(simple_nav_link_1.SimpleNavLink, { onClick: () => dispatch(search_reducer_1.pageSearch(1)) }, "\u6B21")),
             React.createElement("div", { className: "lh-copy f4 mt3" },
                 React.createElement("div", null,
                     "\u691C\u7D22\u30E2\u30FC\u30C9:",
