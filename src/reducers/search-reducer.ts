@@ -72,7 +72,7 @@ export function reduceSearch(state: State, action: SearchAction | IgnoredAction)
 
 
     case "input-change":
-      if (action.target === "searchBar" || action.target !== "searchMode") needsSearchUpdate = true;
+      if (action.target === "searchBar" || action.target === "searchMode") needsSearchUpdate = true;
       break;
     case "work-complete":
       if (action.name[0] === loadIndexesWorkerName) needsSearchUpdate = true;

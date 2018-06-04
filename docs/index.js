@@ -14106,7 +14106,7 @@ function reduceSearch(state, action) {
             }
             break;
         case "input-change":
-            if (action.target === "searchBar" || action.target !== "searchMode")
+            if (action.target === "searchBar" || action.target === "searchMode")
                 needsSearchUpdate = true;
             break;
         case "work-complete":
