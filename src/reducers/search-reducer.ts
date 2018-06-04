@@ -99,7 +99,12 @@ export function updateSearchResults(state: State): ReductionWithEffect<State> {
   const value = state.inputs.searchBar.value;
   state.searchResults = [];
 
-  const clozeAnswerIter = Indexer.reverseIter(state.indexes.clozeAnswers.byLanguageAndLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx,
+  const termIter = state.inputs.searchMode.value === "term-new" ?
+    state.indexes.clozeAnswers.byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx :
+    state.indexes.clozeAnswers.byLanguageAndLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx;
+
+
+  const clozeAnswerIter = Indexer.reverseIter(termIter,
     [state.inputs.curLanguage.value, Infinity], [state.inputs.curLanguage.value]);
   const noteIter = Indexer.iterator(state.indexes.notes.byLanguage,
     [state.inputs.curLanguage.value], [state.inputs.curLanguage.value, Infinity]);
@@ -109,6 +114,7 @@ export function updateSearchResults(state: State): ReductionWithEffect<State> {
 
   switch (state.inputs.searchMode.value) {
     case "term":
+    case "term-new":
     case "content":
       for (let i = 0; i <= state.searchPage; ++i) {
         for (let nextClozeAnswer = clozeAnswerIter();

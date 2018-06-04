@@ -14131,12 +14131,16 @@ function updateSearchResults(state) {
     state = Object.assign({}, state);
     const value = state.inputs.searchBar.value;
     state.searchResults = [];
-    const clozeAnswerIter = redux_indexers_1.Indexer.reverseIter(state.indexes.clozeAnswers.byLanguageAndLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx, [state.inputs.curLanguage.value, Infinity], [state.inputs.curLanguage.value]);
+    const termIter = state.inputs.searchMode.value === "term-new" ?
+        state.indexes.clozeAnswers.byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx :
+        state.indexes.clozeAnswers.byLanguageAndLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx;
+    const clozeAnswerIter = redux_indexers_1.Indexer.reverseIter(termIter, [state.inputs.curLanguage.value, Infinity], [state.inputs.curLanguage.value]);
     const noteIter = redux_indexers_1.Indexer.iterator(state.indexes.notes.byLanguage, [state.inputs.curLanguage.value], [state.inputs.curLanguage.value, Infinity]);
     const foundNoteIdSet = {};
     const foundTermSet = {};
     switch (state.inputs.searchMode.value) {
         case "term":
+        case "term-new":
         case "content":
             for (let i = 0; i <= state.searchPage; ++i) {
                 for (let nextClozeAnswer = clozeAnswerIter(); nextClozeAnswer && state.searchResults.length < maxSearchResults; nextClozeAnswer = clozeAnswerIter()) {
@@ -35662,7 +35666,7 @@ function searchContent(dispatch) {
                 React.createElement("div", null,
                     "\u691C\u7D22\u30E2\u30FC\u30C9:",
                     React.createElement("div", { className: "w-100" },
-                        React.createElement(select_single_1.SelectSingle, { values: ["term", "content", "note"], onChange: (mode) => dispatch(inputs_1.inputChange("searchMode", mode)), value: state.inputs.searchMode.value, className: "w-100" }))),
+                        React.createElement(select_single_1.SelectSingle, { values: ["term", "term-new", "content", "note"], onChange: (mode) => dispatch(inputs_1.inputChange("searchMode", mode)), value: state.inputs.searchMode.value, className: "w-100" }))),
                 React.createElement("div", null,
                     "\u691C\u7D22\u30AD\u30FC\u30EF\u30FC\u30C9:",
                     React.createElement("div", { className: "w-100" },

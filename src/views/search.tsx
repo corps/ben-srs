@@ -32,7 +32,7 @@ export function searchContent(dispatch: (action: Action) => void) {
             検索モード:
             <div className="w-100">
               <SelectSingle
-                values={["term", "content", "note"]}
+                values={["term", "term-new", "content", "note"]}
                 onChange={(mode) => dispatch(inputChange<Inputs>("searchMode", mode))}
                 value={state.inputs.searchMode.value}
                 className="w-100"

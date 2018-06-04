@@ -35,7 +35,7 @@ export type Location = "main" | "edit-note" | "new-note" | "study" | "search";
 
 export type EditingNoteMode = "select" | "content" | "term";
 
-export type SearchMode = "term" | "content" | "note";
+export type SearchMode = "term" | "term-new" | "content" | "note";
 export type SearchResult = ["cloze", StudyDetails] | ["note", Note]
 
 export const initialState = {

@@ -14131,12 +14131,16 @@ function updateSearchResults(state) {
     state = Object.assign({}, state);
     const value = state.inputs.searchBar.value;
     state.searchResults = [];
-    const clozeAnswerIter = redux_indexers_1.Indexer.reverseIter(state.indexes.clozeAnswers.byLanguageAndLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx, [state.inputs.curLanguage.value, Infinity], [state.inputs.curLanguage.value]);
+    const termIter = state.inputs.searchMode.value === "term-new" ?
+        state.indexes.clozeAnswers.byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx :
+        state.indexes.clozeAnswers.byLanguageAndLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx;
+    const clozeAnswerIter = redux_indexers_1.Indexer.reverseIter(termIter, [state.inputs.curLanguage.value, Infinity], [state.inputs.curLanguage.value]);
     const noteIter = redux_indexers_1.Indexer.iterator(state.indexes.notes.byLanguage, [state.inputs.curLanguage.value], [state.inputs.curLanguage.value, Infinity]);
     const foundNoteIdSet = {};
     const foundTermSet = {};
     switch (state.inputs.searchMode.value) {
         case "term":
+        case "term-new":
         case "content":
             for (let i = 0; i <= state.searchPage; ++i) {
                 for (let nextClozeAnswer = clozeAnswerIter(); nextClozeAnswer && state.searchResults.length < maxSearchResults; nextClozeAnswer = clozeAnswerIter()) {
