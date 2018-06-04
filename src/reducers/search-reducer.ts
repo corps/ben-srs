@@ -141,7 +141,6 @@ export function updateSearchResults(state: State): ReductionWithEffect<State> {
       if (nextNote.attributes.content.indexOf(value) === -1) continue;
 
       foundNoteIdSet[nextNote.id] = true;
-      state.searchResults.push(["note", nextNote]);
 
       return nextNote;
     }
