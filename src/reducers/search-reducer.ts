@@ -109,14 +109,12 @@ export function updateSearchResults(state: State): ReductionWithEffect<State> {
     [state.inputs.curLanguage.value], [state.inputs.curLanguage.value, Infinity]);
 
   const foundNoteIdSet: { [k: string]: boolean } = {};
-  const foundTermSet: { [k: string]: boolean } = {};
 
   const filteredClozeAnswerIter = () => {
     for (let nextClozeAnswer = clozeAnswerIter(); nextClozeAnswer; nextClozeAnswer = clozeAnswerIter()) {
-      const termName = nextClozeAnswer.reference + "-" + nextClozeAnswer.marker;
-      if (foundTermSet[termName]) continue;
+      if (foundNoteIdSet[nextClozeAnswer.noteId]) continue;
 
-      if (state.inputs.searchMode.value == "term") {
+      if (state.inputs.searchMode.value == "term" || state.inputs.searchMode.value == "term-new") {
         if (nextClozeAnswer.reference.indexOf(value) === -1) continue;
       }
 
@@ -130,7 +128,7 @@ export function updateSearchResults(state: State): ReductionWithEffect<State> {
         if (details.content.indexOf(value) === -1) continue;
       }
 
-      foundTermSet[termName] = true;
+      foundNoteIdSet[nextClozeAnswer.noteId] = true;
       return details;
     }
   };

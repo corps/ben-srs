@@ -14136,13 +14136,11 @@ function updateSearchResults(state) {
     const clozeAnswerIter = redux_indexers_1.Indexer.reverseIter(termIter, [state.inputs.curLanguage.value, Infinity], [state.inputs.curLanguage.value]);
     const noteIter = redux_indexers_1.Indexer.iterator(state.indexes.notes.byLanguage, [state.inputs.curLanguage.value], [state.inputs.curLanguage.value, Infinity]);
     const foundNoteIdSet = {};
-    const foundTermSet = {};
     const filteredClozeAnswerIter = () => {
         for (let nextClozeAnswer = clozeAnswerIter(); nextClozeAnswer; nextClozeAnswer = clozeAnswerIter()) {
-            const termName = nextClozeAnswer.reference + "-" + nextClozeAnswer.marker;
-            if (foundTermSet[termName])
+            if (foundNoteIdSet[nextClozeAnswer.noteId])
                 continue;
-            if (state.inputs.searchMode.value == "term") {
+            if (state.inputs.searchMode.value == "term" || state.inputs.searchMode.value == "term-new") {
                 if (nextClozeAnswer.reference.indexOf(value) === -1)
                     continue;
             }
@@ -14156,7 +14154,7 @@ function updateSearchResults(state) {
                 if (details.content.indexOf(value) === -1)
                     continue;
             }
-            foundTermSet[termName] = true;
+            foundNoteIdSet[nextClozeAnswer.noteId] = true;
             return details;
         }
     };
