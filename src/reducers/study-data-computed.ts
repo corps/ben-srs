@@ -28,7 +28,7 @@ export const computeStudyData = memoizeBySomeProperties({
     [language, state.startOfDayMinutes], [language, Infinity]);
   result.studied = range.endIdx - range.startIdx;
 
-  range = Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenNewAndNextDue,
+  range = Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue,
     [language, spoken], [language, spoken, nowMinutes + 1]);
   result.due = range.endIdx - range.startIdx;
 

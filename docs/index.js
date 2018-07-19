@@ -13406,31 +13406,32 @@ module.exports = bytesToUuid;
 /*!***********************************!*\
   !*** ./~/uuid/lib/rng-browser.js ***!
   \***********************************/
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, exports) {
 
-/* WEBPACK VAR INJECTION */(function(global) {// Unique ID creation requires a high quality random # generator.  In the
+// Unique ID creation requires a high quality random # generator.  In the
 // browser this is a little complicated due to unknown quality of Math.random()
 // and inconsistent support for the `crypto` API.  We do the best we can via
 // feature-detection
-var rng;
 
-var crypto = global.crypto || global.msCrypto; // for IE 11
-if (crypto && crypto.getRandomValues) {
+// getRandomValues needs to be invoked in a context where "this" is a Crypto implementation.
+var getRandomValues = (typeof(crypto) != 'undefined' && crypto.getRandomValues.bind(crypto)) ||
+                      (typeof(msCrypto) != 'undefined' && msCrypto.getRandomValues.bind(msCrypto));
+if (getRandomValues) {
   // WHATWG crypto RNG - http://wiki.whatwg.org/wiki/Crypto
   var rnds8 = new Uint8Array(16); // eslint-disable-line no-undef
-  rng = function whatwgRNG() {
-    crypto.getRandomValues(rnds8);
+
+  module.exports = function whatwgRNG() {
+    getRandomValues(rnds8);
     return rnds8;
   };
-}
-
-if (!rng) {
+} else {
   // Math.random()-based (RNG)
   //
   // If all else fails, use Math.random().  It's fast, but is of unspecified
   // quality.
   var rnds = new Array(16);
-  rng = function() {
+
+  module.exports = function mathRNG() {
     for (var i = 0, r; i < 16; i++) {
       if ((i & 0x03) === 0) r = Math.random() * 0x100000000;
       rnds[i] = r >>> ((i & 0x03) << 3) & 0xff;
@@ -13440,9 +13441,6 @@ if (!rng) {
   };
 }
 
-module.exports = rng;
-
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(/*! ./../../webpack/buildin/global.js */ 111)))
 
 /***/ }),
 /* 111 */
@@ -13767,7 +13765,7 @@ function withLogin(effect$) {
     return {
         subscribe: (dispatch) => {
             let subscription = new subject_1.Subscription();
-            hello.init({ dropbox: ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).env.DROPBOX_CLIENT_ID }, {
+            hello.init({ dropbox: ({"env":{}}).env.DROPBOX_CLIENT_ID }, {
                 redirect_uri: location.href,
             });
             subscription.add(effect$.subscribe((effect) => {
@@ -14083,7 +14081,7 @@ exports.getServices = getServices;
   \*************************************/
 /***/ (function(module, exports, __webpack_require__) {
 
-var apply = Function.prototype.apply;
+/* WEBPACK VAR INJECTION */(function(global) {var apply = Function.prototype.apply;
 
 // DOM APIs, for completeness
 
@@ -14134,9 +14132,17 @@ exports._unrefActive = exports.active = function(item) {
 
 // setimmediate attaches itself to the global object
 __webpack_require__(/*! setimmediate */ 228);
-exports.setImmediate = setImmediate;
-exports.clearImmediate = clearImmediate;
+// On some exotic environments, it's not clear which object `setimmeidate` was
+// able to install onto.  Search each possibility in the same order as the
+// `setimmediate` library.
+exports.setImmediate = (typeof self !== "undefined" && self.setImmediate) ||
+                       (typeof global !== "undefined" && global.setImmediate) ||
+                       (this && this.setImmediate);
+exports.clearImmediate = (typeof self !== "undefined" && self.clearImmediate) ||
+                         (typeof global !== "undefined" && global.clearImmediate) ||
+                         (this && this.clearImmediate);
 
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(/*! ./../webpack/buildin/global.js */ 111)))
 
 /***/ }),
 /* 123 */
@@ -14559,6 +14565,27 @@ function factory(ReactComponent, isValidElement, ReactNoopUpdateQueue) {
      */
     componentWillUnmount: 'DEFINE_MANY',
 
+    /**
+     * Replacement for (deprecated) `componentWillMount`.
+     *
+     * @optional
+     */
+    UNSAFE_componentWillMount: 'DEFINE_MANY',
+
+    /**
+     * Replacement for (deprecated) `componentWillReceiveProps`.
+     *
+     * @optional
+     */
+    UNSAFE_componentWillReceiveProps: 'DEFINE_MANY',
+
+    /**
+     * Replacement for (deprecated) `componentWillUpdate`.
+     *
+     * @optional
+     */
+    UNSAFE_componentWillUpdate: 'DEFINE_MANY',
+
     // ==== Advanced methods ====
 
     /**
@@ -14572,6 +14599,23 @@ function factory(ReactComponent, isValidElement, ReactNoopUpdateQueue) {
      * @overridable
      */
     updateComponent: 'OVERRIDE_BASE'
+  };
+
+  /**
+   * Similar to ReactClassInterface but for static methods.
+   */
+  var ReactClassStaticInterface = {
+    /**
+     * This method is invoked after a component is instantiated and when it
+     * receives new props. Return an object to update state in response to
+     * prop changes. Return null to indicate no change to state.
+     *
+     * If an object is returned, its keys will be merged into the existing state.
+     *
+     * @return {object || null}
+     * @optional
+     */
+    getDerivedStateFromProps: 'DEFINE_MANY_MERGED'
   };
 
   /**
@@ -14808,6 +14852,7 @@ function factory(ReactComponent, isValidElement, ReactNoopUpdateQueue) {
     if (!statics) {
       return;
     }
+
     for (var name in statics) {
       var property = statics[name];
       if (!statics.hasOwnProperty(name)) {
@@ -14824,14 +14869,25 @@ function factory(ReactComponent, isValidElement, ReactNoopUpdateQueue) {
         name
       );
 
-      var isInherited = name in Constructor;
-      _invariant(
-        !isInherited,
-        'ReactClass: You are attempting to define ' +
-          '`%s` on your component more than once. This conflict may be ' +
-          'due to a mixin.',
-        name
-      );
+      var isAlreadyDefined = name in Constructor;
+      if (isAlreadyDefined) {
+        var specPolicy = ReactClassStaticInterface.hasOwnProperty(name)
+          ? ReactClassStaticInterface[name]
+          : null;
+
+        _invariant(
+          specPolicy === 'DEFINE_MANY_MERGED',
+          'ReactClass: You are attempting to define ' +
+            '`%s` on your component more than once. This conflict may be ' +
+            'due to a mixin.',
+          name
+        );
+
+        Constructor[name] = createMergedResultFunction(Constructor[name], property);
+
+        return;
+      }
+
       Constructor[name] = property;
     }
   }
@@ -15141,6 +15197,12 @@ function factory(ReactComponent, isValidElement, ReactNoopUpdateQueue) {
           'componentWillRecieveProps(). Did you mean componentWillReceiveProps()?',
         spec.displayName || 'A component'
       );
+      warning(
+        !Constructor.prototype.UNSAFE_componentWillRecieveProps,
+        '%s has a method called UNSAFE_componentWillRecieveProps(). ' +
+          'Did you mean UNSAFE_componentWillReceiveProps()?',
+        spec.displayName || 'A component'
+      );
     }
 
     // Reduce time spent doing lookups by setting these on the prototype.
@@ -15168,7 +15230,7 @@ module.exports = factory;
   \*****************************************************************************/
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(/*! ../~/css-loader/lib/css-base.js */ 126)(undefined);
+exports = module.exports = __webpack_require__(/*! ../~/css-loader/lib/css-base.js */ 126)(false);
 // imports
 
 
@@ -17215,8 +17277,8 @@ hello.utils.extend(hello.utils, {
 			};
 
 			/*  execute procedure asynchronously  */                     /*  [Promises/A+ 2.2.4, 3.1]  */
-			if (typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}) === "object" && typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).nextTick === "function")
-				({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).nextTick(func);
+			if (typeof ({"env":{}}) === "object" && typeof ({"env":{}}).nextTick === "function")
+				({"env":{}}).nextTick(func);
 			else if (typeof setImmediate === "function")
 				setImmediate(func);
 			else
@@ -24526,7 +24588,7 @@ var warning = __webpack_require__(/*! fbjs/lib/warning */ 1);
 
 var ReactComponentTreeHook;
 
-if (typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}) !== 'undefined' && ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).env && undefined === 'test') {
+if (typeof ({"env":{}}) !== 'undefined' && ({"env":{}}).env && undefined === 'test') {
   // Temporary hack.
   // Inline requires don't work well with Jest:
   // https://github.com/facebook/react/issues/7240
@@ -31756,7 +31818,7 @@ var warning = __webpack_require__(/*! fbjs/lib/warning */ 1);
 
 var ReactComponentTreeHook;
 
-if (typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}) !== 'undefined' && ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).env && undefined === 'test') {
+if (typeof ({"env":{}}) !== 'undefined' && ({"env":{}}).env && undefined === 'test') {
   // Temporary hack.
   // Inline requires don't work well with Jest:
   // https://github.com/facebook/react/issues/7240
@@ -32003,7 +32065,7 @@ var warning = __webpack_require__(/*! fbjs/lib/warning */ 1);
 
 var ReactComponentTreeHook;
 
-if (typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}) !== 'undefined' && ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).env && undefined === 'test') {
+if (typeof ({"env":{}}) !== 'undefined' && ({"env":{}}).env && undefined === 'test') {
   // Temporary hack.
   // Inline requires don't work well with Jest:
   // https://github.com/facebook/react/issues/7240
@@ -33178,7 +33240,7 @@ var warning = __webpack_require__(/*! fbjs/lib/warning */ 1);
 
 var ReactComponentTreeHook;
 
-if (typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}) !== 'undefined' && ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).env && undefined === 'test') {
+if (typeof ({"env":{}}) !== 'undefined' && ({"env":{}}).env && undefined === 'test') {
   // Temporary hack.
   // Inline requires don't work well with Jest:
   // https://github.com/facebook/react/issues/7240
@@ -33621,7 +33683,7 @@ module.exports = traverseAllChildren;
 
     function installNextTickImplementation() {
         registerImmediate = function(handle) {
-            ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).nextTick(function () { runIfPresent(handle); });
+            ({"env":{}}).nextTick(function () { runIfPresent(handle); });
         };
     }
 
@@ -34231,20 +34293,12 @@ var bytesToUuid = __webpack_require__(/*! ./lib/bytesToUuid */ 109);
 // Inspired by https://github.com/LiosK/UUID.js
 // and http://docs.python.org/library/uuid.html
 
-// random #'s we need to init node and clockseq
-var _seedBytes = rng();
-
-// Per 4.5, create and 48-bit node id, (47 random bits + multicast bit = 1)
-var _nodeId = [
-  _seedBytes[0] | 0x01,
-  _seedBytes[1], _seedBytes[2], _seedBytes[3], _seedBytes[4], _seedBytes[5]
-];
-
-// Per 4.2.2, randomize (14 bit) clockseq
-var _clockseq = (_seedBytes[6] << 8 | _seedBytes[7]) & 0x3fff;
+var _nodeId;
+var _clockseq;
 
 // Previous uuid creation time
-var _lastMSecs = 0, _lastNSecs = 0;
+var _lastMSecs = 0;
+var _lastNSecs = 0;
 
 // See https://github.com/broofa/node-uuid for API details
 function v1(options, buf, offset) {
@@ -34252,8 +34306,26 @@ function v1(options, buf, offset) {
   var b = buf || [];
 
   options = options || {};
-
+  var node = options.node || _nodeId;
   var clockseq = options.clockseq !== undefined ? options.clockseq : _clockseq;
+
+  // node and clockseq need to be initialized to random values if they're not
+  // specified.  We do this lazily to minimize issues related to insufficient
+  // system entropy.  See #189
+  if (node == null || clockseq == null) {
+    var seedBytes = rng();
+    if (node == null) {
+      // Per 4.5, create and 48-bit node id, (47 random bits + multicast bit = 1)
+      node = _nodeId = [
+        seedBytes[0] | 0x01,
+        seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]
+      ];
+    }
+    if (clockseq == null) {
+      // Per 4.2.2, randomize (14 bit) clockseq
+      clockseq = _clockseq = (seedBytes[6] << 8 | seedBytes[7]) & 0x3fff;
+    }
+  }
 
   // UUID timestamps are 100 nano-second units since the Gregorian epoch,
   // (1582-10-15 00:00).  JSNumbers aren't precise enough for this, so
@@ -34314,7 +34386,6 @@ function v1(options, buf, offset) {
   b[i++] = clockseq & 0xff;
 
   // `node`
-  var node = options.node || _nodeId;
   for (var n = 0; n < 6; ++n) {
     b[i + n] = node[n];
   }
@@ -34341,7 +34412,7 @@ function v4(options, buf, offset) {
   var i = buf && offset || 0;
 
   if (typeof(options) == 'string') {
-    buf = options == 'binary' ? new Array(16) : null;
+    buf = options === 'binary' ? new Array(16) : null;
     options = null;
   }
   options = options || {};
@@ -34605,7 +34676,7 @@ exports.computeStudyData = memoizers_1.memoizeBySomeProperties({
     result.clozes = range.endIdx - range.startIdx;
     range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozeAnswers.byLanguageAndAnswered, [language, state.startOfDayMinutes], [language, Infinity]);
     result.studied = range.endIdx - range.startIdx;
-    range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenNewAndNextDue, [language, spoken], [language, spoken, nowMinutes + 1]);
+    range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken], [language, spoken, nowMinutes + 1]);
     result.due = range.endIdx - range.startIdx;
     let answersIter = redux_indexers_1.Indexer.iterator(state.indexes.clozeAnswers.byLanguageAndAnswered, [language, state.startOfDayMinutes], [language, Infinity]);
     let answerTimes = [];
@@ -34947,7 +35018,7 @@ function editContentContent(dispatch) {
             React.createElement("div", { className: "tc pt5-ns fw5 mb2" },
                 React.createElement("div", { className: "f5" },
                     React.createElement("div", { className: "ml2 w4 dib" },
-                        React.createElement(select_single_1.SelectSingle, { placeholder: "言語を選択", onChange: (lang) => dispatch(inputs_1.inputChange("editingNoteLanguage", lang)), value: state.inputs.editingNoteLanguage.value, values: model_1.allLanguages })))),
+                        React.createElement(select_single_1.SelectSingle, { placeholder: "\u8A00\u8A9E\u3092\u9078\u629E", onChange: (lang) => dispatch(inputs_1.inputChange("editingNoteLanguage", lang)), value: state.inputs.editingNoteLanguage.value, values: model_1.allLanguages })))),
             React.createElement("div", { className: "mw6 center" },
                 React.createElement("div", { className: "pa3" },
                     React.createElement(debouncing_inputs_1.DebouncingTextArea, { className: "w-100 input-reset", rows: 6, onChange: inputs_1.inputChangeDispatcher(dispatch, "editingNoteContent"), valueObject: state.inputs.editingNoteContent })),
@@ -35572,9 +35643,9 @@ function newNoteContent(dispatch) {
             React.createElement("div", { className: "tc pt5-ns fw5 mb3" },
                 React.createElement("div", { className: "f5" },
                     React.createElement("div", { className: "w4 dib" },
-                        React.createElement(select_single_1.SelectSingle, { placeholder: "言語を選択", onChange: (lang) => dispatch(inputs_1.inputChange("newNoteLanguage", lang)), value: state.inputs.newNoteLanguage.value, values: model_1.allLanguages })),
+                        React.createElement(select_single_1.SelectSingle, { placeholder: "\u8A00\u8A9E\u3092\u9078\u629E", onChange: (lang) => dispatch(inputs_1.inputChange("newNoteLanguage", lang)), value: state.inputs.newNoteLanguage.value, values: model_1.allLanguages })),
                     state.unusedStoredFiles.length && (React.createElement("div", { className: "ml2 w4 dib" },
-                        React.createElement(select_single_1.SelectSingle, { placeholder: "音声ファイルを選択", onChange: (id) => dispatch(inputs_1.inputChange("newNoteAudioId", id)), value: state.inputs.newNoteAudioId.value, values: state.unusedStoredFiles.map(sf => sf.id), labeler: (v) => {
+                        React.createElement(select_single_1.SelectSingle, { placeholder: "\u97F3\u58F0\u30D5\u30A1\u30A4\u30EB\u3092\u9078\u629E", onChange: (id) => dispatch(inputs_1.inputChange("newNoteAudioId", id)), value: state.inputs.newNoteAudioId.value, values: state.unusedStoredFiles.map(sf => sf.id), labeler: (v) => {
                                 let sf = redux_indexers_1.Indexer.getFirstMatching(state.indexes.storedFiles.byId, [v]);
                                 return sf ? sf.name : "";
                             } }))))),
