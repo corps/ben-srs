@@ -211,7 +211,7 @@ export function answerOk(state: State): Answer {
 }
 
 export function answerMiss(state: State): Answer {
-  return [minutesOfTime(state.now), ["f", 0.4]];
+  return [minutesOfTime(state.now), ["f", 0.6]];
 }
 
 export function answerSkip(state: State): Answer {
@@ -221,15 +221,15 @@ export function answerSkip(state: State): Answer {
 function okAnswerFactor(timeToAnswer: number, type: ClozeType) {
   switch (type) {
     case "produce":
-      return timeToAnswer < 6 ? 3.0 : 2.0;
+      return timeToAnswer < 6 ? 3.0 : 2.4;
 
     case "recognize":
-      return timeToAnswer < 3 ? 3.0 : 2.0;
+      return timeToAnswer <= 4 ? 3.6 : 2.8;
 
     case "listen":
-      return timeToAnswer < 10 ? 3.0 : 2.0;
+      return timeToAnswer < 10 ? 3.6 : 2.8;
 
     case "speak":
-      return timeToAnswer < 10 ? 3.0 : 2.0;
+      return timeToAnswer < 10 ? 3.6 : 2.8;
   }
 }

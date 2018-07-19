@@ -1,7 +1,6 @@
 import * as React from "react";
 import {Action} from "../reducer";
 import {Inputs, State} from "../state";
-import {CountsRow} from "../components/counts-row";
 import {CircleButton} from "../components/circle-button";
 import {clickLogin, clickLogout} from "../reducers/session-reducer";
 import {SelectSingle} from "../components/select-single";
@@ -48,20 +47,13 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
           </div>
         </div>
 
-        <CountsRow counts={state.studyData.due} postfix="枚" className="tc">
-          予定:
-        </CountsRow>
+        <div className="tc f4 fw2 mb1">
+          予定: {state.studyData.due}
+        </div>
 
-        <CountsRow counts={state.studyData.studied} postfix="枚" className="tc">
-          実績:
-        </CountsRow>
-
-        <CountsRow
-          counts={state.studyData.studyTimeMinutes}
-          postfix="分"
-          className="tc">
-          経過:
-        </CountsRow>
+        <div className="tc f4 fw2 mb1">
+          実績: {state.studyData.studied}
+        </div>
 
         <div className="tc f4 fw4 mb3 red">
           {state.syncOffline ? <span className="red mr1">オフライン</span> : null}
@@ -124,10 +116,6 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
             )}
           </div>
         </div>
-
-        <CountsRow counts={state.studyData.newStudy} postfix="枚" className="tc">
-          新規:
-        </CountsRow>
 
         <div className="tc f3 fw2 mb1">言葉: {state.studyData.terms}</div>
 

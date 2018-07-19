@@ -12,19 +12,10 @@ import {SpeechVoice} from "./services/speech";
 import {StudyDetails} from "./study";
 import {DropboxListFolderResponse} from "./services/dropbox";
 
-export const newCounts = {
-  today: 0,
-  week: 0,
-  month: 0,
-};
-
-export type Counts = typeof newCounts;
-
 export const newStudyData = {
-  studied: newCounts,
-  due: newCounts,
-  studyTimeMinutes: newCounts,
-  newStudy: newCounts,
+  studied: 0,
+  due: 0,
+  studyTimeMinutes: 0,
   terms: 0,
   clozes: 0,
 };

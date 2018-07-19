@@ -1,4 +1,4 @@
-import {Schedule} from "./model";
+import {newSchedule, Schedule} from "./model";
 
 // export const SECOND = 1000;
 export const MINUTE = 1;
@@ -43,6 +43,20 @@ export function configuredScheduler(random = () => Math.random()) {
 
     return nextSchedule;
   }
+}
+
+export function medianSchedule(existingSchedules: Schedule[]) {
+  let nextSchedule = {...newSchedule};
+
+  if (existingSchedules.length === 0) return nextSchedule;
+  nextSchedule.isNew = existingSchedules.every(s => s.isNew);
+
+  const summedInterval = existingSchedules.reduce((sum, sch) => sum + sch.intervalMinutes, 0);
+  const averageInterval = summedInterval / existingSchedules.length;
+
+  nextSchedule.intervalMinutes = Math.floor(averageInterval * 0.6);
+
+  return nextSchedule;
 }
 
 export const defaultFactorScheduler = configuredScheduler();

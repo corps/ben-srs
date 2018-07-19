@@ -29,6 +29,7 @@ import {
 } from "../indexes";
 import {requestLocalStoreUpdate} from "./session-reducer";
 import {startSync} from "./sync-reducer";
+import {medianSchedule} from "../scheduler";
 
 export interface ApplyNoteEdits {
   type: "apply-note-edits";
@@ -118,10 +119,8 @@ export type EditNoteActions =
   | CommitNote
   | SkipNote;
 
-export function reduceEditNote(
-  state: State,
-  action: EditNoteActions | IgnoredAction
-): ReductionWithEffect<State> {
+export function reduceEditNote(state: State,
+                               action: EditNoteActions | IgnoredAction): ReductionWithEffect<State> {
   let effect: SideEffect | void = null;
 
   let content = state.editingNoteNormalized.attributes.content;
@@ -214,6 +213,8 @@ export function reduceEditNote(
       let existingIdx = editingNote.attributes.terms.indexOf(term);
       if (existingIdx === -1) throw new Error("Bug");
 
+      const newSchedule = medianSchedule(term.attributes.clozes.map(c => c.attributes.schedule));
+
       term = {...term};
       editingNote.attributes = {...editingNote.attributes};
       editingNote.attributes.terms = editingNote.attributes.terms.slice();
@@ -255,6 +256,7 @@ export function reduceEditNote(
           next = {...newNormalizeCloze};
           next.attributes = {...next.attributes};
           next.attributes.type = type;
+          next.attributes.schedule = newSchedule;
           termAttrs.clozes.push(next);
         }
       };
@@ -359,10 +361,8 @@ export function reduceEditNote(
   return {state, effect};
 }
 
-export function startEditingNote(
-  state: State,
-  note: Note
-): ReductionWithEffect<State> {
+export function startEditingNote(state: State,
+                                 note: Note): ReductionWithEffect<State> {
   let effect: SideEffect | void = null;
   state = {...state};
 
@@ -379,10 +379,8 @@ export function startEditingNote(
   return {state, effect};
 }
 
-export function startEditingTerm(
-  state: State,
-  term: NormalizedTerm
-): ReductionWithEffect<State> {
+export function startEditingTerm(state: State,
+                                 term: NormalizedTerm): ReductionWithEffect<State> {
   let effect: SideEffect | void = null;
 
   state = {...state};
@@ -397,10 +395,10 @@ export function startEditingTerm(
   state.inputs.termSearchBy = {value: term.attributes.reference};
   state.inputs.termClozes = {
     value:
-      term.attributes.clozes
-        .filter(c => c.attributes.type === "produce")
-        .map(c => c.attributes.clozed)
-        .join(",") || term.attributes.reference,
+    term.attributes.clozes
+      .filter(c => c.attributes.type === "produce")
+      .map(c => c.attributes.clozed)
+      .join(",") || term.attributes.reference,
   };
   state.inputs.termDefinition = {value: term.attributes.definition};
 

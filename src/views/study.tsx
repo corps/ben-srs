@@ -23,8 +23,7 @@ export function studyContent(dispatch: (action: Action) => void) {
             </span>
 
               <span className="mh2">経過</span>
-              {state.studyData.studied.today}/
-              {state.studyData.studied.today + state.studyData.due.today}
+              {state.studyData.studied}/{state.studyData.studied + state.studyData.due}
               <span className="mh2">{describeDuration(state.now - state.studyStarted)}</span>
 
               <SimpleNavLink
@@ -46,7 +45,7 @@ export function studyContent(dispatch: (action: Action) => void) {
              onClick={(e) => e.target instanceof HTMLButtonElement ? null : dispatch(toggle<Toggles>("showBack"))}>
           <VCenteringContainer>
             <VCentered>
-              {state.toggles.showBack ? BackSide(state) : FrontSide(state) }
+              {state.toggles.showBack ? BackSide(state) : FrontSide(state)}
             </VCentered>
           </VCenteringContainer>
         </div>
@@ -172,13 +171,13 @@ export function studyContent(dispatch: (action: Action) => void) {
       </div>
 
       <div className="f5 h5 overflow-x-hidden overflow-y-auto ph3">
-        { state.studyDetails.cloze.attributes.type === "listen" ? <div className="mb3">
+        {state.studyDetails.cloze.attributes.type === "listen" ? <div className="mb3">
           {state.studyDetails.content.split("\n").map((s, i) => <span key={i + ""}>{s}<br/></span>)}
-        </div> : null }
+        </div> : null}
         {state.studyDetails.definition.split("\n").map((s, i) => <span key={i + ""}>{s}<br/></span>)}
       </div>
 
-      { state.indexesReady ? <div className="f5 mt2 tc">
+      {state.indexesReady ? <div className="f5 mt2 tc">
         <button className="mh1 pa1 br2"
                 onClick={() => dispatch(answerCard(answerOk(state)))}>
           OK!
@@ -194,7 +193,7 @@ export function studyContent(dispatch: (action: Action) => void) {
         <button className="mh1 pa1 br2" onClick={() => dispatch(editCard)}>
           編集
         </button>
-      </div> : null }
+      </div> : null}
     </div>
   }
 }
