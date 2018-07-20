@@ -13497,10 +13497,13 @@ function reduceFileSync(state, action) {
         case "complete-request":
             if (action.name[0] !== exports.fileDownloadRequestName)
                 break;
-            let [id, rev] = action.name.slice(1);
+            if (!action.success)
+                break;
+            let id = action.name[1];
             let result = dropbox_1.getDropboxResult(action);
             let response = result.response;
             let extParts = response.path_lower.split(".");
+            let rev = response.rev;
             let ext = extParts[extParts.length - 1];
             effect = sequence_1.sequence(effect, files_1.writeFile(id + "-" + rev + "." + ext, result.content, response.size));
             break;
@@ -13548,7 +13551,7 @@ function continueFileSync(state) {
         if (!mime) {
             throw new Error("Unknown mime for " + nextFile.name);
         }
-        let request = requestFileDownload(state.settings.session.accessToken, nextFile.id, nextFile.revision, mime);
+        let request = requestFileDownload(state.settings.session.accessToken, nextFile.id, mime);
         state.downloadingFileId = nextFile.id;
         effect = sequence_1.sequence(effect, request);
         state.clearSyncEffects = sequence_1.sequence(state.clearSyncEffects, ajax_1.abortRequest(request.name));
@@ -13557,8 +13560,8 @@ function continueFileSync(state) {
 }
 exports.continueFileSync = continueFileSync;
 exports.fileDownloadRequestName = "file-download";
-function requestFileDownload(accessToken, id, rev, mimeType) {
-    return ajax_1.requestAjax([exports.fileDownloadRequestName, id, rev], dropbox_1.fileDownloadAjaxConfig(accessToken, "rev:" + rev, mimeType, "blob"));
+function requestFileDownload(accessToken, id, mimeType) {
+    return ajax_1.requestAjax([exports.fileDownloadRequestName, id], dropbox_1.fileDownloadAjaxConfig(accessToken, "id:" + id, mimeType, "blob"));
 }
 exports.requestFileDownload = requestFileDownload;
 function getMissingStoredFiles(state) {

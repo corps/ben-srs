@@ -31,10 +31,14 @@ export function reduceFileSync(
     case "complete-request":
       if (action.name[0] !== fileDownloadRequestName) break;
 
-      let [id, rev] = action.name.slice(1);
+      if (!action.success) break;
+
+      let id = action.name[1];
+
       let result = getDropboxResult(action);
       let response = result.response as DropboxDownloadResponse;
       let extParts = response.path_lower.split(".");
+      let rev = response.rev;
       let ext = extParts[extParts.length - 1];
       effect = sequence(
         effect,
@@ -97,7 +101,6 @@ export function continueFileSync(state: State): ReductionWithEffect<State> {
     let request = requestFileDownload(
       state.settings.session.accessToken,
       nextFile.id,
-      nextFile.revision,
       mime
     );
 
@@ -119,12 +122,11 @@ export const fileDownloadRequestName = "file-download";
 export function requestFileDownload(
   accessToken: string,
   id: string,
-  rev: string,
   mimeType: string
 ): RequestAjax {
   return requestAjax(
-    [fileDownloadRequestName, id, rev],
-    fileDownloadAjaxConfig(accessToken, "rev:" + rev, mimeType, "blob")
+    [fileDownloadRequestName, id],
+    fileDownloadAjaxConfig(accessToken, "id:" + id, mimeType, "blob")
   );
 }
 
