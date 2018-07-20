@@ -126,7 +126,7 @@ export function requestFileDownload(
 ): RequestAjax {
   return requestAjax(
     [fileDownloadRequestName, id],
-    fileDownloadAjaxConfig(accessToken, "id:" + id, mimeType, "blob")
+    fileDownloadAjaxConfig(accessToken, id, mimeType, "blob")
   );
 }
 

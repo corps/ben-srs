@@ -13561,7 +13561,7 @@ function continueFileSync(state) {
 exports.continueFileSync = continueFileSync;
 exports.fileDownloadRequestName = "file-download";
 function requestFileDownload(accessToken, id, mimeType) {
-    return ajax_1.requestAjax([exports.fileDownloadRequestName, id], dropbox_1.fileDownloadAjaxConfig(accessToken, "id:" + id, mimeType, "blob"));
+    return ajax_1.requestAjax([exports.fileDownloadRequestName, id], dropbox_1.fileDownloadAjaxConfig(accessToken, id, mimeType, "blob"));
 }
 exports.requestFileDownload = requestFileDownload;
 function getMissingStoredFiles(state) {
