@@ -37,12 +37,14 @@ export function reduceFileSync(
 
       let id = action.name[1];
 
+      console.log("complete file download", action);
       if (action.status === 409) {
         state = {...state};
         state.indexes = {...state.indexes};
         state.indexes.storedFiles = storedFilesIndexer.removeByPk(
           state.indexes.storedFiles, [id]);
 
+        console.log("removing id", id);
         effect = sequence(effect, requestLocalStoreUpdate(state));
         ({state, effect} = sequenceReduction(effect, continueFileSync(state)));
         break;
