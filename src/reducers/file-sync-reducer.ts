@@ -20,6 +20,8 @@ import {
   getDropboxResult,
   DropboxDownloadResponse,
 } from "../services/dropbox";
+import {requestLocalStoreUpdate} from "./session-reducer";
+import {storedFilesIndexer} from "../indexes";
 
 export function reduceFileSync(
   state: State,
@@ -34,6 +36,13 @@ export function reduceFileSync(
       if (!action.success) break;
 
       let id = action.name[1];
+
+      if (action.status === 409) {
+        state.indexes.storedFiles = storedFilesIndexer.removeByPk(
+          state.indexes.storedFiles, [id]);
+        effect = sequence(effect, requestLocalStoreUpdate(state));
+        break;
+      }
 
       let result = getDropboxResult(action);
       let response = result.response as DropboxDownloadResponse;

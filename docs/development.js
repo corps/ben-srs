@@ -611,7 +611,7 @@ module.exports = ExecutionEnvironment;
 "use strict";
 
 
-module.exports = __webpack_require__(/*! ./lib/React */ 24);
+module.exports = __webpack_require__(/*! ./lib/React */ 25);
 
 
 /***/ }),
@@ -800,7 +800,7 @@ exports.Subscription = Subscription;
 
 
 
-var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 25);
+var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 26);
 
 var ReactCurrentOwner = __webpack_require__(/*! ./ReactCurrentOwner */ 14);
 
@@ -1615,7 +1615,7 @@ var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2),
 var CallbackQueue = __webpack_require__(/*! ./CallbackQueue */ 83);
 var PooledClass = __webpack_require__(/*! ./PooledClass */ 19);
 var ReactFeatureFlags = __webpack_require__(/*! ./ReactFeatureFlags */ 88);
-var ReactReconciler = __webpack_require__(/*! ./ReactReconciler */ 23);
+var ReactReconciler = __webpack_require__(/*! ./ReactReconciler */ 24);
 var Transaction = __webpack_require__(/*! ./Transaction */ 44);
 
 var invariant = __webpack_require__(/*! fbjs/lib/invariant */ 0);
@@ -2513,7 +2513,7 @@ module.exports = DOMProperty;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const indexes_1 = __webpack_require__(/*! ./indexes */ 35);
+const indexes_1 = __webpack_require__(/*! ./indexes */ 27);
 const model_1 = __webpack_require__(/*! ./model */ 15);
 exports.newStudyData = {
     studied: 0,
@@ -3080,9 +3080,9 @@ const model_1 = __webpack_require__(/*! ../model */ 15);
 const study_1 = __webpack_require__(/*! ../study */ 36);
 const sequence_1 = __webpack_require__(/*! kamo-reducers/services/sequence */ 9);
 const note_speech_1 = __webpack_require__(/*! ../services/note-speech */ 50);
-const indexes_1 = __webpack_require__(/*! ../indexes */ 35);
-const session_reducer_1 = __webpack_require__(/*! ./session-reducer */ 26);
-const sync_reducer_1 = __webpack_require__(/*! ./sync-reducer */ 27);
+const indexes_1 = __webpack_require__(/*! ../indexes */ 27);
+const session_reducer_1 = __webpack_require__(/*! ./session-reducer */ 22);
+const sync_reducer_1 = __webpack_require__(/*! ./sync-reducer */ 28);
 const scheduler_1 = __webpack_require__(/*! ../scheduler */ 114);
 exports.testPronounciation = {
     type: "test-pronounciation",
@@ -3312,6 +3312,150 @@ exports.startEditingTerm = startEditingTerm;
 /* 22 */
 /* no static exports found */
 /* all exports used */
+/*!*****************************************!*\
+  !*** ./src/reducers/session-reducer.js ***!
+  \*****************************************/
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const state_1 = __webpack_require__(/*! ../state */ 18);
+const sequence_1 = __webpack_require__(/*! kamo-reducers/services/sequence */ 9);
+const model_1 = __webpack_require__(/*! ../model */ 15);
+const local_storage_1 = __webpack_require__(/*! kamo-reducers/services/local-storage */ 78);
+const login_1 = __webpack_require__(/*! ../services/login */ 115);
+const sync_reducer_1 = __webpack_require__(/*! ./sync-reducer */ 28);
+const workers_1 = __webpack_require__(/*! kamo-reducers/services/workers */ 79);
+const files_1 = __webpack_require__(/*! ../services/files */ 49);
+exports.settingsStoreKey = "settings";
+exports.clickLogin = { type: "click-login" };
+exports.clickLogout = { type: "click-logout" };
+exports.loadIndexesWorkerName = "load-indexes";
+function reduceSession(state, action) {
+    let effect = null;
+    switch (action.type) {
+        case "initialization":
+        case "window-focus":
+            state = Object.assign({}, state);
+            state.now = action.when;
+            if (action.type !== "window-focus" ||
+                state.lastWindowVisible < state.now - 15 * 60 * 1000) {
+                ({ state, effect } = sequence_1.sequenceReduction(effect, sync_reducer_1.clearOtherSyncProcesses(state)));
+                state.indexesReady = false;
+                state.authReady = false;
+                state.clearSyncEffects = local_storage_1.cancelLocalLoad(exports.settingsStoreKey);
+                effect = sequence_1.sequence(effect, local_storage_1.requestLocalData(exports.settingsStoreKey));
+                state.awaiting = Object.assign({}, state.awaiting);
+                state.awaiting["file-list"] = 1;
+                effect = sequence_1.sequence(effect, files_1.requestFileList());
+            }
+            break;
+        case "load-local-data":
+            if (action.key !== exports.settingsStoreKey)
+                break;
+            ({ state, effect } = sequence_1.sequenceReduction(effect, sync_reducer_1.clearOtherSyncProcesses(state)));
+            state = Object.assign({}, state);
+            state.indexes = state_1.initialState.indexes;
+            let data = action.data || exports.newLocalStore;
+            state.settings = data.settings;
+            state.newNotes = data.newNotes;
+            state.downloadedNotes = data.downloadedNotes;
+            state.loadingIndexable = data.indexables;
+            state.awaiting = Object.assign({}, state.awaiting);
+            state.awaiting["auth"] = 1;
+            effect = sequence_1.sequence(effect, login_1.checkLoginSession);
+            break;
+        case "auth-success":
+            state = Object.assign({}, state);
+            if (state.settings.session.login &&
+                state.settings.session.login !== action.login) {
+                effect = sequence_1.sequence(effect, local_storage_1.clearLocalData);
+                state.loadingIndexable = null;
+                state.settings = model_1.newSettings;
+                state.location = "main";
+            }
+            state.settings = Object.assign({}, state.settings);
+            state.settings.session = Object.assign({}, state.settings.session);
+            state.settings.session.login = action.login;
+            state.settings.session.accessToken = action.accessToken;
+            state.settings.session.sessionExpiresAt = action.expires;
+            effect = sequence_1.sequence(effect, requestLocalStoreUpdate(state));
+            break;
+        case "auth-initialized":
+            state = Object.assign({}, state);
+            state.awaiting = Object.assign({}, state.awaiting);
+            state.awaiting["auth"] = 0;
+            state.awaiting["work"] = 1;
+            state.authReady = true;
+            state.clearSyncEffects = workers_1.cancelWork([exports.loadIndexesWorkerName]);
+            effect = sequence_1.sequence(effect, workers_1.requestWork([exports.loadIndexesWorkerName], state.loadingIndexable));
+            break;
+        case "work-complete":
+            if (action.name[0] !== exports.loadIndexesWorkerName)
+                break;
+            state = Object.assign({}, state);
+            let loadedIndexes = action.result;
+            state.indexes = loadedIndexes;
+            state.indexesReady = true;
+            ({ state, effect } = sequence_1.sequenceReduction(effect, sync_reducer_1.startSync(state)));
+        // deliberate fall through
+        case "work-canceled":
+            if (action.name[0] !== exports.loadIndexesWorkerName)
+                break;
+            state = Object.assign({}, state);
+            state.awaiting = Object.assign({}, state.awaiting);
+            state.awaiting["work"] = 0;
+            break;
+        case "click-login":
+            effect = sequence_1.sequence(effect, login_1.requestLogin);
+            // const localStore = require("/Users/zachcollins/Downloads/console (1).json");
+            // const myEffect = storeLocalData(settingsStoreKey, localStore);
+            // effect = sequence(effect, myEffect);
+            break;
+        case "click-logout":
+            ({ state, effect } = sequence_1.sequenceReduction(effect, sync_reducer_1.clearOtherSyncProcesses(state)));
+            effect = sequence_1.sequence(effect, local_storage_1.clearLocalData);
+            state = Object.assign({}, state);
+            state.settings = model_1.newSettings;
+            state.authReady = true;
+            break;
+    }
+    return { state, effect };
+}
+exports.reduceSession = reduceSession;
+function requestLocalStoreUpdate(state) {
+    let localStore = Object.assign({}, exports.newLocalStore);
+    localStore.settings = state.settings;
+    if (state.indexesReady || !state.loadingIndexable) {
+        localStore.indexables = {
+            storedFiles: state.indexes.storedFiles.byId.map(k => k[1]),
+            notes: state.indexes.notes.byId.map(k => k[1]),
+            terms: state.indexes.terms.byNoteIdReferenceAndMarker.map(k => k[1]),
+            clozes: state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx.map(k => k[1]),
+            clozeAnswers: state.indexes.clozeAnswers.byLanguageAndAnswered.map(k => k[1]),
+        };
+    }
+    else {
+        localStore.indexables = state.loadingIndexable;
+    }
+    localStore.newNotes = state.newNotes;
+    localStore.downloadedNotes = state.downloadedNotes;
+    return local_storage_1.storeLocalData(exports.settingsStoreKey, localStore);
+}
+exports.requestLocalStoreUpdate = requestLocalStoreUpdate;
+exports.newLocalStore = {
+    settings: model_1.newSettings,
+    indexables: {},
+    newNotes: {},
+    downloadedNotes: [],
+};
+
+
+/***/ }),
+/* 23 */
+/* no static exports found */
+/* all exports used */
 /*!****************************************!*\
   !*** ./~/react-dom/lib/DOMLazyTree.js ***!
   \****************************************/
@@ -3435,7 +3579,7 @@ DOMLazyTree.queueText = queueText;
 module.exports = DOMLazyTree;
 
 /***/ }),
-/* 23 */
+/* 24 */
 /* no static exports found */
 /* all exports used */
 /*!********************************************!*\
@@ -3609,7 +3753,7 @@ var ReactReconciler = {
 module.exports = ReactReconciler;
 
 /***/ }),
-/* 24 */
+/* 25 */
 /* no static exports found */
 /* all exports used */
 /*!******************************!*\
@@ -3749,7 +3893,7 @@ if (undefined !== 'production') {
 module.exports = React;
 
 /***/ }),
-/* 25 */
+/* 26 */
 /* no static exports found */
 /* all exports used */
 /*!*******************************************!*\
@@ -3796,151 +3940,196 @@ function reactProdInvariant(code) {
 module.exports = reactProdInvariant;
 
 /***/ }),
-/* 26 */
+/* 27 */
 /* no static exports found */
 /* all exports used */
-/*!*****************************************!*\
-  !*** ./src/reducers/session-reducer.js ***!
-  \*****************************************/
+/*!************************!*\
+  !*** ./src/indexes.js ***!
+  \************************/
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const state_1 = __webpack_require__(/*! ../state */ 18);
-const sequence_1 = __webpack_require__(/*! kamo-reducers/services/sequence */ 9);
-const model_1 = __webpack_require__(/*! ../model */ 15);
-const local_storage_1 = __webpack_require__(/*! kamo-reducers/services/local-storage */ 78);
-const login_1 = __webpack_require__(/*! ../services/login */ 115);
-const sync_reducer_1 = __webpack_require__(/*! ./sync-reducer */ 27);
-const workers_1 = __webpack_require__(/*! kamo-reducers/services/workers */ 79);
-const files_1 = __webpack_require__(/*! ../services/files */ 49);
-exports.settingsStoreKey = "settings";
-exports.clickLogin = { type: "click-login" };
-exports.clickLogout = { type: "click-logout" };
-exports.loadIndexesWorkerName = "load-indexes";
-function reduceSession(state, action) {
-    let effect = null;
-    switch (action.type) {
-        case "initialization":
-        case "window-focus":
-            state = Object.assign({}, state);
-            state.now = action.when;
-            if (action.type !== "window-focus" ||
-                state.lastWindowVisible < state.now - 15 * 60 * 1000) {
-                ({ state, effect } = sequence_1.sequenceReduction(effect, sync_reducer_1.clearOtherSyncProcesses(state)));
-                state.indexesReady = false;
-                state.authReady = false;
-                state.clearSyncEffects = local_storage_1.cancelLocalLoad(exports.settingsStoreKey);
-                effect = sequence_1.sequence(effect, local_storage_1.requestLocalData(exports.settingsStoreKey));
-                state.awaiting = Object.assign({}, state.awaiting);
-                state.awaiting["file-list"] = 1;
-                effect = sequence_1.sequence(effect, files_1.requestFileList());
-            }
-            break;
-        case "load-local-data":
-            if (action.key !== exports.settingsStoreKey)
-                break;
-            ({ state, effect } = sequence_1.sequenceReduction(effect, sync_reducer_1.clearOtherSyncProcesses(state)));
-            state = Object.assign({}, state);
-            state.indexes = state_1.initialState.indexes;
-            let data = action.data || exports.newLocalStore;
-            state.settings = data.settings;
-            state.newNotes = data.newNotes;
-            state.downloadedNotes = data.downloadedNotes;
-            state.loadingIndexable = data.indexables;
-            state.awaiting = Object.assign({}, state.awaiting);
-            state.awaiting["auth"] = 1;
-            effect = sequence_1.sequence(effect, login_1.checkLoginSession);
-            break;
-        case "auth-success":
-            state = Object.assign({}, state);
-            if (state.settings.session.login &&
-                state.settings.session.login !== action.login) {
-                effect = sequence_1.sequence(effect, local_storage_1.clearLocalData);
-                state.loadingIndexable = null;
-                state.settings = model_1.newSettings;
-                state.location = "main";
-            }
-            state.settings = Object.assign({}, state.settings);
-            state.settings.session = Object.assign({}, state.settings.session);
-            state.settings.session.login = action.login;
-            state.settings.session.accessToken = action.accessToken;
-            state.settings.session.sessionExpiresAt = action.expires;
-            effect = sequence_1.sequence(effect, requestLocalStoreUpdate(state));
-            break;
-        case "auth-initialized":
-            state = Object.assign({}, state);
-            state.awaiting = Object.assign({}, state.awaiting);
-            state.awaiting["auth"] = 0;
-            state.awaiting["work"] = 1;
-            state.authReady = true;
-            state.clearSyncEffects = workers_1.cancelWork([exports.loadIndexesWorkerName]);
-            effect = sequence_1.sequence(effect, workers_1.requestWork([exports.loadIndexesWorkerName], state.loadingIndexable));
-            break;
-        case "work-complete":
-            if (action.name[0] !== exports.loadIndexesWorkerName)
-                break;
-            state = Object.assign({}, state);
-            let loadedIndexes = action.result;
-            state.indexes = loadedIndexes;
-            state.indexesReady = true;
-            ({ state, effect } = sequence_1.sequenceReduction(effect, sync_reducer_1.startSync(state)));
-        // deliberate fall through
-        case "work-canceled":
-            if (action.name[0] !== exports.loadIndexesWorkerName)
-                break;
-            state = Object.assign({}, state);
-            state.awaiting = Object.assign({}, state.awaiting);
-            state.awaiting["work"] = 0;
-            break;
-        case "click-login":
-            effect = sequence_1.sequence(effect, login_1.requestLogin);
-            // const localStore = require("/Users/zachcollins/Downloads/console (1).json");
-            // const myEffect = storeLocalData(settingsStoreKey, localStore);
-            // effect = sequence(effect, myEffect);
-            break;
-        case "click-logout":
-            ({ state, effect } = sequence_1.sequenceReduction(effect, sync_reducer_1.clearOtherSyncProcesses(state)));
-            effect = sequence_1.sequence(effect, local_storage_1.clearLocalData);
-            state = Object.assign({}, state);
-            state.settings = model_1.newSettings;
-            state.authReady = true;
-            break;
-    }
-    return { state, effect };
-}
-exports.reduceSession = reduceSession;
-function requestLocalStoreUpdate(state) {
-    let localStore = Object.assign({}, exports.newLocalStore);
-    localStore.settings = state.settings;
-    if (state.indexesReady || !state.loadingIndexable) {
-        localStore.indexables = {
-            storedFiles: state.indexes.storedFiles.byId.map(k => k[1]),
-            notes: state.indexes.notes.byId.map(k => k[1]),
-            terms: state.indexes.terms.byNoteIdReferenceAndMarker.map(k => k[1]),
-            clozes: state.indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx.map(k => k[1]),
-            clozeAnswers: state.indexes.clozeAnswers.byLanguageAndAnswered.map(k => k[1]),
-        };
-    }
-    else {
-        localStore.indexables = state.loadingIndexable;
-    }
-    localStore.newNotes = state.newNotes;
-    localStore.downloadedNotes = state.downloadedNotes;
-    return local_storage_1.storeLocalData(exports.settingsStoreKey, localStore);
-}
-exports.requestLocalStoreUpdate = requestLocalStoreUpdate;
-exports.newLocalStore = {
-    settings: model_1.newSettings,
-    indexables: {},
-    newNotes: {},
-    downloadedNotes: [],
+const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 11);
+exports.notesIndexer = new redux_indexers_1.Indexer("byPath");
+exports.notesIndexer.addIndex("byPath", note => note.path.split("/"));
+exports.notesIndexer.addIndex("byId", note => [note.id]);
+exports.notesIndexer.addIndex("byLanguage", note => [note.attributes.language]);
+exports.notesIndexer.addIndex("byHasLocalEdits", note => [note.localEdits]);
+exports.notesIndexer.addIndex("byHasConflicts", note => [note.hasConflicts]);
+exports.notesIndexer.addIndex("byEditsComplete", note => [
+    note.attributes.editsComplete,
+]);
+exports.notesIndexer.addIndex("byAudioFileId", note => [note.attributes.audioFileId]);
+exports.storedFilesIndexer = new redux_indexers_1.Indexer("byId");
+exports.storedFilesIndexer.addIndex("byId", sf => [sf.id]);
+exports.storedFilesIndexer.addIndex("byRev", sf => [sf.revision]);
+exports.termsIndexer = new redux_indexers_1.Indexer("byNoteIdReferenceAndMarker");
+exports.termsIndexer.addIndex("byNoteIdReferenceAndMarker", term => [
+    term.noteId,
+    term.attributes.reference,
+    term.attributes.marker,
+]);
+exports.termsIndexer.addIndex("byLanguage", term => [term.language]);
+exports.clozesIndexer = new redux_indexers_1.Indexer("byNoteIdReferenceMarkerAndClozeIdx");
+exports.clozesIndexer.addIndex("byNoteIdReferenceMarkerAndClozeIdx", cloze => [
+    cloze.noteId,
+    cloze.reference,
+    cloze.marker,
+    cloze.clozeIdx,
+]);
+exports.clozesIndexer.addIndex("byLanguageSpokenAndNextDue", cloze => [
+    cloze.language,
+    cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
+    cloze.attributes.schedule.nextDueMinutes,
+]);
+exports.clozesIndexer.addIndex("byLanguageSpokenNewAndNextDue", cloze => [
+    cloze.language,
+    cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
+    cloze.attributes.schedule.isNew,
+    cloze.attributes.schedule.nextDueMinutes,
+]);
+exports.clozeAnswersIndexer = new redux_indexers_1.Indexer("byNoteIdReferenceMarkerClozeIdxAndAnswerIdx");
+exports.clozeAnswersIndexer.addIndex("byNoteIdReferenceMarkerClozeIdxAndAnswerIdx", answer => [
+    answer.noteId,
+    answer.reference,
+    answer.marker,
+    answer.clozeIdx,
+    answer.answerIdx,
+]);
+exports.clozeAnswersIndexer.addIndex("byLanguageAndAnswered", answer => [
+    answer.language,
+    answer.answer[0],
+]);
+exports.clozeAnswersIndexer.addGroupedIndex("byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx", answer => [answer.language, answer.answer[0]], "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx", answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx], (iter, reverseIter) => iter());
+exports.clozeAnswersIndexer.addGroupedIndex("byLanguageAndLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx", answer => [answer.language, answer.answer[0]], "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx", answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx], (iter, reverseIter) => reverseIter());
+exports.indexesInitialState = {
+    notes: exports.notesIndexer.empty(),
+    terms: exports.termsIndexer.empty(),
+    clozes: exports.clozesIndexer.empty(),
+    clozeAnswers: exports.clozeAnswersIndexer.empty(),
+    storedFiles: exports.storedFilesIndexer.empty(),
 };
+function loadIndexables(indexes, indexables) {
+    indexes = Object.assign({}, indexes);
+    let normalizedIndexable = indexables instanceof Array ? indexables : [indexables];
+    for (let indexable of normalizedIndexable) {
+        if (indexable.note)
+            indexes.notes = exports.notesIndexer.update(indexes.notes, [indexable.note]);
+        if (indexable.notes)
+            indexes.notes = exports.notesIndexer.update(indexes.notes, indexable.notes);
+        if (indexable.terms)
+            indexes.terms = exports.termsIndexer.update(indexes.terms, indexable.terms);
+        if (indexable.clozes)
+            indexes.clozes = exports.clozesIndexer.update(indexes.clozes, indexable.clozes);
+        if (indexable.clozeAnswers)
+            indexes.clozeAnswers = exports.clozeAnswersIndexer.update(indexes.clozeAnswers, indexable.clozeAnswers);
+        if (indexable.storedFiles)
+            indexes.storedFiles = exports.storedFilesIndexer.update(indexes.storedFiles, indexable.storedFiles);
+    }
+    return indexes;
+}
+exports.loadIndexables = loadIndexables;
+function findNoteTree(indexes, id) {
+    let note = redux_indexers_1.Indexer.getFirstMatching(indexes.notes.byId, [id]);
+    if (note) {
+        let terms = redux_indexers_1.Indexer.getAllMatching(indexes.terms.byNoteIdReferenceAndMarker, [id]);
+        let clozes = redux_indexers_1.Indexer.getAllMatching(indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [id]);
+        let clozeAnswers = redux_indexers_1.Indexer.getAllMatching(indexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx, [id]);
+        return { note, terms, clozes, clozeAnswers };
+    }
+    return undefined;
+}
+exports.findNoteTree = findNoteTree;
+function normalizedNote(noteTree) {
+    let { note, terms, clozes, clozeAnswers } = noteTree;
+    let normalizedNote = Object.assign({}, note, { attributes: Object.assign({}, note.attributes, { terms: [] }), id: undefined, version: undefined, localEdits: undefined, path: undefined, hasConflicts: undefined });
+    var idxOfClozes = 0;
+    var idxOfAnswers = 0;
+    for (var term of terms) {
+        let normalizedTerm = Object.assign({}, term, { attributes: Object.assign({}, term.attributes, { clozes: [] }), noteId: undefined, language: undefined });
+        normalizedNote.attributes.terms.push(normalizedTerm);
+        for (; idxOfClozes < clozes.length; ++idxOfClozes) {
+            var cloze = clozes[idxOfClozes];
+            if (cloze.reference !== term.attributes.reference ||
+                cloze.marker !== term.attributes.marker ||
+                cloze.noteId !== term.noteId) {
+                break;
+            }
+            let normalizedCloze = Object.assign({}, cloze, { attributes: Object.assign({}, cloze.attributes, { answers: [] }), noteId: undefined, reference: undefined, marker: undefined, clozeIdx: undefined, language: undefined });
+            for (; idxOfAnswers < clozeAnswers.length; ++idxOfAnswers) {
+                let clozeAnswer = clozeAnswers[idxOfAnswers];
+                if (clozeAnswer.reference !== cloze.reference ||
+                    clozeAnswer.marker !== cloze.marker ||
+                    clozeAnswer.noteId !== cloze.noteId ||
+                    clozeAnswer.clozeIdx !== cloze.clozeIdx) {
+                    break;
+                }
+                normalizedCloze.attributes.answers.push(clozeAnswer.answer);
+            }
+            normalizedTerm.attributes.clozes.push(normalizedCloze);
+        }
+    }
+    return normalizedNote;
+}
+exports.normalizedNote = normalizedNote;
+function denormalizedNote(normalizedNote, id, path, version) {
+    let note = Object.assign({}, normalizedNote, { attributes: Object.assign({}, normalizedNote.attributes, { terms: undefined }), id,
+        path,
+        version, localEdits: false, hasConflicts: false });
+    let terms = [];
+    let clozes = [];
+    let clozeAnswers = [];
+    let noteTree = {
+        note,
+        terms,
+        clozes,
+        clozeAnswers,
+    };
+    for (let normalizedTerm of normalizedNote.attributes.terms) {
+        let term = Object.assign({}, normalizedTerm, { attributes: Object.assign({}, normalizedTerm.attributes, { clozes: undefined }), language: note.attributes.language, noteId: note.id });
+        terms.push(term);
+        for (let clozeIdx = 0; clozeIdx < normalizedTerm.attributes.clozes.length; ++clozeIdx) {
+            let normalizedCloze = normalizedTerm.attributes.clozes[clozeIdx];
+            let cloze = Object.assign({}, normalizedCloze, { clozeIdx, marker: term.attributes.marker, reference: term.attributes.reference, language: note.attributes.language, noteId: note.id });
+            clozes.push(cloze);
+            for (let answerIdx = 0; answerIdx < normalizedCloze.attributes.answers.length; ++answerIdx) {
+                let normalizedClozeAnswer = normalizedCloze.attributes.answers[answerIdx];
+                let clozeAnswer = {
+                    answer: normalizedClozeAnswer,
+                    answerIdx,
+                    clozeIdx,
+                    marker: term.attributes.marker,
+                    reference: term.attributes.reference,
+                    language: note.attributes.language,
+                    noteId: note.id,
+                };
+                clozeAnswers.push(clozeAnswer);
+            }
+        }
+    }
+    return noteTree;
+}
+exports.denormalizedNote = denormalizedNote;
+function removeNote(indexes, note) {
+    indexes = Object.assign({}, indexes);
+    indexes.notes = exports.notesIndexer.removeAll(indexes.notes, [note]);
+    let terms = redux_indexers_1.Indexer.getAllMatching(indexes.terms.byNoteIdReferenceAndMarker, [
+        note.id,
+    ]);
+    indexes.terms = exports.termsIndexer.removeAll(indexes.terms, terms);
+    let clozes = redux_indexers_1.Indexer.getAllMatching(indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [note.id]);
+    indexes.clozes = exports.clozesIndexer.removeAll(indexes.clozes, clozes);
+    let clozeAnswers = redux_indexers_1.Indexer.getAllMatching(indexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx, [note.id]);
+    indexes.clozeAnswers = exports.clozeAnswersIndexer.removeAll(indexes.clozeAnswers, clozeAnswers);
+    return indexes;
+}
+exports.removeNote = removeNote;
 
 
 /***/ }),
-/* 27 */
+/* 28 */
 /* no static exports found */
 /* all exports used */
 /*!**************************************!*\
@@ -3951,16 +4140,16 @@ exports.newLocalStore = {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 30);
+const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 31);
 const sequence_1 = __webpack_require__(/*! kamo-reducers/services/sequence */ 9);
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 11);
-const indexes_1 = __webpack_require__(/*! ../indexes */ 35);
+const indexes_1 = __webpack_require__(/*! ../indexes */ 27);
 const model_1 = __webpack_require__(/*! ../model */ 15);
-const session_reducer_1 = __webpack_require__(/*! ./session-reducer */ 26);
-const dropbox_1 = __webpack_require__(/*! ../services/dropbox */ 28);
-const dropbox_2 = __webpack_require__(/*! ../services/dropbox */ 28);
-const dropbox_3 = __webpack_require__(/*! ../services/dropbox */ 28);
-const dropbox_4 = __webpack_require__(/*! ../services/dropbox */ 28);
+const session_reducer_1 = __webpack_require__(/*! ./session-reducer */ 22);
+const dropbox_1 = __webpack_require__(/*! ../services/dropbox */ 29);
+const dropbox_2 = __webpack_require__(/*! ../services/dropbox */ 29);
+const dropbox_3 = __webpack_require__(/*! ../services/dropbox */ 29);
+const dropbox_4 = __webpack_require__(/*! ../services/dropbox */ 29);
 const file_sync_reducer_1 = __webpack_require__(/*! ./file-sync-reducer */ 112);
 exports.listFolderRequestName = "list-folder";
 exports.noteDownloadRequestName = "notes-download";
@@ -4290,7 +4479,7 @@ function continueSync(state) {
 
 
 /***/ }),
-/* 28 */
+/* 29 */
 /* no static exports found */
 /* all exports used */
 /*!*********************************!*\
@@ -4301,7 +4490,7 @@ function continueSync(state) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 30);
+const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 31);
 function dropboxBaseHeaders(accessToken) {
     return {
         Authorization: "Bearer " + accessToken,
@@ -4409,7 +4598,7 @@ exports.contentTypes = {
 
 
 /***/ }),
-/* 29 */
+/* 30 */
 /* no static exports found */
 /* all exports used */
 /*!**************************************!*\
@@ -4571,7 +4760,7 @@ exports.memoizeBySomeProperties = memoizeBySomeProperties;
 
 
 /***/ }),
-/* 30 */
+/* 31 */
 /* no static exports found */
 /* all exports used */
 /*!******************************************!*\
@@ -4768,7 +4957,7 @@ exports.encodeQueryParts = encodeQueryParts;
 
 
 /***/ }),
-/* 31 */
+/* 32 */
 /* no static exports found */
 /* all exports used */
 /*!*******************************************!*\
@@ -5050,7 +5239,7 @@ var EventPluginHub = {
 module.exports = EventPluginHub;
 
 /***/ }),
-/* 32 */
+/* 33 */
 /* no static exports found */
 /* all exports used */
 /*!*********************************************!*\
@@ -5069,7 +5258,7 @@ module.exports = EventPluginHub;
 
 
 
-var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 31);
+var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 32);
 var EventPluginUtils = __webpack_require__(/*! ./EventPluginUtils */ 57);
 
 var accumulateInto = __webpack_require__(/*! ./accumulateInto */ 95);
@@ -5192,7 +5381,7 @@ var EventPropagators = {
 module.exports = EventPropagators;
 
 /***/ }),
-/* 33 */
+/* 34 */
 /* no static exports found */
 /* all exports used */
 /*!*********************************************!*\
@@ -5246,7 +5435,7 @@ var ReactInstanceMap = {
 module.exports = ReactInstanceMap;
 
 /***/ }),
-/* 34 */
+/* 35 */
 /* no static exports found */
 /* all exports used */
 /*!*********************************************!*\
@@ -5313,195 +5502,6 @@ SyntheticEvent.augmentClass(SyntheticUIEvent, UIEventInterface);
 module.exports = SyntheticUIEvent;
 
 /***/ }),
-/* 35 */
-/* no static exports found */
-/* all exports used */
-/*!************************!*\
-  !*** ./src/indexes.js ***!
-  \************************/
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 11);
-exports.notesIndexer = new redux_indexers_1.Indexer("byPath");
-exports.notesIndexer.addIndex("byPath", note => note.path.split("/"));
-exports.notesIndexer.addIndex("byId", note => [note.id]);
-exports.notesIndexer.addIndex("byLanguage", note => [note.attributes.language]);
-exports.notesIndexer.addIndex("byHasLocalEdits", note => [note.localEdits]);
-exports.notesIndexer.addIndex("byHasConflicts", note => [note.hasConflicts]);
-exports.notesIndexer.addIndex("byEditsComplete", note => [
-    note.attributes.editsComplete,
-]);
-exports.notesIndexer.addIndex("byAudioFileId", note => [note.attributes.audioFileId]);
-exports.storedFilesIndexer = new redux_indexers_1.Indexer("byId");
-exports.storedFilesIndexer.addIndex("byId", sf => [sf.id]);
-exports.storedFilesIndexer.addIndex("byRev", sf => [sf.revision]);
-exports.termsIndexer = new redux_indexers_1.Indexer("byNoteIdReferenceAndMarker");
-exports.termsIndexer.addIndex("byNoteIdReferenceAndMarker", term => [
-    term.noteId,
-    term.attributes.reference,
-    term.attributes.marker,
-]);
-exports.termsIndexer.addIndex("byLanguage", term => [term.language]);
-exports.clozesIndexer = new redux_indexers_1.Indexer("byNoteIdReferenceMarkerAndClozeIdx");
-exports.clozesIndexer.addIndex("byNoteIdReferenceMarkerAndClozeIdx", cloze => [
-    cloze.noteId,
-    cloze.reference,
-    cloze.marker,
-    cloze.clozeIdx,
-]);
-exports.clozesIndexer.addIndex("byLanguageSpokenAndNextDue", cloze => [
-    cloze.language,
-    cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
-    cloze.attributes.schedule.nextDueMinutes,
-]);
-exports.clozesIndexer.addIndex("byLanguageSpokenNewAndNextDue", cloze => [
-    cloze.language,
-    cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
-    cloze.attributes.schedule.isNew,
-    cloze.attributes.schedule.nextDueMinutes,
-]);
-exports.clozeAnswersIndexer = new redux_indexers_1.Indexer("byNoteIdReferenceMarkerClozeIdxAndAnswerIdx");
-exports.clozeAnswersIndexer.addIndex("byNoteIdReferenceMarkerClozeIdxAndAnswerIdx", answer => [
-    answer.noteId,
-    answer.reference,
-    answer.marker,
-    answer.clozeIdx,
-    answer.answerIdx,
-]);
-exports.clozeAnswersIndexer.addIndex("byLanguageAndAnswered", answer => [
-    answer.language,
-    answer.answer[0],
-]);
-exports.clozeAnswersIndexer.addGroupedIndex("byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx", answer => [answer.language, answer.answer[0]], "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx", answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx], (iter, reverseIter) => iter());
-exports.clozeAnswersIndexer.addGroupedIndex("byLanguageAndLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx", answer => [answer.language, answer.answer[0]], "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx", answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx], (iter, reverseIter) => reverseIter());
-exports.indexesInitialState = {
-    notes: exports.notesIndexer.empty(),
-    terms: exports.termsIndexer.empty(),
-    clozes: exports.clozesIndexer.empty(),
-    clozeAnswers: exports.clozeAnswersIndexer.empty(),
-    storedFiles: exports.storedFilesIndexer.empty(),
-};
-function loadIndexables(indexes, indexables) {
-    indexes = Object.assign({}, indexes);
-    let normalizedIndexable = indexables instanceof Array ? indexables : [indexables];
-    for (let indexable of normalizedIndexable) {
-        if (indexable.note)
-            indexes.notes = exports.notesIndexer.update(indexes.notes, [indexable.note]);
-        if (indexable.notes)
-            indexes.notes = exports.notesIndexer.update(indexes.notes, indexable.notes);
-        if (indexable.terms)
-            indexes.terms = exports.termsIndexer.update(indexes.terms, indexable.terms);
-        if (indexable.clozes)
-            indexes.clozes = exports.clozesIndexer.update(indexes.clozes, indexable.clozes);
-        if (indexable.clozeAnswers)
-            indexes.clozeAnswers = exports.clozeAnswersIndexer.update(indexes.clozeAnswers, indexable.clozeAnswers);
-        if (indexable.storedFiles)
-            indexes.storedFiles = exports.storedFilesIndexer.update(indexes.storedFiles, indexable.storedFiles);
-    }
-    return indexes;
-}
-exports.loadIndexables = loadIndexables;
-function findNoteTree(indexes, id) {
-    let note = redux_indexers_1.Indexer.getFirstMatching(indexes.notes.byId, [id]);
-    if (note) {
-        let terms = redux_indexers_1.Indexer.getAllMatching(indexes.terms.byNoteIdReferenceAndMarker, [id]);
-        let clozes = redux_indexers_1.Indexer.getAllMatching(indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [id]);
-        let clozeAnswers = redux_indexers_1.Indexer.getAllMatching(indexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx, [id]);
-        return { note, terms, clozes, clozeAnswers };
-    }
-    return undefined;
-}
-exports.findNoteTree = findNoteTree;
-function normalizedNote(noteTree) {
-    let { note, terms, clozes, clozeAnswers } = noteTree;
-    let normalizedNote = Object.assign({}, note, { attributes: Object.assign({}, note.attributes, { terms: [] }), id: undefined, version: undefined, localEdits: undefined, path: undefined, hasConflicts: undefined });
-    var idxOfClozes = 0;
-    var idxOfAnswers = 0;
-    for (var term of terms) {
-        let normalizedTerm = Object.assign({}, term, { attributes: Object.assign({}, term.attributes, { clozes: [] }), noteId: undefined, language: undefined });
-        normalizedNote.attributes.terms.push(normalizedTerm);
-        for (; idxOfClozes < clozes.length; ++idxOfClozes) {
-            var cloze = clozes[idxOfClozes];
-            if (cloze.reference !== term.attributes.reference ||
-                cloze.marker !== term.attributes.marker ||
-                cloze.noteId !== term.noteId) {
-                break;
-            }
-            let normalizedCloze = Object.assign({}, cloze, { attributes: Object.assign({}, cloze.attributes, { answers: [] }), noteId: undefined, reference: undefined, marker: undefined, clozeIdx: undefined, language: undefined });
-            for (; idxOfAnswers < clozeAnswers.length; ++idxOfAnswers) {
-                let clozeAnswer = clozeAnswers[idxOfAnswers];
-                if (clozeAnswer.reference !== cloze.reference ||
-                    clozeAnswer.marker !== cloze.marker ||
-                    clozeAnswer.noteId !== cloze.noteId ||
-                    clozeAnswer.clozeIdx !== cloze.clozeIdx) {
-                    break;
-                }
-                normalizedCloze.attributes.answers.push(clozeAnswer.answer);
-            }
-            normalizedTerm.attributes.clozes.push(normalizedCloze);
-        }
-    }
-    return normalizedNote;
-}
-exports.normalizedNote = normalizedNote;
-function denormalizedNote(normalizedNote, id, path, version) {
-    let note = Object.assign({}, normalizedNote, { attributes: Object.assign({}, normalizedNote.attributes, { terms: undefined }), id,
-        path,
-        version, localEdits: false, hasConflicts: false });
-    let terms = [];
-    let clozes = [];
-    let clozeAnswers = [];
-    let noteTree = {
-        note,
-        terms,
-        clozes,
-        clozeAnswers,
-    };
-    for (let normalizedTerm of normalizedNote.attributes.terms) {
-        let term = Object.assign({}, normalizedTerm, { attributes: Object.assign({}, normalizedTerm.attributes, { clozes: undefined }), language: note.attributes.language, noteId: note.id });
-        terms.push(term);
-        for (let clozeIdx = 0; clozeIdx < normalizedTerm.attributes.clozes.length; ++clozeIdx) {
-            let normalizedCloze = normalizedTerm.attributes.clozes[clozeIdx];
-            let cloze = Object.assign({}, normalizedCloze, { clozeIdx, marker: term.attributes.marker, reference: term.attributes.reference, language: note.attributes.language, noteId: note.id });
-            clozes.push(cloze);
-            for (let answerIdx = 0; answerIdx < normalizedCloze.attributes.answers.length; ++answerIdx) {
-                let normalizedClozeAnswer = normalizedCloze.attributes.answers[answerIdx];
-                let clozeAnswer = {
-                    answer: normalizedClozeAnswer,
-                    answerIdx,
-                    clozeIdx,
-                    marker: term.attributes.marker,
-                    reference: term.attributes.reference,
-                    language: note.attributes.language,
-                    noteId: note.id,
-                };
-                clozeAnswers.push(clozeAnswer);
-            }
-        }
-    }
-    return noteTree;
-}
-exports.denormalizedNote = denormalizedNote;
-function removeNote(indexes, note) {
-    indexes = Object.assign({}, indexes);
-    indexes.notes = exports.notesIndexer.removeAll(indexes.notes, [note]);
-    let terms = redux_indexers_1.Indexer.getAllMatching(indexes.terms.byNoteIdReferenceAndMarker, [
-        note.id,
-    ]);
-    indexes.terms = exports.termsIndexer.removeAll(indexes.terms, terms);
-    let clozes = redux_indexers_1.Indexer.getAllMatching(indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [note.id]);
-    indexes.clozes = exports.clozesIndexer.removeAll(indexes.clozes, clozes);
-    let clozeAnswers = redux_indexers_1.Indexer.getAllMatching(indexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx, [note.id]);
-    indexes.clozeAnswers = exports.clozeAnswersIndexer.removeAll(indexes.clozeAnswers, clozeAnswers);
-    return indexes;
-}
-exports.removeNote = removeNote;
-
-
-/***/ }),
 /* 36 */
 /* no static exports found */
 /* all exports used */
@@ -5515,7 +5515,7 @@ exports.removeNote = removeNote;
 Object.defineProperty(exports, "__esModule", { value: true });
 const model_1 = __webpack_require__(/*! ./model */ 15);
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 11);
-const indexes_1 = __webpack_require__(/*! ./indexes */ 35);
+const indexes_1 = __webpack_require__(/*! ./indexes */ 27);
 const divisible = [
     "᠃",
     "᠉",
@@ -6584,7 +6584,7 @@ module.exports = ReactBrowserEventEmitter;
 
 
 
-var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 34);
+var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 35);
 var ViewportMetrics = __webpack_require__(/*! ./ViewportMetrics */ 94);
 
 var getEventModifierState = __webpack_require__(/*! ./getEventModifierState */ 65);
@@ -7416,9 +7416,9 @@ const note_speech_1 = __webpack_require__(/*! ../services/note-speech */ 50);
 const scheduler_1 = __webpack_require__(/*! ../scheduler */ 114);
 const edit_note_reducer_1 = __webpack_require__(/*! ./edit-note-reducer */ 21);
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 11);
-const indexes_1 = __webpack_require__(/*! ../indexes */ 35);
-const session_reducer_1 = __webpack_require__(/*! ./session-reducer */ 26);
-const sync_reducer_1 = __webpack_require__(/*! ./sync-reducer */ 27);
+const indexes_1 = __webpack_require__(/*! ../indexes */ 27);
+const session_reducer_1 = __webpack_require__(/*! ./session-reducer */ 22);
+const sync_reducer_1 = __webpack_require__(/*! ./sync-reducer */ 28);
 exports.readCard = { type: "read-card" };
 function answerCard(answer) {
     return {
@@ -7803,7 +7803,7 @@ exports.reduceToggle = reduceToggle;
 
 
 
-var DOMLazyTree = __webpack_require__(/*! ./DOMLazyTree */ 22);
+var DOMLazyTree = __webpack_require__(/*! ./DOMLazyTree */ 23);
 var Danger = __webpack_require__(/*! ./Danger */ 150);
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
 var ReactInstrumentation = __webpack_require__(/*! ./ReactInstrumentation */ 10);
@@ -8371,7 +8371,7 @@ var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2);
 var ReactPropTypesSecret = __webpack_require__(/*! ./ReactPropTypesSecret */ 93);
 var propTypesFactory = __webpack_require__(/*! prop-types/factory */ 80);
 
-var React = __webpack_require__(/*! react/lib/React */ 24);
+var React = __webpack_require__(/*! react/lib/React */ 25);
 var PropTypes = propTypesFactory(React.isValidElement);
 
 var invariant = __webpack_require__(/*! fbjs/lib/invariant */ 0);
@@ -8653,7 +8653,7 @@ module.exports = ReactErrorUtils;
 var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2);
 
 var ReactCurrentOwner = __webpack_require__(/*! react/lib/ReactCurrentOwner */ 14);
-var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 33);
+var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 34);
 var ReactInstrumentation = __webpack_require__(/*! ./ReactInstrumentation */ 10);
 var ReactUpdates = __webpack_require__(/*! ./ReactUpdates */ 13);
 
@@ -11386,19 +11386,19 @@ module.exports = ReactInputSelection;
 
 var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2);
 
-var DOMLazyTree = __webpack_require__(/*! ./DOMLazyTree */ 22);
+var DOMLazyTree = __webpack_require__(/*! ./DOMLazyTree */ 23);
 var DOMProperty = __webpack_require__(/*! ./DOMProperty */ 17);
-var React = __webpack_require__(/*! react/lib/React */ 24);
+var React = __webpack_require__(/*! react/lib/React */ 25);
 var ReactBrowserEventEmitter = __webpack_require__(/*! ./ReactBrowserEventEmitter */ 42);
 var ReactCurrentOwner = __webpack_require__(/*! react/lib/ReactCurrentOwner */ 14);
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
 var ReactDOMContainerInfo = __webpack_require__(/*! ./ReactDOMContainerInfo */ 160);
 var ReactDOMFeatureFlags = __webpack_require__(/*! ./ReactDOMFeatureFlags */ 162);
 var ReactFeatureFlags = __webpack_require__(/*! ./ReactFeatureFlags */ 88);
-var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 33);
+var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 34);
 var ReactInstrumentation = __webpack_require__(/*! ./ReactInstrumentation */ 10);
 var ReactMarkupChecksum = __webpack_require__(/*! ./ReactMarkupChecksum */ 182);
-var ReactReconciler = __webpack_require__(/*! ./ReactReconciler */ 23);
+var ReactReconciler = __webpack_require__(/*! ./ReactReconciler */ 24);
 var ReactUpdateQueue = __webpack_require__(/*! ./ReactUpdateQueue */ 62);
 var ReactUpdates = __webpack_require__(/*! ./ReactUpdates */ 13);
 
@@ -11933,7 +11933,7 @@ module.exports = ReactMount;
 
 var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2);
 
-var React = __webpack_require__(/*! react/lib/React */ 24);
+var React = __webpack_require__(/*! react/lib/React */ 25);
 
 var invariant = __webpack_require__(/*! fbjs/lib/invariant */ 0);
 
@@ -12791,7 +12791,7 @@ module.exports = traverseAllChildren;
 
 
 
-var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 25),
+var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 26),
     _assign = __webpack_require__(/*! object-assign */ 3);
 
 var ReactNoopUpdateQueue = __webpack_require__(/*! ./ReactNoopUpdateQueue */ 107);
@@ -13486,11 +13486,13 @@ module.exports = g;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 30);
+const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 31);
 const files_1 = __webpack_require__(/*! ../services/files */ 49);
 const sequence_1 = __webpack_require__(/*! kamo-reducers/services/sequence */ 9);
-const sync_reducer_1 = __webpack_require__(/*! ./sync-reducer */ 27);
-const dropbox_1 = __webpack_require__(/*! ../services/dropbox */ 28);
+const sync_reducer_1 = __webpack_require__(/*! ./sync-reducer */ 28);
+const dropbox_1 = __webpack_require__(/*! ../services/dropbox */ 29);
+const session_reducer_1 = __webpack_require__(/*! ./session-reducer */ 22);
+const indexes_1 = __webpack_require__(/*! ../indexes */ 27);
 function reduceFileSync(state, action) {
     let effect = null;
     switch (action.type) {
@@ -13500,6 +13502,11 @@ function reduceFileSync(state, action) {
             if (!action.success)
                 break;
             let id = action.name[1];
+            if (action.status === 409) {
+                state.indexes.storedFiles = indexes_1.storedFilesIndexer.removeByPk(state.indexes.storedFiles, [id]);
+                effect = sequence_1.sequence(effect, session_reducer_1.requestLocalStoreUpdate(state));
+                break;
+            }
             let result = dropbox_1.getDropboxResult(action);
             let response = result.response;
             let extParts = response.path_lower.split(".");
@@ -13599,7 +13606,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const uuid = __webpack_require__(/*! uuid */ 231);
 const model_1 = __webpack_require__(/*! ../model */ 15);
 const sequence_1 = __webpack_require__(/*! kamo-reducers/services/sequence */ 9);
-const sync_reducer_1 = __webpack_require__(/*! ./sync-reducer */ 27);
+const sync_reducer_1 = __webpack_require__(/*! ./sync-reducer */ 28);
 const note_speech_1 = __webpack_require__(/*! ../services/note-speech */ 50);
 exports.visitNewNote = { type: "visit-new-note" };
 exports.clickAddNewNote = { type: "click-add-new-note" };
@@ -13738,8 +13745,8 @@ exports.scheduledBy = scheduledBy;
 Object.defineProperty(exports, "__esModule", { value: true });
 const subject_1 = __webpack_require__(/*! kamo-reducers/subject */ 7);
 const hello = __webpack_require__(/*! hellojs */ 141);
-const dropbox_1 = __webpack_require__(/*! ./dropbox */ 28);
-const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 30);
+const dropbox_1 = __webpack_require__(/*! ./dropbox */ 29);
+const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 31);
 exports.requestLogin = { effectType: "request-login" };
 exports.checkLoginSession = { effectType: "check-login-session" };
 exports.unauthorizedAccess = { type: "unauthorized-access" };
@@ -13967,8 +13974,8 @@ if(false) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const time_1 = __webpack_require__(/*! kamo-reducers/services/time */ 40);
 const reducers_1 = __webpack_require__(/*! kamo-reducers/reducers */ 73);
-const session_reducer_1 = __webpack_require__(/*! ./reducers/session-reducer */ 26);
-const sync_reducer_1 = __webpack_require__(/*! ./reducers/sync-reducer */ 27);
+const session_reducer_1 = __webpack_require__(/*! ./reducers/session-reducer */ 22);
+const sync_reducer_1 = __webpack_require__(/*! ./reducers/sync-reducer */ 28);
 const time_computed_1 = __webpack_require__(/*! ./reducers/time-computed */ 243);
 const study_data_computed_1 = __webpack_require__(/*! ./reducers/study-data-computed */ 241);
 const ticker_reducer_1 = __webpack_require__(/*! ./reducers/ticker-reducer */ 242);
@@ -14039,7 +14046,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const window_1 = __webpack_require__(/*! ./window */ 248);
 const login_1 = __webpack_require__(/*! ./login */ 115);
 const initialization_1 = __webpack_require__(/*! ./initialization */ 245);
-const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 30);
+const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 31);
 const sequence_1 = __webpack_require__(/*! kamo-reducers/services/sequence */ 9);
 // import {withAsyncStorage} from "kamo-reducers/services/async-storage";
 const ledger_storage_1 = __webpack_require__(/*! ./ledger-storage */ 247);
@@ -14161,7 +14168,7 @@ exports.clearImmediate = (typeof self !== "undefined" && self.clearImmediate) ||
 Object.defineProperty(exports, "__esModule", { value: true });
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 11);
 const study_1 = __webpack_require__(/*! ../study */ 36);
-const session_reducer_1 = __webpack_require__(/*! ./session-reducer */ 26);
+const session_reducer_1 = __webpack_require__(/*! ./session-reducer */ 22);
 const sequence_1 = __webpack_require__(/*! kamo-reducers/services/sequence */ 9);
 const edit_note_reducer_1 = __webpack_require__(/*! ./edit-note-reducer */ 21);
 function selectSearchResult(result) {
@@ -23104,7 +23111,7 @@ module.exports = AutoFocusUtils;
 
 
 
-var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 32);
+var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 33);
 var ExecutionEnvironment = __webpack_require__(/*! fbjs/lib/ExecutionEnvironment */ 5);
 var FallbackCompositionState = __webpack_require__(/*! ./FallbackCompositionState */ 153);
 var SyntheticCompositionEvent = __webpack_require__(/*! ./SyntheticCompositionEvent */ 196);
@@ -23719,8 +23726,8 @@ module.exports = CSSPropertyOperations;
 
 
 
-var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 31);
-var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 32);
+var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 32);
+var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 33);
 var ExecutionEnvironment = __webpack_require__(/*! fbjs/lib/ExecutionEnvironment */ 5);
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
 var ReactUpdates = __webpack_require__(/*! ./ReactUpdates */ 13);
@@ -24041,7 +24048,7 @@ module.exports = ChangeEventPlugin;
 
 var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2);
 
-var DOMLazyTree = __webpack_require__(/*! ./DOMLazyTree */ 22);
+var DOMLazyTree = __webpack_require__(/*! ./DOMLazyTree */ 23);
 var ExecutionEnvironment = __webpack_require__(/*! fbjs/lib/ExecutionEnvironment */ 5);
 
 var createNodesFromMarkup = __webpack_require__(/*! fbjs/lib/createNodesFromMarkup */ 131);
@@ -24127,7 +24134,7 @@ module.exports = DefaultEventPluginOrder;
 
 
 
-var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 32);
+var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 33);
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
 var SyntheticMouseEvent = __webpack_require__(/*! ./SyntheticMouseEvent */ 43);
 
@@ -24581,7 +24588,7 @@ module.exports = HTMLDOMPropertyConfig;
 
 
 
-var ReactReconciler = __webpack_require__(/*! ./ReactReconciler */ 23);
+var ReactReconciler = __webpack_require__(/*! ./ReactReconciler */ 24);
 
 var instantiateReactComponent = __webpack_require__(/*! ./instantiateReactComponent */ 100);
 var KeyEscapeUtils = __webpack_require__(/*! ./KeyEscapeUtils */ 58);
@@ -24781,14 +24788,14 @@ module.exports = ReactComponentBrowserEnvironment;
 var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2),
     _assign = __webpack_require__(/*! object-assign */ 3);
 
-var React = __webpack_require__(/*! react/lib/React */ 24);
+var React = __webpack_require__(/*! react/lib/React */ 25);
 var ReactComponentEnvironment = __webpack_require__(/*! ./ReactComponentEnvironment */ 60);
 var ReactCurrentOwner = __webpack_require__(/*! react/lib/ReactCurrentOwner */ 14);
 var ReactErrorUtils = __webpack_require__(/*! ./ReactErrorUtils */ 61);
-var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 33);
+var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 34);
 var ReactInstrumentation = __webpack_require__(/*! ./ReactInstrumentation */ 10);
 var ReactNodeTypes = __webpack_require__(/*! ./ReactNodeTypes */ 92);
-var ReactReconciler = __webpack_require__(/*! ./ReactReconciler */ 23);
+var ReactReconciler = __webpack_require__(/*! ./ReactReconciler */ 24);
 
 if (undefined !== 'production') {
   var checkReactTypeSpec = __webpack_require__(/*! ./checkReactTypeSpec */ 205);
@@ -25691,7 +25698,7 @@ module.exports = ReactCompositeComponent;
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
 var ReactDefaultInjection = __webpack_require__(/*! ./ReactDefaultInjection */ 175);
 var ReactMount = __webpack_require__(/*! ./ReactMount */ 91);
-var ReactReconciler = __webpack_require__(/*! ./ReactReconciler */ 23);
+var ReactReconciler = __webpack_require__(/*! ./ReactReconciler */ 24);
 var ReactUpdates = __webpack_require__(/*! ./ReactUpdates */ 13);
 var ReactVersion = __webpack_require__(/*! ./ReactVersion */ 190);
 
@@ -25812,11 +25819,11 @@ var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2),
 
 var AutoFocusUtils = __webpack_require__(/*! ./AutoFocusUtils */ 146);
 var CSSPropertyOperations = __webpack_require__(/*! ./CSSPropertyOperations */ 148);
-var DOMLazyTree = __webpack_require__(/*! ./DOMLazyTree */ 22);
+var DOMLazyTree = __webpack_require__(/*! ./DOMLazyTree */ 23);
 var DOMNamespaces = __webpack_require__(/*! ./DOMNamespaces */ 56);
 var DOMProperty = __webpack_require__(/*! ./DOMProperty */ 17);
 var DOMPropertyOperations = __webpack_require__(/*! ./DOMPropertyOperations */ 84);
-var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 31);
+var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 32);
 var EventPluginRegistry = __webpack_require__(/*! ./EventPluginRegistry */ 41);
 var ReactBrowserEventEmitter = __webpack_require__(/*! ./ReactBrowserEventEmitter */ 42);
 var ReactDOMComponentFlags = __webpack_require__(/*! ./ReactDOMComponentFlags */ 85);
@@ -26870,7 +26877,7 @@ module.exports = ReactDOMContainerInfo;
 
 var _assign = __webpack_require__(/*! object-assign */ 3);
 
-var DOMLazyTree = __webpack_require__(/*! ./DOMLazyTree */ 22);
+var DOMLazyTree = __webpack_require__(/*! ./DOMLazyTree */ 23);
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
 
 var ReactDOMEmptyComponent = function (instantiate) {
@@ -27453,7 +27460,7 @@ module.exports = ReactDOMNullInputValuePropHook;
 
 var _assign = __webpack_require__(/*! object-assign */ 3);
 
-var React = __webpack_require__(/*! react/lib/React */ 24);
+var React = __webpack_require__(/*! react/lib/React */ 25);
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
 var ReactDOMSelect = __webpack_require__(/*! ./ReactDOMSelect */ 86);
 
@@ -27805,7 +27812,7 @@ var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2),
     _assign = __webpack_require__(/*! object-assign */ 3);
 
 var DOMChildrenOperations = __webpack_require__(/*! ./DOMChildrenOperations */ 55);
-var DOMLazyTree = __webpack_require__(/*! ./DOMLazyTree */ 22);
+var DOMLazyTree = __webpack_require__(/*! ./DOMLazyTree */ 23);
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
 
 var escapeTextContentForBrowser = __webpack_require__(/*! ./escapeTextContentForBrowser */ 45);
@@ -28970,7 +28977,7 @@ module.exports = REACT_ELEMENT_TYPE;
 
 
 
-var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 31);
+var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 32);
 
 function runEventQueueInBatch(events) {
   EventPluginHub.enqueueEvents(events);
@@ -29216,7 +29223,7 @@ module.exports = ReactHostOperationHistoryHook;
 
 
 var DOMProperty = __webpack_require__(/*! ./DOMProperty */ 17);
-var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 31);
+var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 32);
 var EventPluginUtils = __webpack_require__(/*! ./EventPluginUtils */ 57);
 var ReactComponentEnvironment = __webpack_require__(/*! ./ReactComponentEnvironment */ 60);
 var ReactEmptyComponent = __webpack_require__(/*! ./ReactEmptyComponent */ 87);
@@ -29363,11 +29370,11 @@ module.exports = ReactMarkupChecksum;
 var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2);
 
 var ReactComponentEnvironment = __webpack_require__(/*! ./ReactComponentEnvironment */ 60);
-var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 33);
+var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 34);
 var ReactInstrumentation = __webpack_require__(/*! ./ReactInstrumentation */ 10);
 
 var ReactCurrentOwner = __webpack_require__(/*! react/lib/ReactCurrentOwner */ 14);
-var ReactReconciler = __webpack_require__(/*! ./ReactReconciler */ 23);
+var ReactReconciler = __webpack_require__(/*! ./ReactReconciler */ 24);
 var ReactChildReconciler = __webpack_require__(/*! ./ReactChildReconciler */ 155);
 
 var emptyFunction = __webpack_require__(/*! fbjs/lib/emptyFunction */ 12);
@@ -30808,7 +30815,7 @@ module.exports = SVGDOMPropertyConfig;
 
 
 
-var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 32);
+var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 33);
 var ExecutionEnvironment = __webpack_require__(/*! fbjs/lib/ExecutionEnvironment */ 5);
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
 var ReactInputSelection = __webpack_require__(/*! ./ReactInputSelection */ 90);
@@ -31008,7 +31015,7 @@ module.exports = SelectEventPlugin;
 var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2);
 
 var EventListener = __webpack_require__(/*! fbjs/lib/EventListener */ 75);
-var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 32);
+var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 33);
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
 var SyntheticAnimationEvent = __webpack_require__(/*! ./SyntheticAnimationEvent */ 194);
 var SyntheticClipboardEvent = __webpack_require__(/*! ./SyntheticClipboardEvent */ 195);
@@ -31019,7 +31026,7 @@ var SyntheticMouseEvent = __webpack_require__(/*! ./SyntheticMouseEvent */ 43);
 var SyntheticDragEvent = __webpack_require__(/*! ./SyntheticDragEvent */ 197);
 var SyntheticTouchEvent = __webpack_require__(/*! ./SyntheticTouchEvent */ 201);
 var SyntheticTransitionEvent = __webpack_require__(/*! ./SyntheticTransitionEvent */ 202);
-var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 34);
+var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 35);
 var SyntheticWheelEvent = __webpack_require__(/*! ./SyntheticWheelEvent */ 203);
 
 var emptyFunction = __webpack_require__(/*! fbjs/lib/emptyFunction */ 12);
@@ -31419,7 +31426,7 @@ module.exports = SyntheticDragEvent;
 
 
 
-var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 34);
+var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 35);
 
 /**
  * @interface FocusEvent
@@ -31508,7 +31515,7 @@ module.exports = SyntheticInputEvent;
 
 
 
-var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 34);
+var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 35);
 
 var getEventCharCode = __webpack_require__(/*! ./getEventCharCode */ 64);
 var getEventKey = __webpack_require__(/*! ./getEventKey */ 209);
@@ -31600,7 +31607,7 @@ module.exports = SyntheticKeyboardEvent;
 
 
 
-var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 34);
+var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 35);
 
 var getEventModifierState = __webpack_require__(/*! ./getEventModifierState */ 65);
 
@@ -31997,7 +32004,7 @@ var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2);
 
 var ReactCurrentOwner = __webpack_require__(/*! react/lib/ReactCurrentOwner */ 14);
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
-var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 33);
+var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 34);
 
 var getHostComponentFromComposite = __webpack_require__(/*! ./getHostComponentFromComposite */ 97);
 var invariant = __webpack_require__(/*! fbjs/lib/invariant */ 0);
@@ -32631,7 +32638,7 @@ module.exports = KeyEscapeUtils;
 
 
 
-var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 25);
+var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 26);
 
 var invariant = __webpack_require__(/*! fbjs/lib/invariant */ 0);
 
@@ -33233,7 +33240,7 @@ module.exports = '15.6.2';
 
 
 
-var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 25);
+var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 26);
 
 var ReactPropTypeLocationNames = __webpack_require__(/*! ./ReactPropTypeLocationNames */ 219);
 var ReactPropTypesSecret = __webpack_require__(/*! ./ReactPropTypesSecret */ 221);
@@ -33387,7 +33394,7 @@ module.exports = getNextDebugID;
  */
 
 
-var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 25);
+var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 26);
 
 var ReactElement = __webpack_require__(/*! ./ReactElement */ 20);
 
@@ -33434,7 +33441,7 @@ module.exports = onlyChild;
 
 
 
-var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 25);
+var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 26);
 
 var ReactCurrentOwner = __webpack_require__(/*! ./ReactCurrentOwner */ 14);
 var REACT_ELEMENT_TYPE = __webpack_require__(/*! ./ReactElementSymbol */ 105);
@@ -34540,7 +34547,7 @@ exports.DictionaryLookup = DictionaryLookup;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 29);
+const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 30);
 const state_1 = __webpack_require__(/*! ../state */ 18);
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 11);
 exports.computeHasEdits = memoizers_1.memoizeBySomeProperties({
@@ -34614,7 +34621,7 @@ exports.reduceKeypresses = reduceKeypresses;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 29);
+const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 30);
 const state_1 = __webpack_require__(/*! ../state */ 18);
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 11);
 exports.computeLanguages = memoizers_1.memoizeBySomeProperties({
@@ -34656,7 +34663,7 @@ exports.computeCurLanguageDefault = memoizers_1.memoizeBySomeProperties({
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 29);
+const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 30);
 const state_1 = __webpack_require__(/*! ../state */ 18);
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 11);
 const time_1 = __webpack_require__(/*! ../utils/time */ 52);
@@ -34751,7 +34758,7 @@ exports.reduceTick = reduceTick;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 29);
+const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 30);
 const state_1 = __webpack_require__(/*! ../state */ 18);
 const time_1 = __webpack_require__(/*! ../utils/time */ 52);
 exports.computeStartOfDay = memoizers_1.memoizeBySomeProperties({
@@ -34798,7 +34805,7 @@ exports.computeEndOfMonth = memoizers_1.memoizeBySomeProperties({
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 29);
+const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 30);
 const state_1 = __webpack_require__(/*! ../state */ 18);
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 11);
 exports.computeUnusedStoredFiles = memoizers_1.memoizeBySomeProperties({
