@@ -3448,7 +3448,6 @@ function reduceSession(state, action) {
                 state.loadingIndexable = null;
                 state.settings = model_1.newSettings;
                 state.location = "main";
-                ({ state, effect } = sequence_1.sequenceReduction(effect, main_menu_reducer_1.optimizeSelectedLanguage(state)));
             }
             state.settings = Object.assign({}, state.settings);
             state.settings.session = Object.assign({}, state.settings.session);
@@ -3473,6 +3472,7 @@ function reduceSession(state, action) {
             let loadedIndexes = action.result;
             state.indexes = loadedIndexes;
             state.indexesReady = true;
+            ({ state, effect } = sequence_1.sequenceReduction(effect, main_menu_reducer_1.optimizeSelectedLanguage(state)));
             ({ state, effect } = sequence_1.sequenceReduction(effect, sync_reducer_1.startSync(state)));
         // deliberate fall through
         case "work-canceled":
@@ -35603,7 +35603,7 @@ const time_1 = __webpack_require__(/*! ../utils/time */ 38);
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 9);
 function mainMenuContent(dispatch) {
     return (state) => {
-        const nextDue = redux_indexers_1.Indexer.iterator(state.indexes.clozes.byNextDue)();
+        const nextDue = redux_indexers_1.Indexer.iterator(state.indexes.clozes.byNextDue, [time_1.minutesOfTime(state.now)])();
         return (React.createElement("div", null,
             React.createElement("div", { className: "tc pt5-ns fw5 mb3" },
                 React.createElement("div", { className: "f5 mb2" },

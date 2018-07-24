@@ -121,7 +121,6 @@ export function reduceSession(
         state.loadingIndexable = null;
         state.settings = newSettings;
         state.location = "main";
-        ({state, effect} = sequenceReduction(effect, optimizeSelectedLanguage(state)));
       }
 
       state.settings = {...state.settings};
@@ -157,6 +156,7 @@ export function reduceSession(
       state.indexes = loadedIndexes;
       state.indexesReady = true;
 
+      ({state, effect} = sequenceReduction(effect, optimizeSelectedLanguage(state)));
       ({state, effect} = sequenceReduction(effect, startSync(state)));
     // deliberate fall through
 

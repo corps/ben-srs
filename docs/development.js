@@ -3448,7 +3448,6 @@ function reduceSession(state, action) {
                 state.loadingIndexable = null;
                 state.settings = model_1.newSettings;
                 state.location = "main";
-                ({ state, effect } = sequence_1.sequenceReduction(effect, main_menu_reducer_1.optimizeSelectedLanguage(state)));
             }
             state.settings = Object.assign({}, state.settings);
             state.settings.session = Object.assign({}, state.settings.session);
@@ -3473,6 +3472,7 @@ function reduceSession(state, action) {
             let loadedIndexes = action.result;
             state.indexes = loadedIndexes;
             state.indexesReady = true;
+            ({ state, effect } = sequence_1.sequenceReduction(effect, main_menu_reducer_1.optimizeSelectedLanguage(state)));
             ({ state, effect } = sequence_1.sequenceReduction(effect, sync_reducer_1.startSync(state)));
         // deliberate fall through
         case "work-canceled":

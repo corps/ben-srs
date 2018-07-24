@@ -8,12 +8,13 @@ import {inputChange} from "kamo-reducers/reducers/inputs";
 import {visitNewNote} from "../reducers/new-note-reducer";
 import {visitEditNote, visitSearch, visitStudy} from "../reducers/main-menu-reducer";
 import {toggleDispatcher} from "kamo-reducers/reducers/toggle";
-import {describeDuration, timeOfMinutes} from "../utils/time";
+import {describeDuration, timeOfMinutes, minutesOfTime} from "../utils/time";
 import {Indexer} from "redux-indexers";
 
 export function mainMenuContent(dispatch: (action: Action) => void) {
   return (state: State) => {
-    const nextDue = Indexer.iterator(state.indexes.clozes.byNextDue)();
+    const nextDue = Indexer.iterator(state.indexes.clozes.byNextDue,
+      [minutesOfTime(state.now)])();
 
     return (
       <div>
