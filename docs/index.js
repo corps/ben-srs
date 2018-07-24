@@ -4065,6 +4065,9 @@ exports.clozesIndexer.addIndex("byLanguageSpokenNewAndNextDue", cloze => [
     cloze.attributes.schedule.isNew,
     cloze.attributes.schedule.nextDueMinutes,
 ]);
+exports.clozesIndexer.addIndex("byNextDue", cloze => [
+    cloze.attributes.schedule.nextDueMinutes,
+]);
 exports.clozeAnswersIndexer = new redux_indexers_1.Indexer("byNoteIdReferenceMarkerClozeIdxAndAnswerIdx");
 exports.clozeAnswersIndexer.addIndex("byNoteIdReferenceMarkerClozeIdxAndAnswerIdx", answer => [
     answer.noteId,
@@ -34500,7 +34503,7 @@ module.exports = function() {
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = function() {
-	return new Worker(__webpack_require__.p + "09d8d3a00fd67103fafa.worker.js");
+	return new Worker(__webpack_require__.p + "48cac430dee9d0f15619.worker.js");
 };
 
 /***/ }),
