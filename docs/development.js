@@ -13499,19 +13499,17 @@ function reduceFileSync(state, action) {
         case "complete-request":
             if (action.name[0] !== exports.fileDownloadRequestName)
                 break;
-            if (!action.success)
-                break;
             let id = action.name[1];
-            console.log("complete file download", action);
             if (action.status === 409) {
                 state = Object.assign({}, state);
                 state.indexes = Object.assign({}, state.indexes);
                 state.indexes.storedFiles = indexes_1.storedFilesIndexer.removeByPk(state.indexes.storedFiles, [id]);
-                console.log("removing id", id);
                 effect = sequence_1.sequence(effect, session_reducer_1.requestLocalStoreUpdate(state));
                 ({ state, effect } = sequence_1.sequenceReduction(effect, continueFileSync(state)));
                 break;
             }
+            if (!action.success)
+                break;
             let result = dropbox_1.getDropboxResult(action);
             let response = result.response;
             let extParts = response.path_lower.split(".");
