@@ -10,6 +10,7 @@ import {sequenceReduction, sequence} from "kamo-reducers/services/sequence";
 import {startSync} from "./sync-reducer";
 import {Language} from "../model";
 import {requestTermSpeech} from "../services/note-speech";
+import {optimizeSelectedLanguage} from "./main-menu-reducer";
 
 export interface VisitNewNote {
   type: "visit-new-note";
@@ -81,6 +82,7 @@ export function reduceNewNote(
 
       ({state, effect} = sequenceReduction(effect, startSync(state)));
       state.location = "main";
+      ({state, effect} = sequenceReduction(effect, optimizeSelectedLanguage(state)));
   }
 
   return {state, effect};

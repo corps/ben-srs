@@ -8,9 +8,13 @@ import {inputChange} from "kamo-reducers/reducers/inputs";
 import {visitNewNote} from "../reducers/new-note-reducer";
 import {visitEditNote, visitSearch, visitStudy} from "../reducers/main-menu-reducer";
 import {toggleDispatcher} from "kamo-reducers/reducers/toggle";
+import {describeDuration, timeOfMinutes} from "../utils/time";
+import {Indexer} from "redux-indexers";
 
 export function mainMenuContent(dispatch: (action: Action) => void) {
   return (state: State) => {
+    const nextDue = Indexer.iterator(state.indexes.clozes.byNextDue)();
+
     return (
       <div>
         <div className="tc pt5-ns fw5 mb3">
@@ -53,6 +57,10 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
 
         <div className="tc f4 fw2 mb1">
           実績: {state.studyData.studied}
+        </div>
+
+        <div className="tc f4 fw2 mb1">
+          次: {nextDue ? describeDuration(state.now - timeOfMinutes(nextDue.attributes.schedule.nextDueMinutes), false) : "none"}
         </div>
 
         <div className="tc f4 fw4 mb3 red">

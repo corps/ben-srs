@@ -34,6 +34,7 @@ export type ClozesStore = {
   byNoteIdReferenceMarkerAndClozeIdx: Index<Cloze>;
   byLanguageSpokenAndNextDue: Index<Cloze>;
   byLanguageSpokenNewAndNextDue: Index<Cloze>;
+  byNextDue: Index<Cloze>;
 };
 
 export type ClozeAnswersStore = {

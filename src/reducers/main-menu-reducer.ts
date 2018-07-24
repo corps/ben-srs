@@ -8,10 +8,13 @@ import {startEditingNote} from "./edit-note-reducer";
 import {findNextEditableNote} from "../study";
 import {sequenceReduction} from "kamo-reducers/services/sequence";
 import {startStudyingNextCard} from "./study-reducer";
+import {Indexer} from "redux-indexers";
+import {minutesOfTime} from "../utils/time";
 
 export interface VisitMainMenu {
   type: "visit-main-menu";
 }
+
 
 export const visitMainMenu: VisitMainMenu = {type: "visit-main-menu"};
 
@@ -47,6 +50,7 @@ export function reduceMainMenu(
     case "visit-main-menu":
       state = {...state};
       state.location = "main";
+      ({state, effect} = sequenceReduction(effect, optimizeSelectedLanguage(state)));
       break;
 
     case "visit-search":
@@ -72,6 +76,29 @@ export function reduceMainMenu(
         startStudyingNextCard(state)
       ));
       break;
+  }
+
+  return {state, effect};
+}
+
+export function optimizeSelectedLanguage(state: State): ReductionWithEffect<State> {
+  let effect: SideEffect | void = null;
+
+  let nextDue = Indexer.iterator(state.indexes.clozes.byLanguageSpokenAndNextDue, [state.inputs.curLanguage, state.toggles.studySpoken])();
+
+  if (!nextDue || nextDue.attributes.schedule.nextDueMinutes > minutesOfTime(state.now)) {
+    nextDue = Indexer.iterator(state.indexes.clozes.byNextDue)();
+    if (nextDue) {
+      let language = nextDue.language;
+      let spoken = nextDue.attributes.type == "listen" || nextDue.attributes.type == "speak";
+
+      state = {...state};
+      state.inputs = {...state.inputs};
+      state.inputs.curLanguage = { value: language };
+
+      state.toggles = {...state.toggles};
+      state.toggles.studySpoken = spoken;
+    }
   }
 
   return {state, effect};

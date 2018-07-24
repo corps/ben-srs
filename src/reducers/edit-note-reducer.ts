@@ -30,6 +30,7 @@ import {
 import {requestLocalStoreUpdate} from "./session-reducer";
 import {startSync} from "./sync-reducer";
 import {medianSchedule} from "../scheduler";
+import {optimizeSelectedLanguage} from "./main-menu-reducer";
 
 export interface ApplyNoteEdits {
   type: "apply-note-edits";
@@ -139,6 +140,7 @@ export function reduceEditNote(state: State,
       } else {
         state = {...state};
         state.location = "main";
+        ({state, effect} = sequenceReduction(effect, optimizeSelectedLanguage(state)));
       }
       break;
 
@@ -193,6 +195,7 @@ export function reduceEditNote(state: State,
       state.indexes = loadIndexables(state.indexes, [denormalized]);
       effect = sequence(effect, requestLocalStoreUpdate(state));
       ({state, effect} = sequenceReduction(effect, startSync(state)));
+      ({state, effect} = sequenceReduction(effect, optimizeSelectedLanguage(state)));
       break;
 
     case "commit-term":

@@ -25,6 +25,7 @@ import {
   WorkCanceled,
 } from "kamo-reducers/services/workers";
 import {requestFileList} from "../services/files";
+import {optimizeSelectedLanguage} from "./main-menu-reducer";
 
 export const settingsStoreKey = "settings";
 
@@ -120,6 +121,7 @@ export function reduceSession(
         state.loadingIndexable = null;
         state.settings = newSettings;
         state.location = "main";
+        ({state, effect} = sequenceReduction(effect, optimizeSelectedLanguage(state)));
       }
 
       state.settings = {...state.settings};
