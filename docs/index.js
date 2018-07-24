@@ -13503,8 +13503,11 @@ function reduceFileSync(state, action) {
                 break;
             let id = action.name[1];
             if (action.status === 409) {
+                state = Object.assign({}, state);
+                state.indexes = Object.assign({}, state.indexes);
                 state.indexes.storedFiles = indexes_1.storedFilesIndexer.removeByPk(state.indexes.storedFiles, [id]);
                 effect = sequence_1.sequence(effect, session_reducer_1.requestLocalStoreUpdate(state));
+                ({ state, effect } = sequence_1.sequenceReduction(effect, continueFileSync(state)));
                 break;
             }
             let result = dropbox_1.getDropboxResult(action);
