@@ -92,6 +92,11 @@ clozesIndexer.addIndex("byLanguageSpokenNewAndNextDue", cloze => [
   cloze.attributes.schedule.nextDueMinutes,
 ]);
 
+clozesIndexer.addIndex("byNextDue", cloze => [
+  cloze.attributes.schedule.nextDueMinutes,
+]);
+
+
 export const clozeAnswersIndexer = new Indexer<ClozeAnswer, ClozeAnswersStore>(
   "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx"
 );
