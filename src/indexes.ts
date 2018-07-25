@@ -107,7 +107,7 @@ clozeAnswersIndexer.addIndex(
     answer.reference,
     answer.marker,
     answer.clozeIdx,
-    answer.answerIdx,
+    answer.answerIdx > 0 ? 1 : 0,
   ]
 );
 clozeAnswersIndexer.addIndex("byLanguageAndAnswered", answer => [
@@ -156,10 +156,8 @@ export interface NoteTree extends SingleIndexable {
 
 export type Indexable = SingleIndexable | SingleIndexable[];
 
-export function loadIndexables(
-  indexes: typeof indexesInitialState,
-  indexables: Indexable
-): typeof indexesInitialState {
+export function loadIndexables(indexes: typeof indexesInitialState,
+                               indexables: Indexable): typeof indexesInitialState {
   indexes = {...indexes};
 
   let normalizedIndexable: SingleIndexable[] =
@@ -189,10 +187,8 @@ export function loadIndexables(
   return indexes;
 }
 
-export function findNoteTree(
-  indexes: typeof indexesInitialState,
-  id: string
-): NoteTree | 0 {
+export function findNoteTree(indexes: typeof indexesInitialState,
+                             id: string): NoteTree | 0 {
   let note = Indexer.getFirstMatching(indexes.notes.byId, [id]);
   if (note) {
     let terms = Indexer.getAllMatching(
@@ -290,12 +286,10 @@ export function normalizedNote(noteTree: NoteTree): NormalizedNote {
   return normalizedNote;
 }
 
-export function denormalizedNote(
-  normalizedNote: NormalizedNote,
-  id: string,
-  path: string,
-  version: string
-): NoteTree {
+export function denormalizedNote(normalizedNote: NormalizedNote,
+                                 id: string,
+                                 path: string,
+                                 version: string): NoteTree {
   let note: Note = {
     ...normalizedNote,
     attributes: {
@@ -377,10 +371,8 @@ export function denormalizedNote(
   return noteTree;
 }
 
-export function removeNote(
-  indexes: typeof indexesInitialState,
-  note: Note
-): typeof indexesInitialState {
+export function removeNote(indexes: typeof indexesInitialState,
+                           note: Note): typeof indexesInitialState {
   indexes = {...indexes};
   indexes.notes = notesIndexer.removeAll(indexes.notes, [note]);
 
