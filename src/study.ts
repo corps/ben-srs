@@ -96,12 +96,21 @@ const allNotDivisibleRegex = new RegExp("[^" + divisibleRegex.source + "]*");
 const allNotDivisibleTailRegex = new RegExp(allNotDivisibleRegex.source + "$");
 const allNotDivisibleHeadRegex = new RegExp("^" + allNotDivisibleRegex.source);
 
-export function findNextStudyDetails(
-  language: Language,
-  fromMinutes: number,
-  indexes: State["indexes"],
-  spoken: boolean
-): StudyDetails | 0 {
+export function findNextStudyDetails(language: Language,
+                                     fromMinutes: number,
+                                     indexes: State["indexes"],
+                                     spoken: boolean): StudyDetails | 0 {
+  let nextCloze = findNextStudyCloze(language, fromMinutes, indexes, spoken);
+
+  if (nextCloze) {
+    return studyDetailsForCloze(nextCloze, indexes);
+  }
+}
+
+export function findNextStudyCloze(language: Language,
+                                   fromMinutes: number,
+                                   indexes: State["indexes"],
+                                   spoken: boolean) {
   let nextCloze = Indexer.reverseIter(
     indexes.clozes.byLanguageSpokenNewAndNextDue,
     [language, spoken, true, fromMinutes],
@@ -122,15 +131,11 @@ export function findNextStudyDetails(
       [language, spoken, Infinity]
     )();
 
-  if (nextCloze) {
-    return studyDetailsForCloze(nextCloze, indexes);
-  }
+  return nextCloze;
 }
 
-export function studyDetailsForCloze(
-  cloze: Cloze,
-  indexes: State["indexes"]
-): StudyDetails | 0 {
+export function studyDetailsForCloze(cloze: Cloze,
+                                     indexes: State["indexes"]): StudyDetails | 0 {
   let term = Indexer.getFirstMatching(
     indexes.terms.byNoteIdReferenceAndMarker,
     [cloze.noteId, cloze.reference, cloze.marker]
@@ -220,11 +225,9 @@ export function findNextUniqueMarker(content: string): string {
   }
 }
 
-export function findContentRange(
-  term: TermId,
-  content: string,
-  grabCharsMax = 50
-): [number, number] {
+export function findContentRange(term: TermId,
+                                 content: string,
+                                 grabCharsMax = 50): [number, number] {
   let [termStart, termEnd] = findTermRange(term, content);
   if (termStart === -1) return [-1, -1];
 
@@ -240,19 +243,17 @@ export function findContentRange(
 
   let rightSideIdx = Math.min(
     termEnd +
-      grabCharsMax +
-      unusedRight.match(allNotDivisibleHeadRegex)[0].length,
+    grabCharsMax +
+    unusedRight.match(allNotDivisibleHeadRegex)[0].length,
     content.length
   );
 
   return [leftSideIdx, rightSideIdx];
 }
 
-export function addNewTerm(
-  note: NormalizedNote,
-  left: number,
-  right: number
-): NormalizedNote {
+export function addNewTerm(note: NormalizedNote,
+                           left: number,
+                           right: number): NormalizedNote {
   let content = note.attributes.content;
   let reference = content.slice(left, right);
   let marker = findNextUniqueMarker(content);
@@ -275,12 +276,10 @@ export function addNewTerm(
   return note;
 }
 
-export function getTermFragment(
-  note: NormalizedNote,
-  term: TermId,
-  termOverride = term.attributes.reference,
-  grabCharsMax = 50
-) {
+export function getTermFragment(note: NormalizedNote,
+                                term: TermId,
+                                termOverride = term.attributes.reference,
+                                grabCharsMax = 50) {
   let content = note.attributes.content;
   for (let noteTerm of note.attributes.terms) {
     if (
@@ -311,11 +310,9 @@ export function getTermFragment(
   return content.slice(0, range[0]) + termOverride + content.slice(range[1]);
 }
 
-export function findTermInNormalizedNote(
-  note: NormalizedNote,
-  reference: string,
-  marker: string
-): NormalizedTerm | 0 {
+export function findTermInNormalizedNote(note: NormalizedNote,
+                                         reference: string,
+                                         marker: string): NormalizedTerm | 0 {
   for (let term of note.attributes.terms) {
     if (
       (term.attributes.reference === reference,
@@ -325,10 +322,8 @@ export function findTermInNormalizedNote(
   }
 }
 
-export function findNextEditableNote(
-  indexes: State["indexes"],
-  lastNoteId = undefined as string
-) {
+export function findNextEditableNote(indexes: State["indexes"],
+                                     lastNoteId = undefined as string) {
   return Indexer.iterator(
     indexes.notes.byEditsComplete,
     [false, lastNoteId],

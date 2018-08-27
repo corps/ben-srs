@@ -3079,7 +3079,7 @@ module.exports = ReactElement;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 const model_1 = __webpack_require__(/*! ../model */ 15);
-const study_1 = __webpack_require__(/*! ../study */ 37);
+const study_1 = __webpack_require__(/*! ../study */ 31);
 const sequence_1 = __webpack_require__(/*! kamo-reducers/services/sequence */ 10);
 const note_speech_1 = __webpack_require__(/*! ../services/note-speech */ 51);
 const indexes_1 = __webpack_require__(/*! ../indexes */ 28);
@@ -3326,7 +3326,7 @@ exports.startEditingTerm = startEditingTerm;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 const edit_note_reducer_1 = __webpack_require__(/*! ./edit-note-reducer */ 21);
-const study_1 = __webpack_require__(/*! ../study */ 37);
+const study_1 = __webpack_require__(/*! ../study */ 31);
 const sequence_1 = __webpack_require__(/*! kamo-reducers/services/sequence */ 10);
 const study_reducer_1 = __webpack_require__(/*! ./study-reducer */ 52);
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 9);
@@ -4220,7 +4220,7 @@ exports.removeNote = removeNote;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 32);
+const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 33);
 const sequence_1 = __webpack_require__(/*! kamo-reducers/services/sequence */ 10);
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 9);
 const indexes_1 = __webpack_require__(/*! ../indexes */ 28);
@@ -4570,7 +4570,7 @@ function continueSync(state) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 32);
+const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 33);
 function dropboxBaseHeaders(accessToken) {
     return {
         Authorization: "Bearer " + accessToken,
@@ -4679,6 +4679,252 @@ exports.contentTypes = {
 
 /***/ }),
 /* 31 */
+/* no static exports found */
+/* all exports used */
+/*!**********************!*\
+  !*** ./src/study.js ***!
+  \**********************/
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const model_1 = __webpack_require__(/*! ./model */ 15);
+const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 9);
+const indexes_1 = __webpack_require__(/*! ./indexes */ 28);
+const divisible = [
+    "᠃",
+    "᠉",
+    "⳹",
+    "⳾",
+    "⸼",
+    "。",
+    "꓿",
+    "꘎",
+    "꛳",
+    "︒",
+    "﹒",
+    "．",
+    "｡",
+    "𖫵",
+    "𛲟",
+    ".",
+    "։",
+    "۔",
+    "܁",
+    "܂",
+    "።",
+    "᙮",
+    "\n",
+    "?",
+    "!",
+    "¿",
+    ";",
+    "՞",
+    "؟",
+    "፧",
+    "፨",
+    "᥅",
+    "⁇",
+    "⁈",
+    "⁉",
+    "⳺",
+    "⳻",
+    "⸮",
+    "꘏",
+    "꛷",
+    "︖",
+    "﹖",
+    "？",
+    "𑅃",
+    "¡",
+    "՜",
+    "߹",
+    "᥄",
+    "‼",
+    "︕",
+    "﹗",
+    "！",
+    "、",
+    ",",
+    ".",
+];
+const divisibleRegex = new RegExp(divisible.map(stop => "\\" + stop).join("|") + "|\\s");
+const allNotDivisibleRegex = new RegExp("[^" + divisibleRegex.source + "]*");
+const allNotDivisibleTailRegex = new RegExp(allNotDivisibleRegex.source + "$");
+const allNotDivisibleHeadRegex = new RegExp("^" + allNotDivisibleRegex.source);
+function findNextStudyDetails(language, fromMinutes, indexes, spoken) {
+    let nextCloze = findNextStudyCloze(language, fromMinutes, indexes, spoken);
+    if (nextCloze) {
+        return studyDetailsForCloze(nextCloze, indexes);
+    }
+}
+exports.findNextStudyDetails = findNextStudyDetails;
+function findNextStudyCloze(language, fromMinutes, indexes, spoken) {
+    let nextCloze = redux_indexers_1.Indexer.reverseIter(indexes.clozes.byLanguageSpokenNewAndNextDue, [language, spoken, true, fromMinutes], [language, spoken, true, null])();
+    nextCloze =
+        nextCloze ||
+            redux_indexers_1.Indexer.reverseIter(indexes.clozes.byLanguageSpokenNewAndNextDue, [language, spoken, false, fromMinutes], [language, spoken, false, null])();
+    nextCloze =
+        nextCloze ||
+            redux_indexers_1.Indexer.iterator(indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken, fromMinutes], [language, spoken, Infinity])();
+    return nextCloze;
+}
+exports.findNextStudyCloze = findNextStudyCloze;
+function studyDetailsForCloze(cloze, indexes) {
+    let term = redux_indexers_1.Indexer.getFirstMatching(indexes.terms.byNoteIdReferenceAndMarker, [cloze.noteId, cloze.reference, cloze.marker]);
+    let note = redux_indexers_1.Indexer.getFirstMatching(indexes.notes.byId, [cloze.noteId]);
+    let clozes = redux_indexers_1.Indexer.getAllMatching(indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [cloze.noteId, cloze.reference, cloze.marker]);
+    let noteTree = indexes_1.findNoteTree(indexes, cloze.noteId);
+    if (term && note && noteTree) {
+        let normalized = indexes_1.normalizedNote(noteTree);
+        let content = getTermFragment(normalized, term, fullTermMarker(term));
+        let termRange = findTermRange(term, content);
+        let reference = term.attributes.reference;
+        let clozeSplits = splitByClozes(clozes, reference);
+        clozeSplits = clozeSplits.slice(0, 2 * (cloze.clozeIdx + 1));
+        return {
+            cloze,
+            definition: term.attributes.definition || note.attributes.content,
+            content: content,
+            spoken: content.replace(fullTermMarker(term), term.attributes.pronounce || reference),
+            beforeTerm: content.slice(0, termRange[0]),
+            beforeCloze: reference.slice(0, clozeSplits.slice(0, -1).reduce((sum, next) => sum + next.length, 0)),
+            clozed: cloze.attributes.clozed,
+            afterCloze: reference.slice(clozeSplits.reduce((sum, next) => sum + next.length, 0)),
+            afterTerm: content.slice(termRange[1]),
+            hint: term.attributes.hint,
+            type: cloze.attributes.type,
+            audioFileId: note.attributes.audioFileId,
+        };
+    }
+}
+exports.studyDetailsForCloze = studyDetailsForCloze;
+function findTermRange(term, text) {
+    let fullMarker = fullTermMarker(term);
+    let start = text.indexOf(fullMarker);
+    if (start === -1) {
+        if (term.attributes.marker.indexOf(term.attributes.reference) === 0) {
+            start = text.indexOf(term.attributes.marker);
+            if (start == -1)
+                return [-1, -1];
+            return [start, start + term.attributes.marker.length];
+        }
+        return [-1, -1];
+    }
+    return [start, start + fullMarker.length];
+}
+exports.findTermRange = findTermRange;
+function splitByClozes(clozes, text) {
+    let idx = 0;
+    let result = [];
+    for (let i = 0; i < clozes.length; ++i) {
+        let clozed = clozes[i].attributes.clozed;
+        let nextIdx = text.indexOf(clozed, idx);
+        if (nextIdx === -1) {
+            result.push("");
+            result.push("");
+        }
+        else {
+            result.push(text.slice(idx, nextIdx));
+            result.push(clozed);
+            idx = nextIdx + clozed.length;
+        }
+    }
+    result.push(text.slice(idx));
+    return result;
+}
+exports.splitByClozes = splitByClozes;
+function findNextUniqueMarker(content) {
+    for (let i = 1;; ++i) {
+        if (content.indexOf("[" + i + "]") === -1)
+            return i + "";
+    }
+}
+exports.findNextUniqueMarker = findNextUniqueMarker;
+function findContentRange(term, content, grabCharsMax = 50) {
+    let [termStart, termEnd] = findTermRange(term, content);
+    if (termStart === -1)
+        return [-1, -1];
+    let leftSide = content.slice(0, termStart);
+    let leftSideGrab = Math.min(grabCharsMax, leftSide.length);
+    let partialLeftSide = leftSide.slice(leftSide.length - leftSideGrab);
+    let unusedLeft = leftSide.slice(0, leftSide.length - partialLeftSide.length);
+    let leftSideIdx = unusedLeft.match(allNotDivisibleTailRegex).index;
+    let rightSide = content.slice(termEnd);
+    let unusedRight = rightSide.slice(grabCharsMax);
+    let rightSideIdx = Math.min(termEnd +
+        grabCharsMax +
+        unusedRight.match(allNotDivisibleHeadRegex)[0].length, content.length);
+    return [leftSideIdx, rightSideIdx];
+}
+exports.findContentRange = findContentRange;
+function addNewTerm(note, left, right) {
+    let content = note.attributes.content;
+    let reference = content.slice(left, right);
+    let marker = findNextUniqueMarker(content);
+    note = Object.assign({}, note);
+    note.attributes = Object.assign({}, note.attributes);
+    let normalizedTerm = Object.assign({}, model_1.newNormalizedTerm);
+    normalizedTerm.attributes = Object.assign({}, normalizedTerm.attributes);
+    normalizedTerm.attributes.reference = reference;
+    normalizedTerm.attributes.marker = marker;
+    content =
+        content.slice(0, left) +
+            fullTermMarker(normalizedTerm) +
+            content.slice(right);
+    note.attributes.terms = note.attributes.terms.concat([normalizedTerm]);
+    note.attributes.content = content;
+    return note;
+}
+exports.addNewTerm = addNewTerm;
+function getTermFragment(note, term, termOverride = term.attributes.reference, grabCharsMax = 50) {
+    let content = note.attributes.content;
+    for (let noteTerm of note.attributes.terms) {
+        if (noteTerm.attributes.reference === term.attributes.reference &&
+            noteTerm.attributes.marker === term.attributes.marker) {
+            continue;
+        }
+        let range = findTermRange(noteTerm, content);
+        if (range[0] === -1)
+            continue;
+        content =
+            content.slice(0, range[0]) +
+                noteTerm.attributes.reference +
+                content.slice(range[1]);
+    }
+    let contentRange = findContentRange(term, content, grabCharsMax);
+    if (contentRange[0] === -1)
+        return "";
+    content = content.slice(contentRange[0], contentRange[1]);
+    let range = findTermRange(term, content);
+    if (range[0] === -1)
+        return "";
+    return content.slice(0, range[0]) + termOverride + content.slice(range[1]);
+}
+exports.getTermFragment = getTermFragment;
+function findTermInNormalizedNote(note, reference, marker) {
+    for (let term of note.attributes.terms) {
+        if ((term.attributes.reference === reference,
+            term.attributes.marker === marker))
+            return term;
+    }
+}
+exports.findTermInNormalizedNote = findTermInNormalizedNote;
+function findNextEditableNote(indexes, lastNoteId = undefined) {
+    return redux_indexers_1.Indexer.iterator(indexes.notes.byEditsComplete, [false, lastNoteId], [false, Infinity])();
+}
+exports.findNextEditableNote = findNextEditableNote;
+function fullTermMarker(term) {
+    if (term.attributes.marker.indexOf(term.attributes.reference) === 0)
+        return term.attributes.marker;
+    return term.attributes.reference + "[" + term.attributes.marker + "]";
+}
+exports.fullTermMarker = fullTermMarker;
+
+
+/***/ }),
+/* 32 */
 /* no static exports found */
 /* all exports used */
 /*!**************************************!*\
@@ -4840,7 +5086,7 @@ exports.memoizeBySomeProperties = memoizeBySomeProperties;
 
 
 /***/ }),
-/* 32 */
+/* 33 */
 /* no static exports found */
 /* all exports used */
 /*!******************************************!*\
@@ -5037,7 +5283,7 @@ exports.encodeQueryParts = encodeQueryParts;
 
 
 /***/ }),
-/* 33 */
+/* 34 */
 /* no static exports found */
 /* all exports used */
 /*!*******************************************!*\
@@ -5319,7 +5565,7 @@ var EventPluginHub = {
 module.exports = EventPluginHub;
 
 /***/ }),
-/* 34 */
+/* 35 */
 /* no static exports found */
 /* all exports used */
 /*!*********************************************!*\
@@ -5338,7 +5584,7 @@ module.exports = EventPluginHub;
 
 
 
-var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 33);
+var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 34);
 var EventPluginUtils = __webpack_require__(/*! ./EventPluginUtils */ 57);
 
 var accumulateInto = __webpack_require__(/*! ./accumulateInto */ 95);
@@ -5461,7 +5707,7 @@ var EventPropagators = {
 module.exports = EventPropagators;
 
 /***/ }),
-/* 35 */
+/* 36 */
 /* no static exports found */
 /* all exports used */
 /*!*********************************************!*\
@@ -5515,7 +5761,7 @@ var ReactInstanceMap = {
 module.exports = ReactInstanceMap;
 
 /***/ }),
-/* 36 */
+/* 37 */
 /* no static exports found */
 /* all exports used */
 /*!*********************************************!*\
@@ -5580,247 +5826,6 @@ function SyntheticUIEvent(dispatchConfig, dispatchMarker, nativeEvent, nativeEve
 SyntheticEvent.augmentClass(SyntheticUIEvent, UIEventInterface);
 
 module.exports = SyntheticUIEvent;
-
-/***/ }),
-/* 37 */
-/* no static exports found */
-/* all exports used */
-/*!**********************!*\
-  !*** ./src/study.js ***!
-  \**********************/
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const model_1 = __webpack_require__(/*! ./model */ 15);
-const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 9);
-const indexes_1 = __webpack_require__(/*! ./indexes */ 28);
-const divisible = [
-    "᠃",
-    "᠉",
-    "⳹",
-    "⳾",
-    "⸼",
-    "。",
-    "꓿",
-    "꘎",
-    "꛳",
-    "︒",
-    "﹒",
-    "．",
-    "｡",
-    "𖫵",
-    "𛲟",
-    ".",
-    "։",
-    "۔",
-    "܁",
-    "܂",
-    "።",
-    "᙮",
-    "\n",
-    "?",
-    "!",
-    "¿",
-    ";",
-    "՞",
-    "؟",
-    "፧",
-    "፨",
-    "᥅",
-    "⁇",
-    "⁈",
-    "⁉",
-    "⳺",
-    "⳻",
-    "⸮",
-    "꘏",
-    "꛷",
-    "︖",
-    "﹖",
-    "？",
-    "𑅃",
-    "¡",
-    "՜",
-    "߹",
-    "᥄",
-    "‼",
-    "︕",
-    "﹗",
-    "！",
-    "、",
-    ",",
-    ".",
-];
-const divisibleRegex = new RegExp(divisible.map(stop => "\\" + stop).join("|") + "|\\s");
-const allNotDivisibleRegex = new RegExp("[^" + divisibleRegex.source + "]*");
-const allNotDivisibleTailRegex = new RegExp(allNotDivisibleRegex.source + "$");
-const allNotDivisibleHeadRegex = new RegExp("^" + allNotDivisibleRegex.source);
-function findNextStudyDetails(language, fromMinutes, indexes, spoken) {
-    let nextCloze = redux_indexers_1.Indexer.reverseIter(indexes.clozes.byLanguageSpokenNewAndNextDue, [language, spoken, true, fromMinutes], [language, spoken, true, null])();
-    nextCloze =
-        nextCloze ||
-            redux_indexers_1.Indexer.reverseIter(indexes.clozes.byLanguageSpokenNewAndNextDue, [language, spoken, false, fromMinutes], [language, spoken, false, null])();
-    nextCloze =
-        nextCloze ||
-            redux_indexers_1.Indexer.iterator(indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken, fromMinutes], [language, spoken, Infinity])();
-    if (nextCloze) {
-        return studyDetailsForCloze(nextCloze, indexes);
-    }
-}
-exports.findNextStudyDetails = findNextStudyDetails;
-function studyDetailsForCloze(cloze, indexes) {
-    let term = redux_indexers_1.Indexer.getFirstMatching(indexes.terms.byNoteIdReferenceAndMarker, [cloze.noteId, cloze.reference, cloze.marker]);
-    let note = redux_indexers_1.Indexer.getFirstMatching(indexes.notes.byId, [cloze.noteId]);
-    let clozes = redux_indexers_1.Indexer.getAllMatching(indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [cloze.noteId, cloze.reference, cloze.marker]);
-    let noteTree = indexes_1.findNoteTree(indexes, cloze.noteId);
-    if (term && note && noteTree) {
-        let normalized = indexes_1.normalizedNote(noteTree);
-        let content = getTermFragment(normalized, term, fullTermMarker(term));
-        let termRange = findTermRange(term, content);
-        let reference = term.attributes.reference;
-        let clozeSplits = splitByClozes(clozes, reference);
-        clozeSplits = clozeSplits.slice(0, 2 * (cloze.clozeIdx + 1));
-        return {
-            cloze,
-            definition: term.attributes.definition || note.attributes.content,
-            content: content,
-            spoken: content.replace(fullTermMarker(term), term.attributes.pronounce || reference),
-            beforeTerm: content.slice(0, termRange[0]),
-            beforeCloze: reference.slice(0, clozeSplits.slice(0, -1).reduce((sum, next) => sum + next.length, 0)),
-            clozed: cloze.attributes.clozed,
-            afterCloze: reference.slice(clozeSplits.reduce((sum, next) => sum + next.length, 0)),
-            afterTerm: content.slice(termRange[1]),
-            hint: term.attributes.hint,
-            type: cloze.attributes.type,
-            audioFileId: note.attributes.audioFileId,
-        };
-    }
-}
-exports.studyDetailsForCloze = studyDetailsForCloze;
-function findTermRange(term, text) {
-    let fullMarker = fullTermMarker(term);
-    let start = text.indexOf(fullMarker);
-    if (start === -1) {
-        if (term.attributes.marker.indexOf(term.attributes.reference) === 0) {
-            start = text.indexOf(term.attributes.marker);
-            if (start == -1)
-                return [-1, -1];
-            return [start, start + term.attributes.marker.length];
-        }
-        return [-1, -1];
-    }
-    return [start, start + fullMarker.length];
-}
-exports.findTermRange = findTermRange;
-function splitByClozes(clozes, text) {
-    let idx = 0;
-    let result = [];
-    for (let i = 0; i < clozes.length; ++i) {
-        let clozed = clozes[i].attributes.clozed;
-        let nextIdx = text.indexOf(clozed, idx);
-        if (nextIdx === -1) {
-            result.push("");
-            result.push("");
-        }
-        else {
-            result.push(text.slice(idx, nextIdx));
-            result.push(clozed);
-            idx = nextIdx + clozed.length;
-        }
-    }
-    result.push(text.slice(idx));
-    return result;
-}
-exports.splitByClozes = splitByClozes;
-function findNextUniqueMarker(content) {
-    for (let i = 1;; ++i) {
-        if (content.indexOf("[" + i + "]") === -1)
-            return i + "";
-    }
-}
-exports.findNextUniqueMarker = findNextUniqueMarker;
-function findContentRange(term, content, grabCharsMax = 50) {
-    let [termStart, termEnd] = findTermRange(term, content);
-    if (termStart === -1)
-        return [-1, -1];
-    let leftSide = content.slice(0, termStart);
-    let leftSideGrab = Math.min(grabCharsMax, leftSide.length);
-    let partialLeftSide = leftSide.slice(leftSide.length - leftSideGrab);
-    let unusedLeft = leftSide.slice(0, leftSide.length - partialLeftSide.length);
-    let leftSideIdx = unusedLeft.match(allNotDivisibleTailRegex).index;
-    let rightSide = content.slice(termEnd);
-    let unusedRight = rightSide.slice(grabCharsMax);
-    let rightSideIdx = Math.min(termEnd +
-        grabCharsMax +
-        unusedRight.match(allNotDivisibleHeadRegex)[0].length, content.length);
-    return [leftSideIdx, rightSideIdx];
-}
-exports.findContentRange = findContentRange;
-function addNewTerm(note, left, right) {
-    let content = note.attributes.content;
-    let reference = content.slice(left, right);
-    let marker = findNextUniqueMarker(content);
-    note = Object.assign({}, note);
-    note.attributes = Object.assign({}, note.attributes);
-    let normalizedTerm = Object.assign({}, model_1.newNormalizedTerm);
-    normalizedTerm.attributes = Object.assign({}, normalizedTerm.attributes);
-    normalizedTerm.attributes.reference = reference;
-    normalizedTerm.attributes.marker = marker;
-    content =
-        content.slice(0, left) +
-            fullTermMarker(normalizedTerm) +
-            content.slice(right);
-    note.attributes.terms = note.attributes.terms.concat([normalizedTerm]);
-    note.attributes.content = content;
-    return note;
-}
-exports.addNewTerm = addNewTerm;
-function getTermFragment(note, term, termOverride = term.attributes.reference, grabCharsMax = 50) {
-    let content = note.attributes.content;
-    for (let noteTerm of note.attributes.terms) {
-        if (noteTerm.attributes.reference === term.attributes.reference &&
-            noteTerm.attributes.marker === term.attributes.marker) {
-            continue;
-        }
-        let range = findTermRange(noteTerm, content);
-        if (range[0] === -1)
-            continue;
-        content =
-            content.slice(0, range[0]) +
-                noteTerm.attributes.reference +
-                content.slice(range[1]);
-    }
-    let contentRange = findContentRange(term, content, grabCharsMax);
-    if (contentRange[0] === -1)
-        return "";
-    content = content.slice(contentRange[0], contentRange[1]);
-    let range = findTermRange(term, content);
-    if (range[0] === -1)
-        return "";
-    return content.slice(0, range[0]) + termOverride + content.slice(range[1]);
-}
-exports.getTermFragment = getTermFragment;
-function findTermInNormalizedNote(note, reference, marker) {
-    for (let term of note.attributes.terms) {
-        if ((term.attributes.reference === reference,
-            term.attributes.marker === marker))
-            return term;
-    }
-}
-exports.findTermInNormalizedNote = findTermInNormalizedNote;
-function findNextEditableNote(indexes, lastNoteId = undefined) {
-    return redux_indexers_1.Indexer.iterator(indexes.notes.byEditsComplete, [false, lastNoteId], [false, Infinity])();
-}
-exports.findNextEditableNote = findNextEditableNote;
-function fullTermMarker(term) {
-    if (term.attributes.marker.indexOf(term.attributes.reference) === 0)
-        return term.attributes.marker;
-    return term.attributes.reference + "[" + term.attributes.marker + "]";
-}
-exports.fullTermMarker = fullTermMarker;
-
 
 /***/ }),
 /* 38 */
@@ -6752,7 +6757,7 @@ module.exports = ReactBrowserEventEmitter;
 
 
 
-var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 36);
+var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 37);
 var ViewportMetrics = __webpack_require__(/*! ./ViewportMetrics */ 94);
 
 var getEventModifierState = __webpack_require__(/*! ./getEventModifierState */ 65);
@@ -7528,7 +7533,7 @@ exports.requestTermSpeech = requestTermSpeech;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 const time_1 = __webpack_require__(/*! ../utils/time */ 38);
-const study_1 = __webpack_require__(/*! ../study */ 37);
+const study_1 = __webpack_require__(/*! ../study */ 31);
 const time_2 = __webpack_require__(/*! kamo-reducers/services/time */ 42);
 const sequence_1 = __webpack_require__(/*! kamo-reducers/services/sequence */ 10);
 const note_speech_1 = __webpack_require__(/*! ../services/note-speech */ 51);
@@ -8688,7 +8693,7 @@ module.exports = ReactErrorUtils;
 var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2);
 
 var ReactCurrentOwner = __webpack_require__(/*! react/lib/ReactCurrentOwner */ 14);
-var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 35);
+var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 36);
 var ReactInstrumentation = __webpack_require__(/*! ./ReactInstrumentation */ 11);
 var ReactUpdates = __webpack_require__(/*! ./ReactUpdates */ 13);
 
@@ -11430,7 +11435,7 @@ var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4
 var ReactDOMContainerInfo = __webpack_require__(/*! ./ReactDOMContainerInfo */ 160);
 var ReactDOMFeatureFlags = __webpack_require__(/*! ./ReactDOMFeatureFlags */ 162);
 var ReactFeatureFlags = __webpack_require__(/*! ./ReactFeatureFlags */ 88);
-var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 35);
+var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 36);
 var ReactInstrumentation = __webpack_require__(/*! ./ReactInstrumentation */ 11);
 var ReactMarkupChecksum = __webpack_require__(/*! ./ReactMarkupChecksum */ 182);
 var ReactReconciler = __webpack_require__(/*! ./ReactReconciler */ 25);
@@ -13523,7 +13528,7 @@ module.exports = g;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 32);
+const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 33);
 const files_1 = __webpack_require__(/*! ../services/files */ 50);
 const sequence_1 = __webpack_require__(/*! kamo-reducers/services/sequence */ 10);
 const sync_reducer_1 = __webpack_require__(/*! ./sync-reducer */ 29);
@@ -13788,7 +13793,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const subject_1 = __webpack_require__(/*! kamo-reducers/subject */ 7);
 const hello = __webpack_require__(/*! hellojs */ 141);
 const dropbox_1 = __webpack_require__(/*! ./dropbox */ 30);
-const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 32);
+const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 33);
 exports.requestLogin = { effectType: "request-login" };
 exports.checkLoginSession = { effectType: "check-login-session" };
 exports.unauthorizedAccess = { type: "unauthorized-access" };
@@ -14088,7 +14093,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const window_1 = __webpack_require__(/*! ./window */ 248);
 const login_1 = __webpack_require__(/*! ./login */ 115);
 const initialization_1 = __webpack_require__(/*! ./initialization */ 245);
-const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 32);
+const ajax_1 = __webpack_require__(/*! kamo-reducers/services/ajax */ 33);
 const sequence_1 = __webpack_require__(/*! kamo-reducers/services/sequence */ 10);
 // import {withAsyncStorage} from "kamo-reducers/services/async-storage";
 const ledger_storage_1 = __webpack_require__(/*! ./ledger-storage */ 247);
@@ -14201,7 +14206,7 @@ exports.clearImmediate = clearImmediate;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 9);
-const study_1 = __webpack_require__(/*! ../study */ 37);
+const study_1 = __webpack_require__(/*! ../study */ 31);
 const session_reducer_1 = __webpack_require__(/*! ./session-reducer */ 23);
 const sequence_1 = __webpack_require__(/*! kamo-reducers/services/sequence */ 10);
 const edit_note_reducer_1 = __webpack_require__(/*! ./edit-note-reducer */ 21);
@@ -23089,7 +23094,7 @@ module.exports = AutoFocusUtils;
 
 
 
-var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 34);
+var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 35);
 var ExecutionEnvironment = __webpack_require__(/*! fbjs/lib/ExecutionEnvironment */ 5);
 var FallbackCompositionState = __webpack_require__(/*! ./FallbackCompositionState */ 153);
 var SyntheticCompositionEvent = __webpack_require__(/*! ./SyntheticCompositionEvent */ 196);
@@ -23704,8 +23709,8 @@ module.exports = CSSPropertyOperations;
 
 
 
-var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 33);
-var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 34);
+var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 34);
+var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 35);
 var ExecutionEnvironment = __webpack_require__(/*! fbjs/lib/ExecutionEnvironment */ 5);
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
 var ReactUpdates = __webpack_require__(/*! ./ReactUpdates */ 13);
@@ -24112,7 +24117,7 @@ module.exports = DefaultEventPluginOrder;
 
 
 
-var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 34);
+var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 35);
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
 var SyntheticMouseEvent = __webpack_require__(/*! ./SyntheticMouseEvent */ 45);
 
@@ -24770,7 +24775,7 @@ var React = __webpack_require__(/*! react/lib/React */ 26);
 var ReactComponentEnvironment = __webpack_require__(/*! ./ReactComponentEnvironment */ 60);
 var ReactCurrentOwner = __webpack_require__(/*! react/lib/ReactCurrentOwner */ 14);
 var ReactErrorUtils = __webpack_require__(/*! ./ReactErrorUtils */ 61);
-var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 35);
+var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 36);
 var ReactInstrumentation = __webpack_require__(/*! ./ReactInstrumentation */ 11);
 var ReactNodeTypes = __webpack_require__(/*! ./ReactNodeTypes */ 92);
 var ReactReconciler = __webpack_require__(/*! ./ReactReconciler */ 25);
@@ -25801,7 +25806,7 @@ var DOMLazyTree = __webpack_require__(/*! ./DOMLazyTree */ 24);
 var DOMNamespaces = __webpack_require__(/*! ./DOMNamespaces */ 56);
 var DOMProperty = __webpack_require__(/*! ./DOMProperty */ 17);
 var DOMPropertyOperations = __webpack_require__(/*! ./DOMPropertyOperations */ 84);
-var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 33);
+var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 34);
 var EventPluginRegistry = __webpack_require__(/*! ./EventPluginRegistry */ 43);
 var ReactBrowserEventEmitter = __webpack_require__(/*! ./ReactBrowserEventEmitter */ 44);
 var ReactDOMComponentFlags = __webpack_require__(/*! ./ReactDOMComponentFlags */ 85);
@@ -28955,7 +28960,7 @@ module.exports = REACT_ELEMENT_TYPE;
 
 
 
-var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 33);
+var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 34);
 
 function runEventQueueInBatch(events) {
   EventPluginHub.enqueueEvents(events);
@@ -29201,7 +29206,7 @@ module.exports = ReactHostOperationHistoryHook;
 
 
 var DOMProperty = __webpack_require__(/*! ./DOMProperty */ 17);
-var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 33);
+var EventPluginHub = __webpack_require__(/*! ./EventPluginHub */ 34);
 var EventPluginUtils = __webpack_require__(/*! ./EventPluginUtils */ 57);
 var ReactComponentEnvironment = __webpack_require__(/*! ./ReactComponentEnvironment */ 60);
 var ReactEmptyComponent = __webpack_require__(/*! ./ReactEmptyComponent */ 87);
@@ -29348,7 +29353,7 @@ module.exports = ReactMarkupChecksum;
 var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2);
 
 var ReactComponentEnvironment = __webpack_require__(/*! ./ReactComponentEnvironment */ 60);
-var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 35);
+var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 36);
 var ReactInstrumentation = __webpack_require__(/*! ./ReactInstrumentation */ 11);
 
 var ReactCurrentOwner = __webpack_require__(/*! react/lib/ReactCurrentOwner */ 14);
@@ -30793,7 +30798,7 @@ module.exports = SVGDOMPropertyConfig;
 
 
 
-var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 34);
+var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 35);
 var ExecutionEnvironment = __webpack_require__(/*! fbjs/lib/ExecutionEnvironment */ 5);
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
 var ReactInputSelection = __webpack_require__(/*! ./ReactInputSelection */ 90);
@@ -30993,7 +30998,7 @@ module.exports = SelectEventPlugin;
 var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2);
 
 var EventListener = __webpack_require__(/*! fbjs/lib/EventListener */ 75);
-var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 34);
+var EventPropagators = __webpack_require__(/*! ./EventPropagators */ 35);
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
 var SyntheticAnimationEvent = __webpack_require__(/*! ./SyntheticAnimationEvent */ 194);
 var SyntheticClipboardEvent = __webpack_require__(/*! ./SyntheticClipboardEvent */ 195);
@@ -31004,7 +31009,7 @@ var SyntheticMouseEvent = __webpack_require__(/*! ./SyntheticMouseEvent */ 45);
 var SyntheticDragEvent = __webpack_require__(/*! ./SyntheticDragEvent */ 197);
 var SyntheticTouchEvent = __webpack_require__(/*! ./SyntheticTouchEvent */ 201);
 var SyntheticTransitionEvent = __webpack_require__(/*! ./SyntheticTransitionEvent */ 202);
-var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 36);
+var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 37);
 var SyntheticWheelEvent = __webpack_require__(/*! ./SyntheticWheelEvent */ 203);
 
 var emptyFunction = __webpack_require__(/*! fbjs/lib/emptyFunction */ 12);
@@ -31404,7 +31409,7 @@ module.exports = SyntheticDragEvent;
 
 
 
-var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 36);
+var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 37);
 
 /**
  * @interface FocusEvent
@@ -31493,7 +31498,7 @@ module.exports = SyntheticInputEvent;
 
 
 
-var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 36);
+var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 37);
 
 var getEventCharCode = __webpack_require__(/*! ./getEventCharCode */ 64);
 var getEventKey = __webpack_require__(/*! ./getEventKey */ 209);
@@ -31585,7 +31590,7 @@ module.exports = SyntheticKeyboardEvent;
 
 
 
-var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 36);
+var SyntheticUIEvent = __webpack_require__(/*! ./SyntheticUIEvent */ 37);
 
 var getEventModifierState = __webpack_require__(/*! ./getEventModifierState */ 65);
 
@@ -31982,7 +31987,7 @@ var _prodInvariant = __webpack_require__(/*! ./reactProdInvariant */ 2);
 
 var ReactCurrentOwner = __webpack_require__(/*! react/lib/ReactCurrentOwner */ 14);
 var ReactDOMComponentTree = __webpack_require__(/*! ./ReactDOMComponentTree */ 4);
-var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 35);
+var ReactInstanceMap = __webpack_require__(/*! ./ReactInstanceMap */ 36);
 
 var getHostComponentFromComposite = __webpack_require__(/*! ./getHostComponentFromComposite */ 97);
 var invariant = __webpack_require__(/*! fbjs/lib/invariant */ 0);
@@ -34516,7 +34521,7 @@ exports.DictionaryLookup = DictionaryLookup;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 31);
+const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 32);
 const state_1 = __webpack_require__(/*! ../state */ 18);
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 9);
 exports.computeHasEdits = memoizers_1.memoizeBySomeProperties({
@@ -34590,7 +34595,7 @@ exports.reduceKeypresses = reduceKeypresses;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 31);
+const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 32);
 const state_1 = __webpack_require__(/*! ../state */ 18);
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 9);
 exports.computeLanguages = memoizers_1.memoizeBySomeProperties({
@@ -34632,10 +34637,11 @@ exports.computeCurLanguageDefault = memoizers_1.memoizeBySomeProperties({
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 31);
+const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 32);
 const state_1 = __webpack_require__(/*! ../state */ 18);
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 9);
 const time_1 = __webpack_require__(/*! ../utils/time */ 38);
+const study_1 = __webpack_require__(/*! ../study */ 31);
 exports.computeStudyData = memoizers_1.memoizeBySomeProperties({
     indexes: state_1.initialState.indexes,
     inputs: { curLanguage: state_1.initialState.inputs.curLanguage },
@@ -34650,11 +34656,12 @@ exports.computeStudyData = memoizers_1.memoizeBySomeProperties({
     let languageStartKey = [language];
     let studyStartKey = [language, spoken];
     let endOfCurDay = 0;
-    let iter = redux_indexers_1.Indexer.iterator(state.indexes.clozes.byLanguageSpokenAndNextDue, studyStartKey, [language, spoken, Infinity]);
-    let nextDue = iter();
+    let startOfCurDay = 0;
+    let nextDue = study_1.findNextStudyCloze(language, nowMinutes, state.indexes, spoken);
     if (nextDue) {
         let nextDueTime = nextDue.attributes.schedule.nextDueMinutes * 1000 * 60;
         endOfCurDay = time_1.minutesOfTime(time_1.endOfDay(nextDueTime));
+        startOfCurDay = time_1.minutesOfTime(time_1.startOfDay(nextDueTime));
         result.dayBucket = time_1.daysOfTime(nextDueTime);
     }
     let range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.terms.byLanguage, languageStartKey, [language, Infinity]);
@@ -34665,7 +34672,7 @@ exports.computeStudyData = memoizers_1.memoizeBySomeProperties({
     result.studied = range.endIdx - range.startIdx;
     range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken], [language, spoken, nowMinutes + 1]);
     result.due = range.endIdx - range.startIdx;
-    range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken], [language, spoken, endOfCurDay]);
+    range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken, startOfCurDay], [language, spoken, endOfCurDay]);
     result.remainingInDay = range.endIdx - range.startIdx;
     let answersIter = redux_indexers_1.Indexer.iterator(state.indexes.clozeAnswers.byLanguageAndAnswered, [language, state.startOfDayMinutes], [language, Infinity]);
     let answerTimes = [];
@@ -34737,7 +34744,7 @@ exports.reduceTick = reduceTick;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 31);
+const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 32);
 const state_1 = __webpack_require__(/*! ../state */ 18);
 const time_1 = __webpack_require__(/*! ../utils/time */ 38);
 exports.computeStartOfDay = memoizers_1.memoizeBySomeProperties({
@@ -34784,7 +34791,7 @@ exports.computeEndOfMonth = memoizers_1.memoizeBySomeProperties({
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 31);
+const memoizers_1 = __webpack_require__(/*! kamo-reducers/memoizers */ 32);
 const state_1 = __webpack_require__(/*! ../state */ 18);
 const redux_indexers_1 = __webpack_require__(/*! redux-indexers */ 9);
 exports.computeUnusedStoredFiles = memoizers_1.memoizeBySomeProperties({
@@ -35139,7 +35146,7 @@ exports.editTermContent = editTermContent;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 const React = __webpack_require__(/*! react */ 6);
-const study_1 = __webpack_require__(/*! ../study */ 37);
+const study_1 = __webpack_require__(/*! ../study */ 31);
 const simple_nav_link_1 = __webpack_require__(/*! ../components/simple-nav-link */ 72);
 const edit_note_reducer_1 = __webpack_require__(/*! ../reducers/edit-note-reducer */ 21);
 const main_menu_reducer_1 = __webpack_require__(/*! ../reducers/main-menu-reducer */ 22);
