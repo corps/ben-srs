@@ -1,7 +1,7 @@
 import {memoizeBySomeProperties} from "kamo-reducers/memoizers";
 import {initialState, newStudyData} from "../state";
 import {Indexer} from "redux-indexers";
-import {minutesOfTime} from "../utils/time";
+import {daysOfTime, endOfDay, minutesOfTime} from "../utils/time";
 
 export const computeStudyData = memoizeBySomeProperties({
   indexes: initialState.indexes,
@@ -18,6 +18,18 @@ export const computeStudyData = memoizeBySomeProperties({
   let languageStartKey = [language];
   let studyStartKey = [language, spoken];
 
+  let endOfCurDay = 0;
+
+  let iter = Indexer.iterator(state.indexes.clozes.byLanguageSpokenAndNextDue, studyStartKey,
+    [language, spoken, Infinity]);
+
+  let nextDue = iter();
+  if (nextDue) {
+    let nextDueTime = nextDue.attributes.schedule.nextDueMinutes * 1000 * 60;
+    endOfCurDay = endOfDay(nextDueTime);
+    result.dayBucket = daysOfTime(nextDueTime);
+  }
+
   let range = Indexer.getRangeFrom(state.indexes.terms.byLanguage, languageStartKey, [language, Infinity]);
   result.terms = range.endIdx - range.startIdx;
 
@@ -31,6 +43,10 @@ export const computeStudyData = memoizeBySomeProperties({
   range = Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue,
     [language, spoken], [language, spoken, nowMinutes + 1]);
   result.due = range.endIdx - range.startIdx;
+
+  range = Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue,
+    [language, spoken], [language, spoken, endOfCurDay]);
+  result.remainingInDay = range.endIdx - range.startIdx;
 
   let answersIter = Indexer.iterator(
     state.indexes.clozeAnswers.byLanguageAndAnswered,

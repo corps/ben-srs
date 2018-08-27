@@ -2521,6 +2521,8 @@ exports.newStudyData = {
     studyTimeMinutes: 0,
     terms: 0,
     clozes: 0,
+    dayBucket: 0,
+    remainingInDay: 0,
 };
 exports.initialState = {
     awaiting: {},
@@ -5876,6 +5878,10 @@ function timeOfMinutes(minutes) {
     return minutes * 60 * 1000;
 }
 exports.timeOfMinutes = timeOfMinutes;
+function daysOfTime(time) {
+    return Math.floor(time / (1000 * 60 * 60 * 24));
+}
+exports.daysOfTime = daysOfTime;
 function describeDuration(time, withoutFixes = true) {
     if (withoutFixes)
         return describeAbsDuration(time);
@@ -34643,6 +34649,14 @@ exports.computeStudyData = memoizers_1.memoizeBySomeProperties({
     const nowMinutes = time_1.minutesOfTime(state.now);
     let languageStartKey = [language];
     let studyStartKey = [language, spoken];
+    let endOfCurDay = 0;
+    let iter = redux_indexers_1.Indexer.iterator(state.indexes.clozes.byLanguageSpokenAndNextDue, studyStartKey, [language, spoken, Infinity]);
+    let nextDue = iter();
+    if (nextDue) {
+        let nextDueTime = nextDue.attributes.schedule.nextDueMinutes * 1000 * 60;
+        endOfCurDay = time_1.endOfDay(nextDueTime);
+        result.dayBucket = time_1.daysOfTime(nextDueTime);
+    }
     let range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.terms.byLanguage, languageStartKey, [language, Infinity]);
     result.terms = range.endIdx - range.startIdx;
     range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, studyStartKey, [language, spoken, Infinity]);
@@ -34651,6 +34665,8 @@ exports.computeStudyData = memoizers_1.memoizeBySomeProperties({
     result.studied = range.endIdx - range.startIdx;
     range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken], [language, spoken, nowMinutes + 1]);
     result.due = range.endIdx - range.startIdx;
+    range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken], [language, spoken, endOfCurDay]);
+    result.remainingInDay = range.endIdx - range.startIdx;
     let answersIter = redux_indexers_1.Indexer.iterator(state.indexes.clozeAnswers.byLanguageAndAnswered, [language, state.startOfDayMinutes], [language, Infinity]);
     let answerTimes = [];
     result.studyTimeMinutes = 0;

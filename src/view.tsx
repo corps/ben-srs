@@ -25,7 +25,15 @@ export function view(dispatch: (action: Action) => void) {
 
     return <div className="wf-mplus1p">
       <div className="fixed w-100 h0_3 top-0 left-0">
-        <ProgressBar tasksNum={awaitingCount}/>
+        <div className="w-100 h0_3">
+          <ProgressBar red tasksNum={awaitingCount}/>
+        </div>
+        <div className="w-100 h0_3">
+          <ProgressBar green tasksNum={state.studyData.due - state.studyData.studied}/>
+        </div>
+        <div className="w-100 h0_3">
+          <ProgressBar blue tasksNum={state.studyData.remainingInDay} tasksGroupId={state.studyData.dayBucket}/>
+        </div>
       </div>
       {
         (function () {

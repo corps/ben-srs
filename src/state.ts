@@ -18,6 +18,8 @@ export const newStudyData = {
   studyTimeMinutes: 0,
   terms: 0,
   clozes: 0,
+  dayBucket: 0,
+  remainingInDay: 0,
 };
 
 export type StudyData = typeof newStudyData;

@@ -4,6 +4,10 @@ import {classNamesGeneratorFor} from "../utils/class-names-for";
 
 export interface ProgressBarProps {
   tasksNum: number
+  tasksGroupId?: number | null
+  green?: boolean
+  red?: boolean
+  blue?: boolean
 }
 
 const initialState = {
@@ -13,7 +17,10 @@ const initialState = {
 
 const classNameGenerator = classNamesGeneratorFor<ProgressBarProps>(add => {
   add("tasksNum", <div className="o-100"/>, <div className="o-0"/>);
-}, <div className="h-100 w-100 br2 br--right bg-light-red transition"/>);
+  add("green", <div className="bg-light-green"/>);
+  add("red", <div className="bg-light-red"/>);
+  add("blue", <div className="bg-light-blue"/>);
+}, <div className="h-100 w-100 br2 br--right transition"/>);
 
 export class ProgressBar extends React.Component<ProgressBarProps, typeof initialState> {
   state = initialState;
@@ -48,12 +55,19 @@ export class ProgressBar extends React.Component<ProgressBarProps, typeof initia
   componentDidUpdate(prevProps: ProgressBarProps) {
     let prevNum = prevProps.tasksNum;
     let nextNum = this.props.tasksNum;
+    const tasksNumChanged = prevNum !== nextNum;
 
-    if (prevNum !== nextNum) {
+    let prevTasksGroupId = prevProps.tasksGroupId;
+    let tasksGroupId = this.props.tasksGroupId;
+    const taskGroupIdChanged = prevTasksGroupId !== tasksGroupId;
+
+    const resetMaxTasks = !nextNum || taskGroupIdChanged;
+
+    if (tasksNumChanged || taskGroupIdChanged) {
       this.setState((prev) => {
         return {
           progress: 0,
-          maxTasks: nextNum ? Math.max(prev.maxTasks, nextNum) : 0
+          maxTasks: resetMaxTasks ? (nextNum || 0) : Math.max(prev.maxTasks, nextNum),
         };
       });
     }

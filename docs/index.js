@@ -2521,6 +2521,8 @@ exports.newStudyData = {
     studyTimeMinutes: 0,
     terms: 0,
     clozes: 0,
+    dayBucket: 0,
+    remainingInDay: 0,
 };
 exports.initialState = {
     awaiting: {},
@@ -5876,6 +5878,10 @@ function timeOfMinutes(minutes) {
     return minutes * 60 * 1000;
 }
 exports.timeOfMinutes = timeOfMinutes;
+function daysOfTime(time) {
+    return Math.floor(time / (1000 * 60 * 60 * 24));
+}
+exports.daysOfTime = daysOfTime;
 function describeDuration(time, withoutFixes = true) {
     if (withoutFixes)
         return describeAbsDuration(time);
@@ -34643,6 +34649,14 @@ exports.computeStudyData = memoizers_1.memoizeBySomeProperties({
     const nowMinutes = time_1.minutesOfTime(state.now);
     let languageStartKey = [language];
     let studyStartKey = [language, spoken];
+    let endOfCurDay = 0;
+    let iter = redux_indexers_1.Indexer.iterator(state.indexes.clozes.byLanguageSpokenAndNextDue, studyStartKey, [language, spoken, Infinity]);
+    let nextDue = iter();
+    if (nextDue) {
+        let nextDueTime = nextDue.attributes.schedule.nextDueMinutes * 1000 * 60;
+        endOfCurDay = time_1.endOfDay(nextDueTime);
+        result.dayBucket = time_1.daysOfTime(nextDueTime);
+    }
     let range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.terms.byLanguage, languageStartKey, [language, Infinity]);
     result.terms = range.endIdx - range.startIdx;
     range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, studyStartKey, [language, spoken, Infinity]);
@@ -34651,6 +34665,8 @@ exports.computeStudyData = memoizers_1.memoizeBySomeProperties({
     result.studied = range.endIdx - range.startIdx;
     range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken], [language, spoken, nowMinutes + 1]);
     result.due = range.endIdx - range.startIdx;
+    range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken], [language, spoken, endOfCurDay]);
+    result.remainingInDay = range.endIdx - range.startIdx;
     let answersIter = redux_indexers_1.Indexer.iterator(state.indexes.clozeAnswers.byLanguageAndAnswered, [language, state.startOfDayMinutes], [language, Infinity]);
     let answerTimes = [];
     result.studyTimeMinutes = 0;
@@ -35253,7 +35269,12 @@ function view(dispatch) {
         }
         return React.createElement("div", { className: "wf-mplus1p" },
             React.createElement("div", { className: "fixed w-100 h0_3 top-0 left-0" },
-                React.createElement(progress_bar_1.ProgressBar, { tasksNum: awaitingCount })),
+                React.createElement("div", { className: "w-100 h0_3" },
+                    React.createElement(progress_bar_1.ProgressBar, { red: true, tasksNum: awaitingCount })),
+                React.createElement("div", { className: "w-100 h0_3" },
+                    React.createElement(progress_bar_1.ProgressBar, { green: true, tasksNum: state.studyData.due - state.studyData.studied })),
+                React.createElement("div", { className: "w-100 h0_3" },
+                    React.createElement(progress_bar_1.ProgressBar, { blue: true, tasksNum: state.studyData.remainingInDay, tasksGroupId: state.studyData.dayBucket }))),
             (function () {
                 if (!state.settings.session.login) {
                     if (state.authReady) {
@@ -35425,7 +35446,10 @@ const initialState = {
 };
 const classNameGenerator = class_names_for_1.classNamesGeneratorFor(add => {
     add("tasksNum", React.createElement("div", { className: "o-100" }), React.createElement("div", { className: "o-0" }));
-}, React.createElement("div", { className: "h-100 w-100 br2 br--right bg-light-red transition" }));
+    add("green", React.createElement("div", { className: "bg-light-green" }));
+    add("red", React.createElement("div", { className: "bg-light-red" }));
+    add("blue", React.createElement("div", { className: "bg-light-blue" }));
+}, React.createElement("div", { className: "h-100 w-100 br2 br--right transition" }));
 class ProgressBar extends React.Component {
     constructor() {
         super(...arguments);
@@ -35457,11 +35481,16 @@ class ProgressBar extends React.Component {
     componentDidUpdate(prevProps) {
         let prevNum = prevProps.tasksNum;
         let nextNum = this.props.tasksNum;
-        if (prevNum !== nextNum) {
+        const tasksNumChanged = prevNum !== nextNum;
+        let prevTasksGroupId = prevProps.tasksGroupId;
+        let tasksGroupId = this.props.tasksGroupId;
+        const taskGroupIdChanged = prevTasksGroupId !== tasksGroupId;
+        const resetMaxTasks = !nextNum || taskGroupIdChanged;
+        if (tasksNumChanged || taskGroupIdChanged) {
             this.setState((prev) => {
                 return {
                     progress: 0,
-                    maxTasks: nextNum ? Math.max(prev.maxTasks, nextNum) : 0
+                    maxTasks: resetMaxTasks ? (nextNum || 0) : Math.max(prev.maxTasks, nextNum),
                 };
             });
         }

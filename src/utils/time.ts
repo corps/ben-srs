@@ -45,6 +45,10 @@ export function timeOfMinutes(minutes: number) {
   return minutes * 60 * 1000;
 }
 
+export function daysOfTime(time: number) {
+  return Math.floor(time / (1000 * 60 * 60 * 24));
+}
+
 export function describeDuration(time: number, withoutFixes = true) {
   if (withoutFixes) return describeAbsDuration(time);
 
