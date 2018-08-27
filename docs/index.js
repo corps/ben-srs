@@ -34654,7 +34654,7 @@ exports.computeStudyData = memoizers_1.memoizeBySomeProperties({
     let nextDue = iter();
     if (nextDue) {
         let nextDueTime = nextDue.attributes.schedule.nextDueMinutes * 1000 * 60;
-        endOfCurDay = time_1.endOfDay(nextDueTime);
+        endOfCurDay = time_1.minutesOfTime(time_1.endOfDay(nextDueTime));
         result.dayBucket = time_1.daysOfTime(nextDueTime);
     }
     let range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.terms.byLanguage, languageStartKey, [language, Infinity]);

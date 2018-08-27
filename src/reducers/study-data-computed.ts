@@ -26,7 +26,7 @@ export const computeStudyData = memoizeBySomeProperties({
   let nextDue = iter();
   if (nextDue) {
     let nextDueTime = nextDue.attributes.schedule.nextDueMinutes * 1000 * 60;
-    endOfCurDay = endOfDay(nextDueTime);
+    endOfCurDay = minutesOfTime(endOfDay(nextDueTime));
     result.dayBucket = daysOfTime(nextDueTime);
   }
 
