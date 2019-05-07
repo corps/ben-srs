@@ -8,7 +8,7 @@ let AppCachePlugin = require("appcache-webpack-plugin");
 
 var config: any = {
   entry: {
-    index: path.join(__dirname, "src/index.tsx"),
+    index: path.join(__dirname, "src/index.js"),
   },
   output: {
     filename: "[name].js",
@@ -56,13 +56,6 @@ var config: any = {
       {
         test: /\.css$/,
         use: ["style-loader", "css-loader?importLoaders=1", "postcss-loader"],
-      },
-      {
-        test: /\.tsx?$/,
-        loader: "ts-loader",
-        options: {
-          transpileOnly: true,
-        },
       },
       {
         test: /\.mp3(\?v=\d+\.\d+\.\d+)?$/,
