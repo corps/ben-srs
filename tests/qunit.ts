@@ -292,6 +292,7 @@ export interface Assert {
 declare var QUnit: {
   assert: Assert;
   config: Config;
+  dump: {maxDepth: number};
   begin: (callback: (details: {totalTests: number}) => void) => void;
   done: (callback: (details: {failed: number, passed: number, total: number, runtime: number}) => void) => void;
   testDone: (callback: (details: {name: string, module: string, failed: number, passed: number, runtime: number, total: number}) => void) => void;
@@ -327,6 +328,8 @@ testWithFinalAsync = function () {
 
   return QUnit.test.apply(null, arguments);
 };
+
+QUnit.dump.maxDepth = 3;
 
 export const test = testWithFinalAsync;
 export const skip = QUnit.skip;

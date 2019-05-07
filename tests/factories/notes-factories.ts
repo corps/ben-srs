@@ -79,6 +79,6 @@ export class ClozeFactory {
 export class AnswerFactory {
   answer: Answer = [
     genPastTime(),
-    ["d", genNum()],
+    ["d", genNum(), genNum()],
   ];
 }

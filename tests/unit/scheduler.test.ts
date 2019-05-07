@@ -68,7 +68,7 @@ test("scheduling non new cards with various intervals and factors", () => {
   var schedule = {...newSchedule};
   schedule.isNew = false;
 
-  var minimal = minimalIntervalOf(schedule);
+  var minimal = minimalIntervalOf(false);
   var minimalRatioInterval: number;
   var factor: number;
   var intervalRatioWaited: number;

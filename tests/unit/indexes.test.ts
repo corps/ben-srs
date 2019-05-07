@@ -11,9 +11,7 @@ test("normalizedNote / findNoteTree / denormalizedNote", (assert) => {
       let termFactory = factory.addTerm();
       for (let j = Math.random() * 3; j > 0; j--) {
         let clozeFactory = termFactory.addCloze();
-        for (let k = Math.random() * 3; k > 0; k--) {
-          clozeFactory.addAnswer();
-        }
+        clozeFactory.addAnswer();
       }
     }
 

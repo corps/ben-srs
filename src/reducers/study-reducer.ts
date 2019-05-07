@@ -215,7 +215,7 @@ export function answerMiss(state: State): Answer {
 }
 
 export function answerSkip(state: State): Answer {
-  return [minutesOfTime(state.now), ["d", 60]];
+  return [minutesOfTime(state.now), ["d", 0.6, 2.0]];
 }
 
 function okAnswerFactor(timeToAnswer: number, type: ClozeType) {

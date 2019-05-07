@@ -17,6 +17,7 @@ export const allLanguages: Language[] = Object.keys(LanguageSettings) as any[];
 export const newSchedule = {
   lastAnsweredMinutes: 0,
   nextDueMinutes: 0,
+  delayIntervalMinutes: 0 as number | null,
   intervalMinutes: 0,
   isNew: true
 };
