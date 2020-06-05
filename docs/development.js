@@ -1299,7 +1299,7 @@ var Indexer = (function () {
         var newValues = [];
         var uniqueValues = uniqueIndex(this.indexKeyers[this.mainIndexName], values);
         uniqueValues.forEach(function (v) {
-            var existing = _this.getByPk(indexes, v[0]);
+            var existing = Indexer.getFirstMatching(indexes[_this.mainIndexName], v[0]);
             if (existing)
                 oldValues.push(existing);
             newValues.push(v[1]);
@@ -1341,8 +1341,20 @@ var Indexer = (function () {
             return value;
         });
     };
-    Indexer.prototype.getByPk = function (indexes, key) {
-        return Indexer.getFirstMatching(indexes[this.mainIndexName], key);
+    Indexer.getAllUniqueMatchingAnyOf = function (index, keys) {
+        var result = [];
+        var retrievedIdxs = new Int8Array(index.length);
+        for (var _i = 0, keys_1 = keys; _i < keys_1.length; _i++) {
+            var key = keys_1[_i];
+            var _a = Indexer.getRangeFrom(index, key, key.concat([Infinity])), startIdx = _a.startIdx, endIdx = _a.endIdx;
+            for (; startIdx < endIdx; ++startIdx) {
+                if (retrievedIdxs[startIdx])
+                    continue;
+                retrievedIdxs[startIdx] = 1;
+                result.push(index[startIdx][1]);
+            }
+        }
+        return result;
     };
     Indexer.getRangeFrom = function (index, startKey, endKey) {
         if (startKey === void 0) { startKey = null; }
@@ -1441,15 +1453,15 @@ var Indexer = (function () {
     return Indexer;
 }());
 exports.Indexer = Indexer;
-function uniqueIndex(keyer, values) {
-    var result = [];
+function uniqueIndex(keyer, values, index) {
+    if (index === void 0) { index = []; }
     for (var _i = 0, values_1 = values; _i < values_1.length; _i++) {
         var value = values_1[_i];
         var key = keyer(value);
-        var _a = Indexer.getRangeFrom(result, key, key.concat([null])), startIdx = _a.startIdx, endIdx = _a.endIdx;
-        result.splice(startIdx, endIdx - startIdx, [key, value]);
+        var _a = Indexer.getRangeFrom(index, key, key.concat([null])), startIdx = _a.startIdx, endIdx = _a.endIdx;
+        index.splice(startIdx, endIdx - startIdx, [key, value]);
     }
-    return result;
+    return index;
 }
 
 
@@ -7418,7 +7430,53 @@ const storage = window.navigator
     .webkitPersistentStorage;
 const requestFileSystem = window
     .webkitRequestFileSystem;
+function inMemoryFs() {
+    function makeRoot() {
+        const files = {};
+        return {
+            getFile(name, opts, cb) {
+                const file = files[name] || {
+                    createWriter(cb) {
+                        setTimeout(() => cb({
+                            onwriteend: null,
+                            onerror: null,
+                            write(blob) {
+                                file.blob = blob;
+                                setTimeout(() => this.onwriteend(), 0);
+                            },
+                        }));
+                    },
+                    remove(cb, errCb) {
+                        delete files[name];
+                        setTimeout(cb, 0);
+                    },
+                    file(cb) {
+                        setTimeout(() => {
+                            cb(new File([file.blob], name));
+                        }, 0);
+                    }
+                };
+                setTimeout(() => cb(file), 0);
+            },
+            createReader() {
+                const files = this.files;
+                return {
+                    readEntries(cb, errCb) {
+                        setTimeout(() => cb(Object.keys(files).map(name => ({ name }))));
+                    },
+                };
+            }
+        };
+    }
+    return {
+        root: makeRoot(),
+    };
+}
 function withFs(cb, spaceNeeded = 0) {
+    if (!storage || !requestFileSystem) {
+        cb(inMemoryFs());
+        return;
+    }
     storage.queryUsageAndQuota((used, remaining) => {
         let total = used + remaining;
         if (remaining < spaceNeeded) {
@@ -13974,7 +14032,7 @@ function withLogin(effect$) {
     return {
         subscribe: (dispatch) => {
             let subscription = new subject_1.Subscription();
-            hello.init({ dropbox: ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).env.DROPBOX_CLIENT_ID }, {
+            hello.init({ dropbox: ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01"}}).env.DROPBOX_CLIENT_ID }, {
                 redirect_uri: location.href,
             });
             subscription.add(effect$.subscribe((effect) => {
@@ -17452,8 +17510,8 @@ hello.utils.extend(hello.utils, {
 			};
 
 			/*  execute procedure asynchronously  */                     /*  [Promises/A+ 2.2.4, 3.1]  */
-			if (typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}) === "object" && typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).nextTick === "function")
-				({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).nextTick(func);
+			if (typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01"}}) === "object" && typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01"}}).nextTick === "function")
+				({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01"}}).nextTick(func);
 			else if (typeof setImmediate === "function")
 				setImmediate(func);
 			else
@@ -24656,7 +24714,7 @@ var warning = __webpack_require__(/*! fbjs/lib/warning */ 1);
 
 var ReactComponentTreeHook;
 
-if (typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}) !== 'undefined' && ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).env && undefined === 'test') {
+if (typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01"}}) !== 'undefined' && ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01"}}).env && undefined === 'test') {
   // Temporary hack.
   // Inline requires don't work well with Jest:
   // https://github.com/facebook/react/issues/7240
@@ -31982,7 +32040,7 @@ var warning = __webpack_require__(/*! fbjs/lib/warning */ 1);
 
 var ReactComponentTreeHook;
 
-if (typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}) !== 'undefined' && ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).env && undefined === 'test') {
+if (typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01"}}) !== 'undefined' && ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01"}}).env && undefined === 'test') {
   // Temporary hack.
   // Inline requires don't work well with Jest:
   // https://github.com/facebook/react/issues/7240
@@ -32235,7 +32293,7 @@ var warning = __webpack_require__(/*! fbjs/lib/warning */ 1);
 
 var ReactComponentTreeHook;
 
-if (typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}) !== 'undefined' && ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).env && undefined === 'test') {
+if (typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01"}}) !== 'undefined' && ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01"}}).env && undefined === 'test') {
   // Temporary hack.
   // Inline requires don't work well with Jest:
   // https://github.com/facebook/react/issues/7240
@@ -33440,7 +33498,7 @@ var warning = __webpack_require__(/*! fbjs/lib/warning */ 1);
 
 var ReactComponentTreeHook;
 
-if (typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}) !== 'undefined' && ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).env && undefined === 'test') {
+if (typeof ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01"}}) !== 'undefined' && ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01"}}).env && undefined === 'test') {
   // Temporary hack.
   // Inline requires don't work well with Jest:
   // https://github.com/facebook/react/issues/7240
@@ -33891,7 +33949,7 @@ module.exports = traverseAllChildren;
 
     function installNextTickImplementation() {
         registerImmediate = function(handle) {
-            ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01","DROPBOX_TEST_ACCESS_TOKEN":"rStw6ZI7n6sAAAAAAAAOh9hkfvduVghGfWDh8JgSZxBmojMBgPomPPnosM8wXAd4"}}).nextTick(function () { runIfPresent(handle); });
+            ({"env":{"DROPBOX_CLIENT_ID":"tlu6ta8q9mu0w01"}}).nextTick(function () { runIfPresent(handle); });
         };
     }
 
@@ -34645,7 +34703,7 @@ module.exports = v4;
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = function() {
-	return new Worker(__webpack_require__.p + "abfe49cf9ce6a3d93aed.worker.js");
+	return new Worker(__webpack_require__.p + "f277804eed2474c5a8c4.worker.js");
 };
 
 /***/ }),
@@ -34658,7 +34716,7 @@ module.exports = function() {
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = function() {
-	return new Worker(__webpack_require__.p + "a1b6ed48a30edb9cb7d5.worker.js");
+	return new Worker(__webpack_require__.p + "e6cfb876de056065fb4e.worker.js");
 };
 
 /***/ }),
@@ -35229,7 +35287,7 @@ function editContentContent(dispatch) {
             React.createElement("div", { className: "tc pt5-ns fw5 mb2" },
                 React.createElement("div", { className: "f5" },
                     React.createElement("div", { className: "ml2 w4 dib" },
-                        React.createElement(select_single_1.SelectSingle, { placeholder: "言語を選択", onChange: (lang) => dispatch(inputs_1.inputChange("editingNoteLanguage", lang)), value: state.inputs.editingNoteLanguage.value, values: model_1.allLanguages })))),
+                        React.createElement(select_single_1.SelectSingle, { placeholder: "\u8A00\u8A9E\u3092\u9078\u629E", onChange: (lang) => dispatch(inputs_1.inputChange("editingNoteLanguage", lang)), value: state.inputs.editingNoteLanguage.value, values: model_1.allLanguages })))),
             React.createElement("div", { className: "mw6 center" },
                 React.createElement("div", { className: "pa3" },
                     React.createElement(debouncing_inputs_1.DebouncingTextArea, { className: "w-100 input-reset", rows: 6, onChange: inputs_1.inputChangeDispatcher(dispatch, "editingNoteContent"), valueObject: state.inputs.editingNoteContent })),

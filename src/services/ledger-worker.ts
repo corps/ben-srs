@@ -139,8 +139,10 @@ function run() {
           if (cursor) {
             result = jd.applyDiff(result, cursor.value.diff);
             console.log("accumulating diff", cursor.value, result);
-            cursor.delete();
-            cursor.continue();
+            const req = cursor.delete();
+            req.onsuccess = () => {
+              cursor.continue();
+            }
           } else {
             console.log("putting finalized diff", result);
             req = store.put({objKey: key, diff: [[[], result]]});

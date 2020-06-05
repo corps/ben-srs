@@ -94,6 +94,7 @@ interface FileEntry {
   createWriter(cb: (fw: FileWriter) => void): void;
   remove(cb: () => void, errCb: (err: any) => void): void;
   file(cb: (file: File) => void): void;
+  blob?: Blob
 }
 
 interface DirectoryEntry {
@@ -132,7 +133,65 @@ const storage: FileApiStorage = (window.navigator as any)
 const requestFileSystem: RequestFileSystem = (window as any)
   .webkitRequestFileSystem;
 
+function inMemoryFs(): FileSystem {
+  function makeRoot(): DirectoryNode {
+    const files =  {} as {[k: string]: FileEntry};
+    return {
+      getFile(
+          name: string,
+          opts: {create?: boolean},
+          cb: (fileEntry: FileEntry) => void
+      ): void {
+        const file = files[name] || {
+          createWriter(cb: (fw: FileWriter) => void) {
+            setTimeout(() => cb({
+              onwriteend: null,
+              onerror: null,
+              write(blob: Blob) {
+                file.blob = blob;
+                setTimeout(() => this.onwriteend(), 0);
+              },
+            }));
+          },
+          remove(cb: () => void, errCb: (err: any) => void) {
+            delete files[name];
+            setTimeout(cb, 0);
+          },
+          file(cb: (file: File) => void) {
+              setTimeout(() => {
+                cb(new File([file.blob], name));
+              }, 0);
+          }
+        } as FileEntry;
+
+        setTimeout(() => cb(file), 0);
+      },
+      createReader(): DirectoryReader {
+        const files = this.files;
+
+        return {
+          readEntries(
+              cb: (results: DirectoryEntry[]) => void,
+              errCb: (err: any) => void
+          ): void {
+            setTimeout(() => cb(Object.keys(files).map(name => ({ name }))));
+          },
+        }
+      }
+    };
+  }
+
+  return {
+    root: makeRoot(),
+  }
+}
+
 export function withFs(cb: (fs: FileSystem) => void, spaceNeeded = 0): void {
+  if (!storage || !requestFileSystem) {
+    cb(inMemoryFs());
+    return;
+  }
+
   storage.queryUsageAndQuota(
     (used, remaining) => {
       let total = used + remaining;
