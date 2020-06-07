@@ -174,6 +174,7 @@ function inMemoryFs(): FileSystem {
               cb: (results: DirectoryEntry[]) => void,
               errCb: (err: any) => void
           ): void {
+            this.readEntries = (cb: any) => setTimeout(() => cb([]), 0);
             setTimeout(() => cb(Object.keys(files).map(name => ({ name }))));
           },
         }

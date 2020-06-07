@@ -84,7 +84,9 @@ export function reduceMainMenu(
 export function optimizeSelectedLanguage(state: State): ReductionWithEffect<State> {
   let effect: SideEffect | void = null;
 
-  let nextDue = Indexer.iterator(state.indexes.clozes.byLanguageSpokenAndNextDue, [state.inputs.curLanguage, state.toggles.studySpoken])();
+  let nextDue = Indexer.iterator(state.indexes.clozes.byLanguageSpokenAndNextDue,
+      [state.inputs.curLanguage, state.toggles.studySpoken],
+      [state.inputs.curLanguage, state.toggles.studySpoken, Infinity])();
 
   let minutesNow = minutesOfTime(state.now);
   let curLanguageHasDue = nextDue && nextDue.attributes.schedule.nextDueMinutes <= minutesNow;
