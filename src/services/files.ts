@@ -167,8 +167,6 @@ function inMemoryFs(): FileSystem {
         setTimeout(() => cb(file), 0);
       },
       createReader(): DirectoryReader {
-        const files = this.files;
-
         return {
           readEntries(
               cb: (results: DirectoryEntry[]) => void,

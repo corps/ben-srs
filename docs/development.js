@@ -7459,7 +7459,6 @@ function inMemoryFs() {
                 setTimeout(() => cb(file), 0);
             },
             createReader() {
-                const files = this.files;
                 return {
                     readEntries(cb, errCb) {
                         this.readEntries = (cb) => setTimeout(() => cb([]), 0);
