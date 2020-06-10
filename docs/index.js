@@ -3391,7 +3391,7 @@ function reduceMainMenu(state, action) {
 exports.reduceMainMenu = reduceMainMenu;
 function optimizeSelectedLanguage(state) {
     let effect = null;
-    let nextDue = redux_indexers_1.Indexer.iterator(state.indexes.clozes.byLanguageSpokenAndNextDue, [state.inputs.curLanguage, state.toggles.studySpoken])();
+    let nextDue = redux_indexers_1.Indexer.iterator(state.indexes.clozes.byLanguageSpokenAndNextDue, [state.inputs.curLanguage, state.toggles.studySpoken], [state.inputs.curLanguage, state.toggles.studySpoken, Infinity])();
     let minutesNow = time_1.minutesOfTime(state.now);
     let curLanguageHasDue = nextDue && nextDue.attributes.schedule.nextDueMinutes <= minutesNow;
     if (!curLanguageHasDue) {
@@ -7462,6 +7462,7 @@ function inMemoryFs() {
                 const files = this.files;
                 return {
                     readEntries(cb, errCb) {
+                        this.readEntries = (cb) => setTimeout(() => cb([]), 0);
                         setTimeout(() => cb(Object.keys(files).map(name => ({ name }))));
                     },
                 };
