@@ -7441,21 +7441,25 @@ function inMemoryFs() {
                             onwriteend: null,
                             onerror: null,
                             write(blob) {
+                                console.log("writing blob", name);
                                 file.blob = blob;
                                 setTimeout(() => this.onwriteend(), 0);
                             },
                         }));
                     },
                     remove(cb, errCb) {
+                        console.log("remove?");
                         delete files[name];
                         setTimeout(cb, 0);
                     },
                     file(cb) {
                         setTimeout(() => {
+                            console.log("file callback", name);
                             cb(new File([file.blob], name));
                         }, 0);
                     }
                 };
+                console.log("getting file", file, files);
                 setTimeout(() => cb(file), 0);
             },
             createReader() {
@@ -7500,6 +7504,7 @@ function withFs(cb, spaceNeeded = 0) {
 exports.withFs = withFs;
 function dispatchRootContents(fs, dispatch) {
     let reader = fs.root.createReader();
+    console.log("dispatch root contents");
     let results = [];
     function readEntries() {
         reader.readEntries(entries => {
@@ -7508,6 +7513,7 @@ function dispatchRootContents(fs, dispatch) {
                 readEntries();
             }
             else {
+                console.log("root contents got", results);
                 dispatch(updateFileList(results.map(e => e.name)));
             }
         }, err => {
@@ -7575,6 +7581,7 @@ function withFiles(effect$) {
                         });
                         break;
                     case "write-file":
+                        console.log("write file");
                         withFs(fs => {
                             fs.root.getFile(effect.fileName, { create: true }, entry => {
                                 entry.createWriter(writer => {
