@@ -142,7 +142,7 @@ function inMemoryFs(): FileSystem {
           opts: {create?: boolean},
           cb: (fileEntry: FileEntry) => void
       ): void {
-        const file = files[name] || {
+        const file = files[name] || (files[name] = {
           createWriter(cb: (fw: FileWriter) => void) {
             setTimeout(() => cb({
               onwriteend: null,
@@ -165,7 +165,7 @@ function inMemoryFs(): FileSystem {
                 cb(new File([file.blob], name));
               }, 0);
           }
-        } as FileEntry;
+        }) as FileEntry;
         console.log("getting file", file, files);
 
         setTimeout(() => cb(file), 0);

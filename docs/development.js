@@ -7435,7 +7435,7 @@ function inMemoryFs() {
         const files = {};
         return {
             getFile(name, opts, cb) {
-                const file = files[name] || {
+                const file = files[name] || (files[name] = {
                     createWriter(cb) {
                         setTimeout(() => cb({
                             onwriteend: null,
@@ -7458,7 +7458,7 @@ function inMemoryFs() {
                             cb(new File([file.blob], name));
                         }, 0);
                     }
-                };
+                });
                 console.log("getting file", file, files);
                 setTimeout(() => cb(file), 0);
             },
