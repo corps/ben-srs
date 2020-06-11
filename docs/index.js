@@ -35770,7 +35770,7 @@ subscription.add(dom_1.generateRootElement().subscribe((element) => {
             case "c":
                 let time = Date.now() - start.pop();
                 let action = startAction.pop();
-                console.log("render in", time, "ms");
+                // console.log("render in", time, "ms");
                 if (time > 50) {
                     console.log("slow action:", action);
                 }
