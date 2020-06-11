@@ -59,17 +59,17 @@ function run() {
       if (cursor && cursor.primaryKey === state.curSeq) {
         var startDiff = Date.now();
         var diff = jd.diff(state.curVal, value, 30);
-        console.log("putting diff", key, diff, Date.now() - startDiff);
+        // console.log("putting diff", key, diff, Date.now() - startDiff);
         req = store.put({objKey: key, diff});
       } else {
-        console.log("putting reet diff", cursor.key, cursor.primaryKey, state.curSeq, key, value);
+        // console.log("putting reet diff", cursor.key, cursor.primaryKey, state.curSeq, key, value);
         req = store.put({objKey: key, diff: [[[], value]]});
       }
 
       req.onsuccess = e => {
         state.curSeq = req.result;
         state.curVal = value;
-        console.log("newState", state);
+        // console.log("newState", state);
       };
 
       req.onerror = e => {
@@ -79,7 +79,7 @@ function run() {
 
     tx.oncomplete = () => {
       writing[key] = false;
-      console.log("completed write txn", Date.now() - startWrite);
+      // console.log("completed write txn", Date.now() - startWrite);
       let queuedValue = queuedWrite[key];
       if (key in queuedWrite) {
         delete queuedWrite[key];
