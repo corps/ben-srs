@@ -134,11 +134,14 @@ function run() {
           curVal: null,
         });
 
+        var lastCursor = Date.now();
         req.onsuccess = e => {
           let cursor = (e.target as any).result as IDBCursorWithValue;
           if (cursor) {
+            var start = Date.now();
             result = jd.applyDiff(result, cursor.value.diff);
-            console.log("accumulating diff", cursor.value, result);
+            console.log("accumulating diff", cursor.value, result, Date.now() - start, Date.now() - lastCursor);
+            lastCursor = Date.now();
             const req = cursor.delete();
             req.onsuccess = () => {
               cursor.continue();

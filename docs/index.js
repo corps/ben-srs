@@ -34703,7 +34703,7 @@ module.exports = v4;
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = function() {
-	return new Worker(__webpack_require__.p + "f277804eed2474c5a8c4.worker.js");
+	return new Worker(__webpack_require__.p + "7b5cb186747f5a5527d4.worker.js");
 };
 
 /***/ }),
