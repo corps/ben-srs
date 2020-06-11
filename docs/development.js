@@ -7472,9 +7472,10 @@ function inMemoryFs() {
         root: makeRoot(),
     };
 }
+const memoryFs = inMemoryFs();
 function withFs(cb, spaceNeeded = 0) {
     if (!storage || !requestFileSystem) {
-        cb(inMemoryFs());
+        cb(memoryFs);
         return;
     }
     storage.queryUsageAndQuota((used, remaining) => {

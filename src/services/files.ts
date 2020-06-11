@@ -185,9 +185,10 @@ function inMemoryFs(): FileSystem {
   }
 }
 
+const memoryFs = inMemoryFs();
 export function withFs(cb: (fs: FileSystem) => void, spaceNeeded = 0): void {
   if (!storage || !requestFileSystem) {
-    cb(inMemoryFs());
+    cb(memoryFs);
     return;
   }
 
