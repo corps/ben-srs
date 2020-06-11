@@ -148,25 +148,21 @@ function inMemoryFs(): FileSystem {
               onwriteend: null,
               onerror: null,
               write(blob: Blob) {
-                console.log("writing blob", name);
                 file.blob = blob;
                 setTimeout(() => this.onwriteend(), 0);
               },
             }));
           },
           remove(cb: () => void, errCb: (err: any) => void) {
-            console.log("remove?");
             delete files[name];
             setTimeout(cb, 0);
           },
           file(cb: (file: File) => void) {
               setTimeout(() => {
-                console.log("file callback", name);
                 cb(new File([file.blob], name));
               }, 0);
           }
         }) as FileEntry;
-        console.log("getting file", file, files);
 
         setTimeout(() => cb(file), 0);
       },
@@ -239,7 +235,6 @@ function dispatchRootContents(
 ) {
   let reader = fs.root.createReader();
 
-  console.log("dispatch root contents")
   let results: DirectoryEntry[] = [];
   function readEntries() {
     reader.readEntries(
@@ -248,7 +243,6 @@ function dispatchRootContents(
           results = results.concat(entries);
           readEntries();
         } else {
-          console.log("root contents got", results);
           dispatch(updateFileList(results.map(e => e.name)));
         }
       },
@@ -337,7 +331,6 @@ export function withFiles(
               break;
 
             case "write-file":
-              console.log("write file");
               withFs(fs => {
                 fs.root.getFile(effect.fileName, {create: true}, entry => {
                   entry.createWriter(writer => {
