@@ -140,7 +140,7 @@ function run() {
           if (cursor) {
             var start = Date.now();
             result = jd.applyDiff(result, cursor.value.diff);
-            console.log("accumulating diff", cursor.value, result, Date.now() - start, Date.now() - lastCursor);
+            // console.log("accumulating diff", cursor.value, result, Date.now() - start, Date.now() - lastCursor);
             lastCursor = Date.now();
             const req = cursor.delete();
             req.onsuccess = () => {
