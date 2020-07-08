@@ -4,6 +4,7 @@ import {
   IgnoredSideEffect,
   SideEffect,
 } from "kamo-reducers/reducers";
+import {getMimeFromFileName} from "./dropbox";
 
 const MIN_STORAGE_BYTES = 1024 * 1024 * 1024;
 
@@ -159,7 +160,7 @@ function inMemoryFs(): FileSystem {
           },
           file(cb: (file: File) => void) {
               setTimeout(() => {
-                cb(new File([file.blob], name));
+                cb(new File([file.blob], name, { type: getMimeFromFileName(name) || "" }));
               }, 0);
           }
         }) as FileEntry;
@@ -283,11 +284,17 @@ export function withFiles(
               withFs(fs => {
                 fs.root.getFile(effect.fileName, {}, entry => {
                   entry.file(f => {
+                    console.log('play audio file');
                     let reader = new FileReader();
                     reader.onload = e => {
                       dataUrlsOfFiles[effect.fileName] = reader.result;
+                      console.log('reader.onload');
                       setTimeout(() => playAudioFile(effect.fileName), 100);
                     };
+
+                    reader.onerror = e => {
+                      console.error('failed to read audio', e);
+                    }
 
                     reader.readAsDataURL(f);
                   });
