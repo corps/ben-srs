@@ -21,7 +21,7 @@
     "dropbox": "^2.5.4",
     "express": "^4.16.2",
     "file-loader": "^0.11.2",
-    "hellojs": "^1.15.1",
+    "hellojs": "^1.18.6",
     "history": "^4.6.3",
     "json-delta": "^1.0.1",
     "kamo-reducers": "^2.0.0",
