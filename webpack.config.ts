@@ -26,7 +26,7 @@ var config: any = {
         JSON.stringify({
           env: {
             E2E_TEST: process.env.E2E_TEST,
-            DROPBOX_CLIENT_ID: process.env.DROPBOX_CLIENT_ID,
+            DROPBOX_CLIENT_ID: "tlu6ta8q9mu0w01",
             DROPBOX_TEST_ACCESS_TOKEN:
               process.env.NODE_ENV !== "production"
                 ? process.env.DROPBOX_TEST_ACCESS_TOKEN

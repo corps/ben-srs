@@ -83,12 +83,14 @@ clozesIndexer.addIndex("byNoteIdReferenceMarkerAndClozeIdx", cloze => [
 clozesIndexer.addIndex("byLanguageSpokenAndNextDue", cloze => [
   cloze.language,
   cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
+  !cloze.attributes.schedule.delayIntervalMinutes,
   cloze.attributes.schedule.nextDueMinutes,
 ]);
 clozesIndexer.addIndex("byLanguageSpokenNewAndNextDue", cloze => [
   cloze.language,
   cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
   cloze.attributes.schedule.isNew,
+  !cloze.attributes.schedule.delayIntervalMinutes,
   cloze.attributes.schedule.nextDueMinutes,
 ]);
 

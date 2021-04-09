@@ -3391,7 +3391,7 @@ function reduceMainMenu(state, action) {
 exports.reduceMainMenu = reduceMainMenu;
 function optimizeSelectedLanguage(state) {
     let effect = null;
-    let nextDue = redux_indexers_1.Indexer.iterator(state.indexes.clozes.byLanguageSpokenAndNextDue, [state.inputs.curLanguage, state.toggles.studySpoken], [state.inputs.curLanguage, state.toggles.studySpoken, Infinity])();
+    let nextDue = redux_indexers_1.Indexer.iterator(state.indexes.clozes.byLanguageSpokenAndNextDue, [state.inputs.curLanguage, state.toggles.studySpoken, false], [state.inputs.curLanguage, state.toggles.studySpoken, true, Infinity])();
     let minutesNow = time_1.minutesOfTime(state.now);
     let curLanguageHasDue = nextDue && nextDue.attributes.schedule.nextDueMinutes <= minutesNow;
     if (!curLanguageHasDue) {
@@ -4215,12 +4215,14 @@ exports.clozesIndexer.addIndex("byNoteIdReferenceMarkerAndClozeIdx", cloze => [
 exports.clozesIndexer.addIndex("byLanguageSpokenAndNextDue", cloze => [
     cloze.language,
     cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
+    !cloze.attributes.schedule.delayIntervalMinutes,
     cloze.attributes.schedule.nextDueMinutes,
 ]);
 exports.clozesIndexer.addIndex("byLanguageSpokenNewAndNextDue", cloze => [
     cloze.language,
     cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
     cloze.attributes.schedule.isNew,
+    !cloze.attributes.schedule.delayIntervalMinutes,
     cloze.attributes.schedule.nextDueMinutes,
 ]);
 exports.clozesIndexer.addIndex("byNextDue", cloze => [
@@ -4798,13 +4800,13 @@ function findNextStudyDetails(language, fromMinutes, indexes, spoken) {
 }
 exports.findNextStudyDetails = findNextStudyDetails;
 function findNextStudyCloze(language, fromMinutes, indexes, spoken) {
-    let nextCloze = redux_indexers_1.Indexer.reverseIter(indexes.clozes.byLanguageSpokenNewAndNextDue, [language, spoken, true, fromMinutes], [language, spoken, true, null])();
+    let nextCloze = redux_indexers_1.Indexer.reverseIter(indexes.clozes.byLanguageSpokenNewAndNextDue, [language, spoken, true, true, fromMinutes], [language, spoken, true, true, null])();
     nextCloze =
         nextCloze ||
-            redux_indexers_1.Indexer.reverseIter(indexes.clozes.byLanguageSpokenNewAndNextDue, [language, spoken, false, fromMinutes], [language, spoken, false, null])();
+            redux_indexers_1.Indexer.reverseIter(indexes.clozes.byLanguageSpokenNewAndNextDue, [language, spoken, false, true, fromMinutes], [language, spoken, false, true, null])();
     nextCloze =
         nextCloze ||
-            redux_indexers_1.Indexer.iterator(indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken, fromMinutes], [language, spoken, Infinity])();
+            redux_indexers_1.Indexer.iterator(indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken, false, fromMinutes], [language, spoken, Infinity, Infinity])();
     return nextCloze;
 }
 exports.findNextStudyCloze = findNextStudyCloze;
@@ -34723,7 +34725,7 @@ module.exports = function() {
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = function() {
-	return new Worker(__webpack_require__.p + "e6cfb876de056065fb4e.worker.js");
+	return new Worker(__webpack_require__.p + "a378766312fd29fd841a.worker.js");
 };
 
 /***/ }),
@@ -34934,7 +34936,7 @@ exports.computeStudyData = memoizers_1.memoizeBySomeProperties({
     const spoken = state.toggles.studySpoken;
     const nowMinutes = time_1.minutesOfTime(state.now);
     let languageStartKey = [language];
-    let studyStartKey = [language, spoken];
+    let studyStartKey = [language, spoken, false];
     let endOfCurDay = 0;
     let startOfCurDay = 0;
     let nextDue = study_1.findNextStudyCloze(language, nowMinutes, state.indexes, spoken);
@@ -34946,13 +34948,13 @@ exports.computeStudyData = memoizers_1.memoizeBySomeProperties({
     }
     let range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.terms.byLanguage, languageStartKey, [language, Infinity]);
     result.terms = range.endIdx - range.startIdx;
-    range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, studyStartKey, [language, spoken, Infinity]);
+    range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, studyStartKey, [language, spoken, true, Infinity]);
     result.clozes = range.endIdx - range.startIdx;
     range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozeAnswers.byLanguageAndAnswered, [language, state.startOfDayMinutes], [language, Infinity]);
     result.studied = range.endIdx - range.startIdx;
-    range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken], [language, spoken, nowMinutes + 1]);
+    range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken, true], [language, spoken, true, nowMinutes + 1]);
     result.due = range.endIdx - range.startIdx;
-    range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken, startOfCurDay], [language, spoken, endOfCurDay]);
+    range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken, true, startOfCurDay], [language, spoken, true, endOfCurDay]);
     result.remainingInDay = range.endIdx - range.startIdx;
     let answersIter = redux_indexers_1.Indexer.iterator(state.indexes.clozeAnswers.byLanguageAndAnswered, [language, state.startOfDayMinutes], [language, Infinity]);
     let answerTimes = [];

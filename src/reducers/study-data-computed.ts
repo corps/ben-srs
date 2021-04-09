@@ -17,7 +17,7 @@ export const computeStudyData = memoizeBySomeProperties({
   const nowMinutes = minutesOfTime(state.now);
 
   let languageStartKey = [language];
-  let studyStartKey = [language, spoken];
+  let studyStartKey = [language, spoken, false];
 
   let endOfCurDay = 0;
   let startOfCurDay = 0;
@@ -33,7 +33,7 @@ export const computeStudyData = memoizeBySomeProperties({
   let range = Indexer.getRangeFrom(state.indexes.terms.byLanguage, languageStartKey, [language, Infinity]);
   result.terms = range.endIdx - range.startIdx;
 
-  range = Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, studyStartKey, [language, spoken, Infinity]);
+  range = Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, studyStartKey, [language, spoken, true, Infinity]);
   result.clozes = range.endIdx - range.startIdx;
 
   range = Indexer.getRangeFrom(state.indexes.clozeAnswers.byLanguageAndAnswered,
@@ -41,11 +41,11 @@ export const computeStudyData = memoizeBySomeProperties({
   result.studied = range.endIdx - range.startIdx;
 
   range = Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue,
-    [language, spoken], [language, spoken, nowMinutes + 1]);
+    [language, spoken, true], [language, spoken, true, nowMinutes + 1]);
   result.due = range.endIdx - range.startIdx;
 
   range = Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue,
-    [language, spoken, startOfCurDay], [language, spoken, endOfCurDay]);
+    [language, spoken, true, startOfCurDay], [language, spoken, true, endOfCurDay]);
   result.remainingInDay = range.endIdx - range.startIdx;
 
   let answersIter = Indexer.iterator(

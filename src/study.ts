@@ -113,22 +113,22 @@ export function findNextStudyCloze(language: Language,
                                    spoken: boolean) {
   let nextCloze = Indexer.reverseIter(
     indexes.clozes.byLanguageSpokenNewAndNextDue,
-    [language, spoken, true, fromMinutes],
-    [language, spoken, true, null]
+    [language, spoken, true, true, fromMinutes],
+    [language, spoken, true, true, null]
   )();
   nextCloze =
     nextCloze ||
     Indexer.reverseIter(
       indexes.clozes.byLanguageSpokenNewAndNextDue,
-      [language, spoken, false, fromMinutes],
-      [language, spoken, false, null]
+      [language, spoken, false, true, fromMinutes],
+      [language, spoken, false, true, null]
     )();
   nextCloze =
     nextCloze ||
     Indexer.iterator(
       indexes.clozes.byLanguageSpokenAndNextDue,
-      [language, spoken, fromMinutes],
-      [language, spoken, Infinity]
+      [language, spoken, false, fromMinutes],
+      [language, spoken, Infinity, Infinity]
     )();
 
   return nextCloze;
