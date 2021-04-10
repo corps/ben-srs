@@ -1,4 +1,4 @@
-let allInputs = ["url", "start", "end", "language", "content"].map(id =>
+let allInputs = ["url", "start", "end", "language", "content", "accessToken"].map(id =>
   document.getElementById(id)
 );
 allInputs.forEach(element => {
