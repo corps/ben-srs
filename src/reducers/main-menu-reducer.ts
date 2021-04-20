@@ -92,7 +92,7 @@ export function optimizeSelectedLanguage(state: State): ReductionWithEffect<Stat
   let curLanguageHasDue = nextDue && nextDue.attributes.schedule.nextDueMinutes <= minutesNow;
 
   if (!curLanguageHasDue) {
-    nextDue = Indexer.reverseIter(state.indexes.clozes.byNextDue, [minutesNow], [null])();
+    nextDue = Indexer.reverseIter(state.indexes.clozes.byNextDue, [true, minutesNow], [true, null])();
     nextDue = nextDue || Indexer.iterator(state.indexes.clozes.byNextDue)();
     
     if (nextDue) {

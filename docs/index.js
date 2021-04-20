@@ -3395,7 +3395,7 @@ function optimizeSelectedLanguage(state) {
     let minutesNow = time_1.minutesOfTime(state.now);
     let curLanguageHasDue = nextDue && nextDue.attributes.schedule.nextDueMinutes <= minutesNow;
     if (!curLanguageHasDue) {
-        nextDue = redux_indexers_1.Indexer.reverseIter(state.indexes.clozes.byNextDue, [minutesNow], [null])();
+        nextDue = redux_indexers_1.Indexer.reverseIter(state.indexes.clozes.byNextDue, [true, minutesNow], [true, null])();
         nextDue = nextDue || redux_indexers_1.Indexer.iterator(state.indexes.clozes.byNextDue)();
         if (nextDue) {
             let language = nextDue.language;
@@ -4226,6 +4226,7 @@ exports.clozesIndexer.addIndex("byLanguageSpokenNewAndNextDue", cloze => [
     cloze.attributes.schedule.nextDueMinutes,
 ]);
 exports.clozesIndexer.addIndex("byNextDue", cloze => [
+    !cloze.attributes.schedule.delayIntervalMinutes,
     cloze.attributes.schedule.nextDueMinutes,
 ]);
 exports.clozeAnswersIndexer = new redux_indexers_1.Indexer("byNoteIdReferenceMarkerClozeIdxAndAnswerIdx");
@@ -34725,7 +34726,7 @@ module.exports = function() {
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = function() {
-	return new Worker(__webpack_require__.p + "a378766312fd29fd841a.worker.js");
+	return new Worker(__webpack_require__.p + "64a73eb05ff2e08427bd.worker.js");
 };
 
 /***/ }),

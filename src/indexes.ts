@@ -95,6 +95,7 @@ clozesIndexer.addIndex("byLanguageSpokenNewAndNextDue", cloze => [
 ]);
 
 clozesIndexer.addIndex("byNextDue", cloze => [
+  !cloze.attributes.schedule.delayIntervalMinutes,
   cloze.attributes.schedule.nextDueMinutes,
 ]);
 
