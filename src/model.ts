@@ -128,7 +128,7 @@ export const newClozeAnswer = {
   clozeIdx: -1,
   language: "" as Language,
   answerIdx: -1,
-  answer: [0, ["d", 0]] as Answer
+  answer: [0, ["d", 0, 0]] as Answer
 };
 
 export type ClozeAnswer = typeof newClozeAnswer;

@@ -1994,7 +1994,7 @@ exports.newClozeAnswer = {
     clozeIdx: -1,
     language: "",
     answerIdx: -1,
-    answer: [0, ["d", 0]]
+    answer: [0, ["d", 0, 0]]
 };
 exports.newNormalizeCloze = Object.assign({}, exports.newCloze, { attributes: Object.assign({}, exports.newCloze.attributes, { answers: [] }), noteId: undefined, reference: undefined, marker: undefined, clozeIdx: undefined, language: undefined });
 exports.newSession = {
@@ -2540,6 +2540,7 @@ const model_1 = __webpack_require__(/*! ./model */ 15);
 exports.newStudyData = {
     studied: 0,
     due: 0,
+    new: 0,
     studyTimeMinutes: 0,
     terms: 0,
     clozes: 0,
@@ -34955,6 +34956,8 @@ exports.computeStudyData = memoizers_1.memoizeBySomeProperties({
     result.studied = range.endIdx - range.startIdx;
     range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken, true], [language, spoken, true, nowMinutes + 1]);
     result.due = range.endIdx - range.startIdx;
+    range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken, true], [language, spoken, true, 1]);
+    result.new = range.endIdx - range.startIdx;
     range = redux_indexers_1.Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue, [language, spoken, true, startOfCurDay], [language, spoken, true, endOfCurDay]);
     result.remainingInDay = range.endIdx - range.startIdx;
     let answersIter = redux_indexers_1.Indexer.iterator(state.indexes.clozeAnswers.byLanguageAndAnswered, [language, state.startOfDayMinutes], [language, Infinity]);

@@ -53,7 +53,7 @@ export function mainMenuContent(dispatch: (action: Action) => void) {
         </div>
 
         <div className="tc f4 fw2 mb1">
-          予定: {state.studyData.due}
+          予定: {state.studyData.due} {state.studyData.new ? "(" + state.studyData.new + ")" : ""}
         </div>
 
         <div className="tc f4 fw2 mb1">

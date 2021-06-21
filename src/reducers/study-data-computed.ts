@@ -45,6 +45,10 @@ export const computeStudyData = memoizeBySomeProperties({
   result.due = range.endIdx - range.startIdx;
 
   range = Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue,
+    [language, spoken, true], [language, spoken, true, 1]);
+  result.new = range.endIdx - range.startIdx;
+
+  range = Indexer.getRangeFrom(state.indexes.clozes.byLanguageSpokenAndNextDue,
     [language, spoken, true, startOfCurDay], [language, spoken, true, endOfCurDay]);
   result.remainingInDay = range.endIdx - range.startIdx;
 

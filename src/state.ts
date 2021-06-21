@@ -15,6 +15,7 @@ import {DropboxListFolderResponse} from "./services/dropbox";
 export const newStudyData = {
   studied: 0,
   due: 0,
+  new: 0,
   studyTimeMinutes: 0,
   terms: 0,
   clozes: 0,

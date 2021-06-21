@@ -12,6 +12,7 @@ import {toggle} from "kamo-reducers/reducers/toggle";
 export function studyContent(dispatch: (action: Action) => void) {
   return (state: State) => {
     let dueTime = timeOfMinutes(state.studyDetails.cloze.attributes.schedule.nextDueMinutes);
+    let intervalTime = timeOfMinutes(state.studyDetails.cloze.attributes.schedule.intervalMinutes);
 
     return <FlexContainer vertical className="vh-100 overflow-x-hidden overflow-y-hidden">
       <Row fixedRow className="h3 w-100">
@@ -34,7 +35,8 @@ export function studyContent(dispatch: (action: Action) => void) {
             </div>
 
             <div>
-              期日: {describeDuration(state.now - dueTime, false)}
+              期日: {describeDuration(state.now - dueTime, false)} <br/>
+              期間: {describeDuration(intervalTime)}
             </div>
           </VCentered>
         </VCenteringContainer>
