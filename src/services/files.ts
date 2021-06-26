@@ -131,8 +131,7 @@ type RequestFileSystem = (
 const storage: FileApiStorage = (window.navigator as any)
   .webkitPersistentStorage;
 
-const requestFileSystem: RequestFileSystem = (window as any)
-  .webkitRequestFileSystem;
+const requestFileSystem: RequestFileSystem = (window as any).webkitRequestFileSystem || (window as any).requestFileSystem;
 
 function inMemoryFs(): FileSystem {
   function makeRoot(): DirectoryNode {
@@ -188,8 +187,13 @@ function inMemoryFs(): FileSystem {
 
 const memoryFs = inMemoryFs();
 export function withFs(cb: (fs: FileSystem) => void, spaceNeeded = 0): void {
-  if (!storage || !requestFileSystem) {
+  if (!requestFileSystem) {
     cb(memoryFs);
+    return;
+  }
+
+  if (!storage) {
+    requestFileSystem(1, MIN_STORAGE_BYTES, cb)
     return;
   }
 

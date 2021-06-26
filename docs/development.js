@@ -7433,8 +7433,7 @@ function deleteFiles(fileNames) {
 exports.deleteFiles = deleteFiles;
 const storage = window.navigator
     .webkitPersistentStorage;
-const requestFileSystem = window
-    .webkitRequestFileSystem;
+const requestFileSystem = window.webkitRequestFileSystem || window.requestFileSystem;
 function inMemoryFs() {
     function makeRoot() {
         const files = {};
@@ -7479,8 +7478,12 @@ function inMemoryFs() {
 }
 const memoryFs = inMemoryFs();
 function withFs(cb, spaceNeeded = 0) {
-    if (!storage || !requestFileSystem) {
+    if (!requestFileSystem) {
         cb(memoryFs);
+        return;
+    }
+    if (!storage) {
+        requestFileSystem(1, MIN_STORAGE_BYTES, cb);
         return;
     }
     storage.queryUsageAndQuota((used, remaining) => {
