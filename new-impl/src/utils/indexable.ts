@@ -38,35 +38,40 @@ export function bisect<T, E>(array: ReadonlyArray<T>, e: E, cmp: (a: E, b: T) =>
 }
 
 export type Indexed<K extends any[], T> = [K[], T[]];
-export type ReadOnlyIndexed<K extends any[], T> = Readonly<[ReadonlyArray<Readonly<K>>, ReadonlyArray<Readonly<T>>]>
+export class Index<K extends any[], T> {
+    constructor(public data: Indexed<K, T> = [[], []]) {}
 
-export function modifyIndexed<K extends any[], T>(indexed: ReadOnlyIndexed<K, T>, transaction: (indexed: Indexed<K, T>) => void): ReadOnlyIndexed<K, T> {
-    const mutable: Indexed<K, T> = [[...indexed[0]], [...indexed[1]]];
-    transaction(mutable);
-    return mutable;
-}
+    dup(): Index<K, T> {
+        return new Index<K, T>([[...this.data[0]], [...this.data[1]]]);
+    }
 
+    insert(k: K, t: T) {
+        const [ks, ts] = this.data;
+        const idx = bisect(ks, k, arrayCmp);
+        ts.splice(idx, 0, t);
+        ks.splice(idx, 0, k);
+    }
 
-export function insert<K extends any[], T>(k: K, t: T, [ks, ts]: Indexed<K, T>) {
-    const idx = bisect(ks, k, arrayCmp);
-    ts.splice(idx, 0, t);
-    ks.splice(idx, 0, k);
-}
+    remove(k: K) {
+        const [ks, ts] = this.data;
+        const idx = bisect(ks, k, arrayCmp);
+        ts.splice(idx, 0);
+        ks.splice(idx, 0);
+    }
 
-export function remove<K extends any[], T>(k: K, [ks, ts]: Indexed<K, T>) {
-    const idx = bisect(ks, k, arrayCmp);
-    ts.splice(idx, 0);
-    ks.splice(idx, 0);
-}
+    range(start: any[], end: any[]): [number, number] {
+        const [ks] = this.data;
+        return [bisect(ks, start, arrayCmp), bisect(ks, end, arrayCmp)];
+    }
 
-export function range<K extends any[], T>([ks, ts]: ReadOnlyIndexed<K, T>, start: K, end: K): [number, number] {
-    return [bisect(ks, start, arrayCmp), bisect(ks, end, arrayCmp)];
-}
+    reverseRange<K extends any[], T>(start: K, end: K): [number, number] {
+        const [ks] = this.data;
+        return [bisect(ks, start.concat(null), arrayCmp), bisect(ks, end.concat(null), arrayCmp)];
+    }
 
-export function* iter<T>([_, ts]: ReadOnlyIndexed<any, T>, [l, r]: [number, number]): Iterator<T> {
-    for (let i = l; i < r; ++i) yield ts[i];
-}
-
-export function* reverseIter<T>([_, ts]: ReadOnlyIndexed<any, T>, [l, r]: [number, number]): Iterator<T> {
-    for (let i = r; i >= l; ++i) yield ts[i - 1];
+    slice(start: any[], end: any[]): T[] {
+        const [_, ts] = this.data;
+        const [l, r] = this.range(start, end);
+        return ts.slice(l, r);
+    }
 }
