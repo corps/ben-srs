@@ -6,7 +6,7 @@ import {visitMainMenu} from "../reducers/main-menu-reducer";
 import {DebouncingTextInput} from "../components/debouncing-inputs";
 import {inputChange, inputChangeDispatcher} from "kamo-reducers/reducers/inputs";
 import {SelectSingle} from "../components/select-single";
-import {Note} from "../model";
+import {Note} from "../storage";
 import {StudyDetails} from "../study";
 import {pageSearch, selectSearchResult} from "../reducers/search-reducer";
 

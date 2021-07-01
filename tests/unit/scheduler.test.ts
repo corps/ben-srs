@@ -1,6 +1,6 @@
 import {assert, test, testModule} from "../qunit";
 import {configuredScheduler, DAY, minimalIntervalOf, MINUTE} from "../../src/scheduler";
-import {newSchedule, Schedule} from "../../src/model";
+import {newSchedule, Schedule} from "../../src/storage";
 
 testModule("unit/scheduler");
 

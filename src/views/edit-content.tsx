@@ -6,7 +6,7 @@ import {
   inputChange,
   inputChangeDispatcher,
 } from "kamo-reducers/reducers/inputs";
-import {allLanguages} from "../model";
+import {allLanguages} from "../storage";
 import {DebouncingTextArea} from "../components/debouncing-inputs";
 import {
   applyNoteEdits,

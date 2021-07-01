@@ -5,10 +5,10 @@ import {
   SideEffect,
 } from "kamo-reducers/reducers";
 import uuid = require("uuid");
-import {newNormalizedNote} from "../model";
+import {newNormalizedNote} from "../storage";
 import {sequenceReduction, sequence} from "kamo-reducers/services/sequence";
 import {startSync} from "./sync-reducer";
-import {Language} from "../model";
+import {Language} from "../storage";
 import {requestTermSpeech} from "../services/note-speech";
 import {optimizeSelectedLanguage} from "./main-menu-reducer";
 

@@ -1,7 +1,7 @@
 import {
   newNormalizeCloze, newNormalizedNote, newNormalizedTerm, newSchedule,
   NormalizedCloze, NormalizedNote, NormalizedTerm
-} from "../../src/model";
+} from "../../src/storage";
 import {genId, genNum, genPastTime, genSomeText} from "./general-factories";
 import {Answer} from "../../src/scheduler";
 import {fullTermMarker} from "../../src/study";

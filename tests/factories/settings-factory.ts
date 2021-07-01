@@ -1,7 +1,7 @@
 import {
   ByLangPronunciationOverrides, Language, NormalizedNote, PronunciationOverrides,
   Session, Settings,
-} from "../../src/model";
+} from "../../src/storage";
 import {genFutureTime, genId, genSomeText, pick} from "./general-factories";
 import {LocalStore} from "../../src/reducers/session-reducer";
 import {NoteFactory} from "./notes-factories";

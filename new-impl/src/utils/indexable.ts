@@ -1,4 +1,5 @@
 import 'regenerator-runtime';
+import {Maybe, some} from "./maybe";
 
 export function arrayCmp(a: ReadonlyArray<any>, b: ReadonlyArray<any>): number {
     for (let i = 0; i < a.length && i < b.length; ++i) {
@@ -55,8 +56,26 @@ export class Index<K extends any[], T> {
     remove(k: K) {
         const [ks, ts] = this.data;
         const idx = bisect(ks, k, arrayCmp);
-        ts.splice(idx, 0);
-        ks.splice(idx, 0);
+        if (arrayCmp(ks[idx], k) !== 0) return;
+        ts.splice(idx, 1);
+        ks.splice(idx, 1);
+    }
+
+    find(k: K): Maybe<T> {
+        const [ks, ts] = this.data;
+        const idx = bisect(ks, k, arrayCmp);
+        if (arrayCmp(ks[idx], k) === 0) return some(ts[idx]);
+        return null;
+    }
+
+    get length() {
+        return this.data[0].length;
+    }
+
+    removeRange([l, r]: [number, number]) {
+        const [ks, ts] = this.data;
+        ts.splice(l, r - l);
+        ks.splice(l, r - l);
     }
 
     range(start: any[], end: any[]): [number, number] {
@@ -64,14 +83,13 @@ export class Index<K extends any[], T> {
         return [bisect(ks, start, arrayCmp), bisect(ks, end, arrayCmp)];
     }
 
-    reverseRange<K extends any[], T>(start: K, end: K): [number, number] {
+    rightRange<K extends any[], T>(start: K, end: K): [number, number] {
         const [ks] = this.data;
         return [bisect(ks, start.concat(null), arrayCmp), bisect(ks, end.concat(null), arrayCmp)];
     }
 
-    slice(start: any[], end: any[]): T[] {
+    slice([l, r]: [number, number]): T[] {
         const [_, ts] = this.data;
-        const [l, r] = this.range(start, end);
         return ts.slice(l, r);
     }
 }

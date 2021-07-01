@@ -5,7 +5,7 @@ import {
   newNormalizedTerm,
   NormalizedNote,
   NormalizedTerm,
-} from "./model";
+} from "./storage";
 import {Indexer} from "redux-indexers";
 import {State} from "./state";
 import {findNoteTree, normalizedNote} from "./indexes";

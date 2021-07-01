@@ -34,7 +34,7 @@ import {authInitialized} from "../../src/services/login";
 import {SideEffect} from "kamo-reducers/reducers";
 import {sequence} from "kamo-reducers/services/sequence";
 import {NoteFactory} from "../factories/notes-factories";
-import {NormalizedNote, Note, Session, stringifyNote} from "../../src/model";
+import {NormalizedNote, Note, Session, stringifyNote} from "../../src/storage";
 import {genId, genSomeText} from "../factories/general-factories";
 import {
   genDeleteEntry,
@@ -51,7 +51,7 @@ import {
 import {requestFileDownload} from "../../src/reducers/sync-reducer";
 import {requestListFolder} from "../../src/reducers/sync-reducer";
 import {requestFileUpload} from "../../src/reducers/sync-reducer";
-import {newNormalizedNote} from "../../src/model";
+import {newNormalizedNote} from "../../src/storage";
 import {NoteTree} from "../../src/indexes";
 
 let tester: BensrsTester;

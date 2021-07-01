@@ -12,7 +12,7 @@ import {
 } from "kamo-reducers/reducers";
 import {UpdateFileList, writeFile} from "../services/files";
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
-import {StoredFile} from "../model";
+import {StoredFile} from "../storage";
 import {clearOtherSyncProcesses} from "./sync-reducer";
 import {
   fileDownloadAjaxConfig,

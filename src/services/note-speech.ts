@@ -1,5 +1,5 @@
 import {SideEffect} from "kamo-reducers/reducers";
-import {Language} from "../model";
+import {Language} from "../storage";
 import {requestSpeech} from "./speech";
 import {playAudioFile} from "./files";
 import {State} from "../state";

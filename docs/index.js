@@ -1938,8 +1938,8 @@ exports.newSchedule = {
     intervalMinutes: 0,
     isNew: true
 };
-exports.newPronunciationOverrides = {};
-exports.newByLangPronunciationOverrides = {};
+exports.defaultPronunciationOverrides = {};
+exports.defaultByLangPronunciationOverrides = {};
 exports.newStoredFile = {
     id: "",
     revision: "",

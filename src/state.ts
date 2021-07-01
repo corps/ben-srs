@@ -6,7 +6,7 @@ import {
   newNote,
   newSettings,
   NormalizedNote, Note,
-} from "./model";
+} from "./storage";
 import {SideEffect} from "kamo-reducers/reducers";
 import {SpeechVoice} from "./services/speech";
 import {StudyDetails} from "./study";

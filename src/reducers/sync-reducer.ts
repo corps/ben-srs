@@ -27,7 +27,7 @@ import {
   stringifyNote,
   NormalizedNote,
   newNormalizedNote,
-} from "../model";
+} from "../storage";
 import {requestLocalStoreUpdate} from "./session-reducer";
 import {getDropboxResult, getMimeFromFileName} from "../services/dropbox";
 import {DropboxListFolderResponse} from "../services/dropbox";

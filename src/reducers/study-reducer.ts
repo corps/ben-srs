@@ -21,7 +21,7 @@ import {
 } from "../indexes";
 import {requestLocalStoreUpdate} from "./session-reducer";
 import {startSync} from "./sync-reducer";
-import {ClozeType} from "../model";
+import {ClozeType} from "../storage";
 
 export interface ReadCard {
   type: "read-card";

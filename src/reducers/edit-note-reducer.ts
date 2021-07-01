@@ -10,7 +10,7 @@ import {
   NormalizedCloze,
   NormalizedTerm,
   Note,
-} from "../model";
+} from "../storage";
 import {
   addNewTerm,
   findNextEditableNote,

@@ -5,7 +5,7 @@ import {
   SideEffect,
 } from "kamo-reducers/reducers";
 import {sequence, sequenceReduction} from "kamo-reducers/services/sequence";
-import {newSettings, NormalizedNote} from "../model";
+import {newSettings, NormalizedNote} from "../storage";
 import {
   LoadLocalData,
   requestLocalData,

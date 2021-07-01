@@ -8,7 +8,7 @@ import {
   Note,
   Term,
   StoredFile,
-} from "./model";
+} from "./storage";
 
 export type NotesStore = {
   byPath: Index<Note>;

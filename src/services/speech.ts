@@ -1,6 +1,6 @@
 import {Subject, Subscriber, Subscription} from "kamo-reducers/subject";
 import {GlobalAction, IgnoredSideEffect, SideEffect} from "kamo-reducers/reducers";
-import {Language, LanguageSettings} from "../model";
+import {Language, LanguageSettings} from "../storage";
 
 export interface SpeechVoice {
   readonly default: boolean;

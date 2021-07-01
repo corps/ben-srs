@@ -1,4 +1,4 @@
-import {Language, newNormalizedNote, stringifyNote} from "../model";
+import {Language, newNormalizedNote, stringifyNote} from "../storage";
 import {
   fileUploadAjaxConfig,
   getDropboxResult,

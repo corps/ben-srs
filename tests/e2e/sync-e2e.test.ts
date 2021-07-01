@@ -11,7 +11,7 @@ import {
 import {Subscription} from "kamo-reducers/subject";
 import {BensrsTester} from "../tester";
 import {NoteFactory} from "../factories/notes-factories";
-import {newSettings, Term, Note} from "../../src/model";
+import {newSettings, Term, Note} from "../../src/storage";
 import {
   settingsStoreKey,
   newLocalStore,

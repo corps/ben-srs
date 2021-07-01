@@ -191,20 +191,3 @@ export function getDropboxResult(
 
   return result;
 }
-
-export function getMimeFromFileName(name: string): string | void {
-  let parts = name.split(".");
-  if (parts.length > 0) {
-    let ext = parts[parts.length - 1];
-    return contentTypes[ext.toLowerCase()];
-  }
-
-  return null;
-}
-
-export const contentTypes: {[k: string]: string} = {
-  "mp3": "audio/mpeg",
-  "ogg": "audio/ogg",
-  "wav": "audio/wav",
-  "opus": "audio/opus",
-};

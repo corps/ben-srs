@@ -11,7 +11,7 @@ import {WorkComplete} from "kamo-reducers/services/workers";
 import {loadIndexesWorkerName} from "./session-reducer";
 import {sequenceReduction} from "kamo-reducers/services/sequence";
 import {startEditingNote, startEditingTerm} from "./edit-note-reducer";
-import {Note} from "../model";
+import {Note} from "../storage";
 import {VisitSearch} from "./main-menu-reducer";
 
 export interface SelectSearchResult {

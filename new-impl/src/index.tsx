@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDom from 'react-dom';
-import {App} from "./app";
+import {App} from "./components/App";
 
 window.onload = () => {
   ReactDom.render(<App/>, document.body);

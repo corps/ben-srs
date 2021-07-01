@@ -1,5 +1,5 @@
 import * as React from "react";
-import {Language} from "../model";
+import {Language} from "../storage";
 
 export interface DictionaryLookupProps {
   language: Language,

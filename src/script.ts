@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { parseNote } from "./model";
+import { parseNote } from "./storage";
 
 let dir = path.join(process.env.HOME, "Dropbox", "アプリ", "Ben Srs Dev");
 let files = fs.readdirSync(dir);

@@ -1,5 +1,5 @@
 import {test, testModule} from "../qunit";
-import {newTerm} from "../../src/model";
+import {newTerm} from "../../src/storage";
 import {
   findContentRange,
   findNextUniqueMarker,
@@ -16,7 +16,7 @@ import {
 } from "../../src/indexes";
 import {genSomeText} from "../factories/general-factories";
 import {Indexer} from "redux-indexers";
-import {Term} from "../../src/model";
+import {Term} from "../../src/storage";
 
 testModule("unit/study");
 

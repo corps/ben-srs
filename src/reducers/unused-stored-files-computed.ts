@@ -1,7 +1,7 @@
 import {memoizeBySomeProperties} from "kamo-reducers/memoizers";
 import {initialState} from "../state";
 import {Indexer} from "redux-indexers";
-import {StoredFile} from "../model";
+import {StoredFile} from "../storage";
 
 export const computeUnusedStoredFiles = memoizeBySomeProperties(
   {

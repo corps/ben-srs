@@ -1,6 +1,6 @@
 import {memoizeBySomeProperties} from "kamo-reducers/memoizers";
 import {initialState} from "../state";
-import {Language, Note} from "../model";
+import {Language, Note} from "../storage";
 import {Indexer} from "redux-indexers";
 
 export const computeLanguages = memoizeBySomeProperties(
