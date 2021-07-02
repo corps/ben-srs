@@ -1,7 +1,11 @@
-import {Dropbox, DropboxAuth, files} from "dropbox";
+import {Dropbox, DropboxAuth, DropboxResponseError, files} from "dropbox";
 import {defaultUser, Session, User} from "./backends";
 import {defaultFileDelta, FileDelta, FileListProgress, FileMetadata, SyncBackend} from "./sync";
 import {some} from "../utils/maybe";
+import 'regenerator-runtime';
+import {withRetries} from "../utils/retryable";
+import {DynamicRateLimitQueue, GatingException} from "../utils/rate-limiting";
+import {Cancellable} from "../cancellable";
 
 export class DropboxSession implements Session {
   constructor(
@@ -23,37 +27,73 @@ export class DropboxSession implements Session {
 }
 
 export class DropboxSyncBackend implements SyncBackend {
+  requestQ = new DynamicRateLimitQueue();
+
   constructor(public db: Dropbox) {
+  }
+
+  async handleRetry<T>(fn: () => Promise<T>): Promise<T> {
+    return await withRetries(fn, (e) => {
+      console.log('catching error', e);
+      if (e instanceof DropboxResponseError) {
+        return e.status >= 500 ? 1 : 0;
+      }
+
+      return e instanceof GatingException ? -1 : 0;
+    })
+  }
+
+  async handleRateLimit<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn();
+    } catch (e) {
+      if (e instanceof DropboxResponseError) {
+        if (e.status === 429) {
+          if (e.headers['Retry-After']) {
+            const until = Date.now() + parseInt(e.headers['Retry-After'], 10);
+            throw new GatingException(until, e);
+          }
+        }
+      }
+
+      throw e;
+    }
+  }
+
+  async makeRequest<T>(fn: () => Promise<T>): Promise<T> {
+    const withRateLimited = () => this.handleRateLimit(fn);
+    return await this.handleRetry(withRateLimited);
   }
 
   async downloadBinaryFile(metadata: FileMetadata): Promise<Blob> {
     const { path, rev } = metadata;
-    const download = this.db.filesDownload({ rev, path });
-    console.log(download);
-    return new Blob();
+    const download = await this.makeRequest(() => this.db.filesDownload({ rev, path }));
+    return (download.result as any).fileBlob
   }
 
   downloadTextFile(metadata: FileMetadata): Promise<string> {
     return Promise.resolve("");
   }
 
-  syncFileList(cursor: string): Iterable<Promise<FileListProgress>> {
+  syncFileList(context: Cancellable, cursor: string): Iterable<Promise<FileListProgress>> {
     const {db} = this;
+
+    const makeRequest = this.makeRequest.bind(this);
 
     function* syncFileList() {
       let done = false;
       while (!done) {
         let baseWork;
         if (!cursor) {
-          baseWork = db.filesListFolder({
+          baseWork = makeRequest(() => db.filesListFolder({
             recursive: true,
             include_deleted: true,
             path: ""
-          });
+          }));
         } else {
-          baseWork = db.filesListFolderContinue({
+          baseWork = makeRequest(() => db.filesListFolderContinue({
             cursor
-          });
+          }));
         }
 
         yield baseWork.then(listResponse => {
