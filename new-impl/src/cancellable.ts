@@ -3,11 +3,27 @@ import {useState, useEffect} from 'react';
 import {isSome, Maybe, some} from "./utils/maybe";
 import {UnbufferedChannel, Trigger} from "./utils/semaphore";
 
-export function useCancelledOnDismount() {
-  const [cancellable, _] = useState(() => new Cancellable());
-  useEffect(() => cancellable.cancel());
-  return cancellable;
+export function useWithContext(fn: (context: Cancellable) => void, deps: any[] = []) {
+  useEffect(() => {
+    const cancellable = new Cancellable();
+    fn(cancellable);
+    return () => cancellable.cancel();
+  }, deps);
 }
+
+export function useAsync<Result, P>(fn: () => AsyncGenerator<Result, P>, deps: any[] = []): [Maybe<Result>, Maybe<any>] {
+  const [result, setResult] = useState(null as Maybe<Result>);
+  const [error, setError] = useState(null as Maybe<any>);
+
+  useWithContext((context) => {
+    setError(null);
+    setResult(null);
+    context.run(fn()).then(setResult, setError);
+  }, deps);
+
+  return [result, error];
+}
+
 
 export type AsyncGenerator<Result, P> = Generator<Promise<P>, Result, P>;
 
@@ -71,6 +87,7 @@ export class Cancellable {
           const nextValue = await self.race<P>(deferred as Promise<P>);
           if (isSome(nextValue)) {
             yieldChannel.send(nextValue);
+            next = nextValue[0]
           } else {
             break;
           }

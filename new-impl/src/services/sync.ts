@@ -1,8 +1,7 @@
-import {mapSome, Maybe, some, withDefault} from "../utils/maybe";
-import {Cancellable, runPromise, runAsync, AsyncGenerator} from "../cancellable";
+import {mapSome, Maybe} from "../utils/maybe";
+import {Cancellable, runPromise} from "../cancellable";
 import 'regenerator-runtime';
-import {UnbufferedChannel, Trigger} from "../utils/semaphore";
-import {Progress, withProgress, WithProgress} from "../progress";
+import {FileStore} from "./storage";
 
 export const defaultFileMetadata = {
     path: "/",
@@ -29,67 +28,71 @@ export type FileListProgress = typeof defaultFileListProgress;
 
 export interface SyncBackend {
     syncFileList(cursor: string): Iterable<Promise<FileListProgress>>
-    downloadFiles(metadata: FileMetadata[]): Iterable<Promise<Blob>[]>,
+    downloadFiles(metadata: FileMetadata[]): Iterable<[Promise<[FileMetadata, Blob]>[], Promise<void>]>,
 }
-
-const m = new Blob();
 
 export function syncFiles(
     context: Cancellable,
     backend: SyncBackend,
-    cursor = "",
+    storage: FileStore,
+    onSetPending: (v: number) => void = () => null,
 ) {
-    return context.iocRun<null, WithProgress<unknown>>(function* syncFiles() {
-        for (let fileList of backend.syncFileList(cursor)) {
-            const {delta, cursor: nextCursor} = yield* runPromiseWithSyncProgress(fileList, "Fetch sync batch");
-            cursor = nextCursor;
+    return context.iocRun<null, unknown>(function* syncFiles() {
+        let pending = 0;
+        function updatePending(d: number) {
+            pending += d;
+            onSetPending(pending);
+        }
 
-            const deleteReferences: string[] = [];
+        updatePending(1);
+        let cursor = yield* runPromise(storage.getCursor());
+
+        for (let fileList of backend.syncFileList(cursor)) {
+            updatePending(1);
+            const {delta, cursor: nextCursor} = yield* runPromise(fileList);
+            updatePending(-1);
+
+            const deletePaths: string[] = [];
             const updatedReferences: FileMetadata[] = [];
             delta.forEach(({updated, deleted}) => {
                 mapSome(updated, fm => updatedReferences.push(fm));
-                mapSome(deleted, path => deleteReferences.push(path));
+                mapSome(deleted, path => deletePaths.push(path));
             })
 
-            const batchWork: Promise<any>[] = [];
-            for (let fd of delta) {
-                const basePromise = handleDelta(backend, fd);
-                batchWork.push(handleDelta(backend, fd));
+            updatePending(updatedReferences.length);
 
-                const idx = yield* runPromiseWithSyncProgress(Promise.race(batchWork));
+            const pendingWork: Promise<any>[] = [];
+            for (let [batch, limiter] of backend.downloadFiles(updatedReferences)) {
+                for (let download of batch) {
+                    pendingWork.push(download.then(([md, blob]) =>
+                        storage.storeBlob(blob, md, false)).then(() => {
+                            updatePending(-1);
+                    }));
+                }
+
+                if (pendingWork.length > 0) {
+                    const idx = yield* runPromise(
+                        Promise.race(pendingWork.map((work, idx) => work.then(v => idx))))
+
+                    pendingWork.splice(idx, 1);
+                }
+
+                yield limiter;
             }
 
-            yield Promise.all(batchWork).then(v => withProgress(v, syncProgress("", 1)));
+            yield Promise.all(pendingWork);
+
+            updatePending(deletePaths.length);
+            for (let path of deletePaths) {
+                yield storage.deletePath(path);
+                updatePending(-1);
+            }
+
+            yield storage.storeCursor(nextCursor);
         }
+
+        updatePending(-1);
 
         return null;
     }())
-}
-
-export function* runPromiseWithSyncProgress<T>(v: Promise<T>, message: string): AsyncGenerator<T, WithProgress<any>> {
-    yield Promise.resolve(withProgress(null, syncProgress(message + ' starting', 1)));
-    const [result] = yield v.then(v => [v, syncProgress(message + ' finished', -1)]);
-    return result as T;
-}
-
-export function syncProgress(message: string, delta: number): Progress {
-    return { message, delta, bucket: 'sync' };
-}
-
-export function describeDelta(delta: FileDelta): string {
-    const updateDetails = withDefault(mapSome(delta.updated, ({path}) => `updated ${path}`), '')
-    const deleteDetails = withDefault(mapSome(delta.deleted, (path) => `deleted ${path}`), '')
-    return `${updateDetails}${deleteDetails}`
-}
-
-export async function handleDelta(backend: SyncBackend, delta: FileDelta) {
-    const {updated, deleted} = delta;
-
-    await withDefault(mapSome(updated, async updated => {
-        await backend.downloadBinaryFile(updated);
-    }), Promise.resolve());
-
-    await withDefault(mapSome(deleted, async deleted => {
-        await Promise.resolve();
-    }), Promise.resolve());
 }

@@ -9,13 +9,10 @@ export class GatingException extends Error {
 
 
 export class DynamicRateLimitQueue {
-    private q: Trigger[] = [];
     private running = 0;
-    private allowed = 1;
     private gates: number[] = [];
 
-    constructor() {
-        this.running = 1;
+    constructor(private maxConcurrent = 5) {
     }
 
     async ungated() {
@@ -30,42 +27,28 @@ export class DynamicRateLimitQueue {
         }
     }
 
-    async queue<T>(fn: () => Promise<T>): Promise<T> {
-        await this.ungated();
-        if (this.running < this.allowed) {
-            return await this.run(fn);
-        }
+    ready<T>(count: number): [Trigger<T>[], Promise<T>[]] {
+        const triggers: Trigger<T>[] = [];
+        const work: Promise<T>[] = [];
 
-        const trigger = new Trigger();
-        this.q.push(trigger);
-        await trigger.promise;
+        for (let i = this.running; i < this.maxConcurrent && triggers.length < count; ++i) {
+            const trigger = new Trigger<T>();
+            this.running += 1;
 
-        return await this.queue(fn);
-    }
-
-    async run<T>(fn: () => Promise<T>) {
-        this.running += 1;
-        try {
-            const result = await fn();
-            this.allowed += 1;
-            return result;
-        } catch (e) {
-            if (e instanceof GatingException) {
-                if (this.allowed > 1) this.allowed = 1;
-                this.gates.push(e.until);
-                throw e.original;
-            }
-
-            throw e;
-        } finally {
-            this.running -= 1;
-
-            if (this.running < this.allowed) {
-                const next = this.q.shift();
-                if (next) {
-                    next.resolve();
+            work.push(trigger.promise.finally(() => {
+                this.running -= 1;
+            }).catch(e => {
+                if (e instanceof GatingException) {
+                    this.gates.push(e.until);
+                    throw e.original;
                 }
-            }
+
+                throw e;
+            }));
+
+            triggers.push(trigger);
         }
+
+        return [triggers, work];
     }
 }

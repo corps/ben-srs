@@ -1,4 +1,4 @@
-import {defaultFileListProgress, FileListProgress, FileMetadata, SyncBackend} from "./sync";
+import {FileListProgress, FileMetadata, SyncBackend} from "./sync";
 import {loadDropboxSession} from "./dropbox";
 
 export const defaultUser = {
@@ -18,16 +18,10 @@ export const defaultSession: Session = {
   },
   syncBackend(): SyncBackend {
     return {
-      downloadBinaryFile(metadata: FileMetadata): Promise<Blob> {
-        return Promise.resolve(new Blob());
-      }, downloadTextFile(metadata: FileMetadata): Promise<string> {
-        return Promise.resolve("");
-      }, syncFileList (cursor: string): Iterable<Promise<FileListProgress>> {
-        function* iter() {
-          yield Promise.resolve(defaultFileListProgress);
-        }
-
-        return iter();
+      downloadFiles(metadata: FileMetadata[]): Iterable<[Promise<[FileMetadata, Blob]>[], Promise<void>]> {
+        return [];
+      }, syncFileList(cursor: string): Iterable<Promise<FileListProgress>> {
+        return [];
       }
     }
   }
@@ -43,12 +37,3 @@ export interface Session {
 export interface Backend {
   loadSession(storage: Storage): Promise<Session>,
 }
-
-export const backends = {
-  dropbox: {
-    loadSession: loadDropboxSession("tlu6ta8q9mu0w01"),
-  },
-}
-
-export type BackendType = keyof typeof backends;
-export const allBackends = Object.keys(backends);

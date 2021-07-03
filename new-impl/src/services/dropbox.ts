@@ -1,11 +1,10 @@
+import 'regenerator-runtime';
 import {Dropbox, DropboxAuth, DropboxResponseError, files} from "dropbox";
 import {defaultUser, Session, User} from "./backends";
 import {defaultFileDelta, FileDelta, FileListProgress, FileMetadata, SyncBackend} from "./sync";
 import {some} from "../utils/maybe";
-import 'regenerator-runtime';
 import {withRetries} from "../utils/retryable";
 import {DynamicRateLimitQueue, GatingException} from "../utils/rate-limiting";
-import {Cancellable} from "../cancellable";
 
 export class DropboxSession implements Session {
   constructor(
@@ -34,8 +33,7 @@ export class DropboxSyncBackend implements SyncBackend {
 
   async handleRetry<T>(fn: () => Promise<T>): Promise<T> {
     return await withRetries(fn, (e) => {
-      console.log('catching error', e);
-      if (e instanceof DropboxResponseError) {
+      if ('status' in e) {
         return e.status >= 500 ? 1 : 0;
       }
 
@@ -47,10 +45,11 @@ export class DropboxSyncBackend implements SyncBackend {
     try {
       return await fn();
     } catch (e) {
-      if (e instanceof DropboxResponseError) {
+      if ('status' in e) {
         if (e.status === 429) {
           if (e.headers['Retry-After']) {
             const until = Date.now() + parseInt(e.headers['Retry-After'], 10);
+            console.log('hit gating until', until);
             throw new GatingException(until, e);
           }
         }
@@ -60,25 +59,45 @@ export class DropboxSyncBackend implements SyncBackend {
     }
   }
 
-  async makeRequest<T>(fn: () => Promise<T>): Promise<T> {
-    const withRateLimited = () => this.handleRateLimit(fn);
-    return await this.handleRetry(withRateLimited);
+  downloadFiles(metadata: FileMetadata[]): Iterable<[Promise<[FileMetadata, Blob]>[], Promise<void>]> {
+    const {requestQ} = this;
+
+    const requestDownload = (rev: string, path: string): Promise<Blob> => {
+        return this.handleRetry(async () => {
+          await requestQ.ungated();
+          return this.handleRateLimit(async () => {
+            const {result} = await this.db.filesDownload({ rev, path });
+            return (result as any).fileBlob;
+          })
+        });
+    }
+
+    function* downloadFiles() {
+        const remainingMetadatas = [...metadata];
+        while (remainingMetadatas.length) {
+          const [triggers, promises] = requestQ.ready<[FileMetadata, Blob]>(remainingMetadatas.length);
+
+          triggers.forEach(trigger => {
+            const next = remainingMetadatas.pop();
+            if (next) {
+              const {rev, path} = next;
+              requestDownload(rev, path).then(blob => [next, blob] as [FileMetadata, Blob]).then(trigger.resolve, trigger.reject);
+            }
+          })
+
+          yield [promises, requestQ.ungated()] as [Promise<[FileMetadata, Blob]>[], Promise<void>]
+        }
+      }
+
+    return downloadFiles();
   }
 
-  async downloadBinaryFile(metadata: FileMetadata): Promise<Blob> {
-    const { path, rev } = metadata;
-    const download = await this.makeRequest(() => this.db.filesDownload({ rev, path }));
-    return (download.result as any).fileBlob
-  }
-
-  downloadTextFile(metadata: FileMetadata): Promise<string> {
-    return Promise.resolve("");
-  }
-
-  syncFileList(context: Cancellable, cursor: string): Iterable<Promise<FileListProgress>> {
+  syncFileList(cursor: string): Iterable<Promise<FileListProgress>> {
     const {db} = this;
 
-    const makeRequest = this.makeRequest.bind(this);
+    const makeRequest = <T>(fn: () => Promise<T>) => {
+      return this.handleRetry(() => this.handleRateLimit(fn));
+    }
 
     function* syncFileList() {
       let done = false;
@@ -135,7 +154,7 @@ export function mapDropboxListResponse(response: files.ListFolderResult): FileLi
 
 export function loadDropboxSession(clientId: string) {
   return async function loadDropboxSession(storage: Storage): Promise<Session> {
-    const auth = await getDropboxAuth(clientId, storage);
+    const auth = await getDropboxAuthOrLogin(clientId, storage);
 
     let user = {...defaultUser, needsRefreshAt: auth.getAccessTokenExpiresAt() };
 
@@ -155,7 +174,7 @@ export function loadDropboxSession(clientId: string) {
   }
 }
 
-export function getDropboxAuth(clientId: string, storage: Storage): Promise<DropboxAuth> {
+export function getDropboxAuthOrLogin(clientId: string, storage: Storage): Promise<DropboxAuth> {
   const existingToken = storage.getItem('token');
   const existingExpiresAt = storage.getItem('expires');
 
@@ -173,7 +192,6 @@ export function getDropboxAuth(clientId: string, storage: Storage): Promise<Drop
   const auth = new DropboxAuth({
     clientId,
   });
-
 
   let match;
   if ((match = window.location.search.match(/code=([^&]+)/))) {

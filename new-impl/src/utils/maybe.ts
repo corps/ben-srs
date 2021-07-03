@@ -23,7 +23,7 @@ export function alternate<T>(a: Maybe<T>, ...alts: Maybe<T>[]): Maybe<T> {
   return null;
 }
 
-export function maybeOfNullable<T>(v: T | null | undefined): Maybe<T> {
+export function fromVoid<T>(v: T | null | undefined): Maybe<T> {
   if (v == null) return null;
   return [v];
 }
