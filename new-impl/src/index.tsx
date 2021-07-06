@@ -3,7 +3,9 @@ import ReactDom from 'react-dom';
 import {App} from "./components/App";
 
 window.onload = () => {
-  ReactDom.render(<App/>, document.body);
+  const newDiv = document.createElement("DIV");
+  document.body.appendChild(newDiv);
+  ReactDom.render(<App/>, newDiv);
 }
 
 if ('serviceWorker' in navigator && process.env['NODE_ENV'] !== 'development') {

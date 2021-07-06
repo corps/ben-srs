@@ -228,7 +228,15 @@ export function getDropboxAuthOrLogin(clientId: string, storage: Storage): Promi
             const result: DropboxAccessTokenAuthResponse = response.result as any;
             auth.setAccessToken(result.access_token);
             auth.setAccessTokenExpiresAt(new Date(new Date().getTime() + result.expires_in))
+
+            storage.setItem('token', result.access_token);
+            storage.setItem('expires', auth.getAccessTokenExpiresAt().getTime() + "");
+            location.href = location.origin + location.pathname;
             return auth;
+          }, e => {
+            storage.clear();
+            location.href = location.origin + location.pathname;
+            throw e;
           });
       }
 

@@ -7,7 +7,7 @@ bash: .image
 
 up: .image
 	docker run -d -p 8080:8080 -v $$PWD:/app -u $(shell id -u):$(shell id -g) --name bensrs-srv bensrs websocketd --port 8080 --staticdir dist ./server.sh || true
-	docker run -d -v $$PWD:/app -u $(shell id -u):$(shell id -g) --name bensrs-webpack teach-coding webpack --watch || true
+	docker run -d -v $$PWD:/app -u $(shell id -u):$(shell id -g) --name bensrs-webpack bensrs webpack --watch || true
 
 down:
 	docker stop bensrs-srv || true

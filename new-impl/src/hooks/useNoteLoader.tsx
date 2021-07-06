@@ -7,7 +7,7 @@ export function useNoteLoader() {
     const index = useNotesIndex();
     const storage = useFileStorage();
     const [loadedTrigger] = useState(() => new Trigger<void>());
-    const [worker] = useState(() => new Worker(new URL('../services/index-worker.ts' /*, import.meta.url*/)));
+    const [worker] = useState(() => new Worker(new URL('../services/index-worker.ts', import.meta.url)));
 
     useEffect(() => {
         storage.fetchBlobsByExt('txt').then(noteBlobs => {
