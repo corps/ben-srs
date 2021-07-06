@@ -118,8 +118,8 @@ export class FileStore {
   }
 
   async getCursor() {
-    const cursor = this.db.table('cursors').where('backend').equals('default').first();
-    return cursor || "";
+    const cursor = await this.db.table('cursors').where('backend').equals('default').first();
+    return cursor?.cursor || "";
   }
 
   async storeBlob(blob: Blob, metadata: FileMetadata, localChange: boolean): Promise<void> {

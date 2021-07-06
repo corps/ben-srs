@@ -26,5 +26,5 @@ export function useSync(onProgress: Dispatch<number>) {
         yield notesLoaded;
         yield* syncFiles(session.syncBackend(), storage, onProgress, notesIndex)
         onProgress(0);
-    }, [syncCounter]);
+    }, [syncCounter], () => onProgress(0));
 }

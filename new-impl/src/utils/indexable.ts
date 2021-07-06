@@ -1,5 +1,5 @@
 import 'regenerator-runtime';
-import {mapSome, Maybe} from "./maybe";
+import {mapSome, Maybe, some} from "./maybe";
 
 export function arrayCmp(a: ReadonlyArray<any>, b: ReadonlyArray<any>): number {
     for (let i = 0; i < a.length && i < b.length; ++i) {
@@ -113,7 +113,7 @@ export class Indexer<V, I extends IndexStore<V>> {
 
         return () => {
             if (idx < endIdx) {
-                return index[idx++][1];
+                return some(index[1][idx++]);
             }
             return null;
         }
@@ -128,7 +128,7 @@ export class Indexer<V, I extends IndexStore<V>> {
 
         return () => {
             if (idx > startIdx) {
-                return index[--idx][1];
+                return some(index[1][--idx]);
             }
             return null;
         }
@@ -184,8 +184,7 @@ export class Indexer<V, I extends IndexStore<V>> {
                 valuesToRemove = [];
                 valuesToAdd = [];
 
-                for (let updateGroup of updateGroups) {
-                    let updateGroupKey = updateGroup[0];
+                for (let updateGroupKey of updateGroups[0]) {
                     const prevGroupIndex = oldIndexes[groupIndexName];
                     const updateGroupKeyRight = endKeyMatchingWithin(updateGroupKey);
                     let iter = Indexer.iterator(prevGroupIndex,

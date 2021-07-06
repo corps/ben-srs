@@ -14,23 +14,22 @@ const classNameGenerator = classNamesGeneratorFor<Props>(add => {
     add("green", <div className="bg-light-green"/>);
     add("red", <div className="bg-light-red"/>);
     add("blue", <div className="bg-light-blue"/>);
-}, <div className="h-100 w-100 br2 br--right transition"/>);
+}, <div className="h-100 w-100 br2 br--right"/>);
 
 export function ProgressBar(props: Props) {
     const [tween, setTween] = useState(0);
     const {pendingNum, completed} = props;
     const tweened = tween / (tween + 2);
     const total = pendingNum + completed;
-    const running = pendingNum + tweened;
 
-    const progress = (pendingNum === 0 ? 1 : running / total * 100);
+    const progress = (pendingNum === 0 ? 100 : (completed + tweened) / total * 100);
 
     useEffect(() => {
         setTween(0);
-        const interval = setInterval(() => setTween(t => Math.min(t + 1, 30)), 200)
+        const interval = setInterval(() => setTween(t => Math.min(t + 1, 30)), 100)
         return () => clearInterval(interval);
     }, [completed])
 
-    return <div className={classNameGenerator(props)} style={{width: progress + "%"}}>
+    return <div className={classNameGenerator(props)} style={{width: progress + "%", transition: "all 250ms ease-in"}}>
     </div>;
 }

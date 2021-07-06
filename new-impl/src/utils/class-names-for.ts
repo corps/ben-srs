@@ -68,8 +68,8 @@ export function classNamesGeneratorFor<T extends {}>(
       classNames += " " + unusedInverseClasses[k];
     }
 
-    if (props.className && !ignoreGivenStyles)
-      classNames += " " + props.className;
+    if ('className' in props && !ignoreGivenStyles)
+      classNames += " " + (props as any).className;
 
     return classNames;
   };

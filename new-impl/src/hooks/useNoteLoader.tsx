@@ -7,6 +7,7 @@ export function useNoteLoader() {
     const index = useNotesIndex();
     const storage = useFileStorage();
     const [loadedTrigger] = useState(() => new Trigger<void>());
+    // @ts-ignore
     const [worker] = useState(() => new Worker(new URL('../services/index-worker.ts', import.meta.url)));
 
     useEffect(() => {

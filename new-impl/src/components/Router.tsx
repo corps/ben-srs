@@ -10,6 +10,10 @@ export function Router() {
     const {pending, completed, onProgress} = useProgress();
     const [_, syncError] = useSync(onProgress);
 
+    useEffect(() => {
+        syncError && console.error(syncError);
+    }, [syncError]);
+
     const ele = route[route.length - 1] || <MainMenu syncFailed={!!syncError}/>;
 
     return <RouteContext.Provider value={setRoute}>

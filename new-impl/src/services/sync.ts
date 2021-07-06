@@ -58,10 +58,12 @@ export function* syncFiles(
     }
 
     let cursor = yield* runPromise(storage.getCursor());
+    console.log('got cursor', cursor);
 
     for (let fileList of backend.syncFileList(cursor)) {
         updatePending(1);
         const {delta, cursor: nextCursor} = yield* runPromise(fileList);
+        console.log({delta});
         updatePending(-1);
 
         const deletePaths: string[] = [];
@@ -79,6 +81,7 @@ export function* syncFiles(
                 pendingWork.push(download.then(async ([md, blob]) => {
                     const contents = await blob.text();
                     const note = denormalizedNote(parseNote(contents), md.id, md.path, md.rev);
+                    console.log('storing', {note});
                     updateNotes(notesIndex, note);
                     await storage.storeBlob(blob, md, false);
                     updatePending(-1);
