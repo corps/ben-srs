@@ -8,6 +8,7 @@ export interface CircleButtonProps {
   yellow?: boolean
   purple?: boolean
   onClick?: React.MouseEventHandler<any>
+  className?: string
 }
 
 const circleClassNames = classNamesGeneratorFor<CircleButtonProps>(add => {

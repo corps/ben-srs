@@ -28,6 +28,11 @@ export function fromVoid<T>(v: T | null | undefined): Maybe<T> {
   return [v];
 }
 
+export function toVoid<T>(v: Maybe<T>): T | null {
+  if (v == null) return null;
+  return v[0];
+}
+
 export function mapSome<A, B>(a: Maybe<A>, f: (a: A) => B): Maybe<B> {
   if (isSome(a)) {
     return [f(a[0])];

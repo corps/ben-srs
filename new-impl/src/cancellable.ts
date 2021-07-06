@@ -11,14 +11,17 @@ export function useWithContext(fn: (context: Cancellable) => void, deps: any[] =
   }, deps);
 }
 
-export function useAsync<Result>(fn: () => AsyncGenerator<Result, any>, deps: any[] = []) {
-  const [resultChannel] = useState(new UnbufferedChannel<Result>());
+export function useAsync<Result, P>(fn: () => AsyncGenerator<Result, P>, deps: any[] = []): [Maybe<Result>, Maybe<any>] {
+  const [result, setResult] = useState(null as Maybe<Result>);
+  const [error, setError] = useState(null as Maybe<any>);
 
   useWithContext((context) => {
-    context.run(fn()).then((v) => mapSome(v, v => resultChannel.send(v)), e => resultChannel.reject(e));
+    setError(null);
+    setResult(null);
+    context.run(fn()).then(setResult, setError);
   }, deps);
 
-  return resultChannel;
+  return [result, error];
 }
 
 

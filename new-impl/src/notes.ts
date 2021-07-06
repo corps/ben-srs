@@ -430,3 +430,22 @@ export function removeNotesByPath(indexes: NoteIndexes, path: string) {
     indexes.clozeAnswers = clozeAnswersIndexer.removeAll(indexes.clozeAnswers, Indexer.getAllMatching(indexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx, [noteId]));
   }
 }
+
+export function findNoteTree(indexes: NoteIndexes, id: string): Maybe<NoteTree> {
+  return mapSome(Indexer.getFirstMatching(indexes.notes.byId, [id]), note => {
+      const terms = Indexer.getAllMatching(
+          indexes.terms.byNoteIdReferenceAndMarker,
+          [id]
+      );
+      const clozes = Indexer.getAllMatching(
+          indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx,
+          [id]
+      );
+      const clozeAnswers = Indexer.getAllMatching(
+          indexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx,
+          [id]
+      );
+
+      return {note, terms, clozes, clozeAnswers};
+  });
+}

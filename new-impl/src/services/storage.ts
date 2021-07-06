@@ -110,6 +110,7 @@ export class FileStore {
   async clear() {
     await this.db.table('metadata').clear();
     await this.db.table('blobs').clear();
+    await this.db.table('cursors').clear();
   }
 
   async storeCursor(cursor: string) {

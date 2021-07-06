@@ -4,20 +4,13 @@ import {MainMenu} from "./MainMenu";
 import {ProgressBar} from "./ProgressBar";
 import {useProgress} from "../hooks/useProgress";
 import {useSync} from "../hooks/useSync";
-import {runPromise, useAsync} from "../cancellable";
 
 export function Router() {
     const [route, setRoute] = useState([] as ReactElement[]);
     const {pending, completed, onProgress} = useProgress();
-    const [syncFailed, setSyncFailed] = useState(false)
-    const syncChannel = useSync(onProgress);
+    const [_, syncError] = useSync(onProgress);
 
-    useAsync(function* (){
-        const failed = yield* runPromise(syncChannel.receive().then(() => false, () => true));
-        setSyncFailed(failed);
-    }, [syncChannel])
-
-    const ele = route[route.length - 1] || <MainMenu syncFailed={syncFailed}/>;
+    const ele = route[route.length - 1] || <MainMenu syncFailed={!!syncError}/>;
 
     return <RouteContext.Provider value={setRoute}>
         <div className="fixed w-100" style={{height: "5px"}}>
