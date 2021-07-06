@@ -1,8 +1,8 @@
 import {mapSome, Maybe} from "../utils/maybe";
-import {Cancellable, runPromise} from "../cancellable";
+import {runPromise} from "../cancellable";
 import 'regenerator-runtime';
-import {FileStore} from "./storage";
-import {NotesIndex} from "../notes";
+import {FileStore, StoredBlob} from "./storage";
+import {denormalizedNote, NoteIndexes, parseNote, removeNotesByPath, updateNotes} from "../notes";
 
 export const defaultFileMetadata = {
     path: "/",
@@ -28,16 +28,16 @@ export const defaultFileListProgress = {
 export type FileListProgress = typeof defaultFileListProgress;
 
 export interface SyncBackend {
-    syncFileList(cursor: string): Iterable<Promise<FileListProgress>>
-
+    syncFileList(cursor: string): Iterable<Promise<FileListProgress>>,
     downloadFiles(metadata: FileMetadata[]): Iterable<[Promise<[FileMetadata, Blob]>[], Promise<void>]>,
+    uploadFile(storedBlob: StoredBlob): Iterable<Promise<void>>,
 }
 
 export function* syncFiles(
     backend: SyncBackend,
     storage: FileStore,
     onSetPending: (v: number) => void = () => null,
-    notesIndex: NotesIndex,
+    notesIndex: NoteIndexes,
 ) {
     let pending = 0;
 
@@ -46,7 +46,17 @@ export function* syncFiles(
         onSetPending(pending);
     }
 
-    updatePending(1);
+    const dirty = yield* runPromise(storage.fetchDirty());
+    updatePending(dirty.length);
+
+    for (let d of dirty) {
+        for (let work of backend.uploadFile(d)) {
+            yield work;
+        }
+
+        updatePending(-1);
+    }
+
     let cursor = yield* runPromise(storage.getCursor());
 
     for (let fileList of backend.syncFileList(cursor)) {
@@ -66,8 +76,11 @@ export function* syncFiles(
         const pendingWork: Promise<any>[] = [];
         for (let [batch, limiter] of backend.downloadFiles(updatedReferences)) {
             for (let download of batch) {
-                pendingWork.push(download.then(([md, blob]) =>
-                    storage.storeBlob(blob, md, false)).then(() => {
+                pendingWork.push(download.then(async ([md, blob]) => {
+                    const contents = await blob.text();
+                    const note = denormalizedNote(parseNote(contents), md.id, md.path, md.rev);
+                    updateNotes(notesIndex, note);
+                    await storage.storeBlob(blob, md, false);
                     updatePending(-1);
                 }));
             }
@@ -86,8 +99,7 @@ export function* syncFiles(
 
         updatePending(deletePaths.length);
         for (let path of deletePaths) {
-            const deletedIds = notesIndex.notesIndex.indexes.byPath.sliceMatching(
-                path.split('/'), [...path.split('/'), Infinity]).map(({id}) => id)
+            removeNotesByPath(notesIndex, path);
             yield storage.deletePath(path);
             updatePending(-1);
         }

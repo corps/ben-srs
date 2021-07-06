@@ -1,4 +1,4 @@
-import {useFileStorage, useSession} from "./contexts";
+import {useFileStorage, useNotesIndex, useSession} from "./contexts";
 import {useLiveQuery} from "dexie-react-hooks";
 import {useAsync} from "../cancellable";
 import {syncFiles} from "../services/sync";
@@ -10,6 +10,7 @@ export function useSync(onProgress: Dispatch<number>) {
     const storage = useFileStorage();
     const dirtyRecords = useLiveQuery(async () => storage.fetchDirty(), [], []);
     const [syncCounter, setSyncCounter] = useState(0);
+    const notesIndex = useNotesIndex();
     const notesLoaded = useNoteLoader();
 
     useEffect(() => {
@@ -19,11 +20,11 @@ export function useSync(onProgress: Dispatch<number>) {
         }
     }, [dirtyRecords, syncCounter]);
 
-    useAsync(function *() {
+    return useAsync(function *() {
         onProgress(0);
         onProgress(1);
         yield notesLoaded;
-        yield* syncFiles(session.syncBackend(), storage, onProgress)
+        yield* syncFiles(session.syncBackend(), storage, onProgress, notesIndex)
         onProgress(0);
     }, [syncCounter]);
 }

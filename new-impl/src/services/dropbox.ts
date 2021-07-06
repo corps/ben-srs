@@ -5,6 +5,7 @@ import {defaultFileDelta, FileDelta, FileListProgress, FileMetadata, SyncBackend
 import {some} from "../utils/maybe";
 import {withRetries} from "../utils/retryable";
 import {DynamicRateLimitQueue, GatingException} from "../utils/rate-limiting";
+import {StoredBlob} from "./storage";
 
 export class DropboxSession implements Session {
   constructor(
@@ -107,6 +108,7 @@ export class DropboxSyncBackend implements SyncBackend {
           baseWork = makeRequest(() => db.filesListFolder({
             recursive: true,
             include_deleted: true,
+            limit: 50,
             path: ""
           }));
         } else {
@@ -124,6 +126,26 @@ export class DropboxSyncBackend implements SyncBackend {
     }
 
     return syncFileList();
+  }
+
+  uploadFile(storedBlob: StoredBlob): Iterable<Promise<any>> {
+    const {db} = this;
+
+    function* uploadFile() {
+      yield db.filesUpload({
+        contents: storedBlob.blob,
+        path: storedBlob.path,
+        mode: storedBlob.rev ? {'.tag': "update", update: storedBlob.rev} : {'.tag': 'add'},
+      }).then(() => null, error => {
+        if ('status' in error && error.status === 409) {
+          return null;
+        }
+
+        throw error;
+      })
+    }
+
+    return uploadFile();
   }
 }
 

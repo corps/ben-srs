@@ -1,10 +1,10 @@
 import {createContext, Dispatch, ReactElement, useContext} from "react";
 import {defaultSession} from "../services/backends";
-import {NotesIndex} from "../notes";
+import {indexesInitialState} from "../notes";
 import {FileStore} from "../services/storage";
 
 export const SessionContext = createContext(defaultSession);
-export const NotesIndexContext = createContext(new NotesIndex());
+export const NotesIndexContext = createContext({...indexesInitialState});
 export const FileStorageContext = createContext({} as FileStore);
 export const RouteContext = createContext((() => []) as Dispatch<(v: ReactElement[]) => ReactElement[]>);
 

@@ -1,8 +1,7 @@
 import {useEffect, useState} from "react";
 import {Trigger} from "../utils/semaphore";
-import {NotesIndex} from "../notes";
 import {useFileStorage, useNotesIndex} from "./contexts";
-import {recursivelyInstallData} from "../utils/indexable";
+import {NoteIndexes} from "../notes";
 
 export function useNoteLoader() {
     const index = useNotesIndex();
@@ -17,9 +16,8 @@ export function useNoteLoader() {
             });
         }, loadedTrigger.reject)
 
-        worker.onmessage = ({ data: { index: indexedData } }: {data: {index: NotesIndex}}) => {
-            console.log('recursively installing', indexedData);
-            recursivelyInstallData(index, indexedData);
+        worker.onmessage = ({ data: { indexes: indexedData } }: {data: {indexes: NoteIndexes}}) => {
+            Object.assign(index, indexedData);
             loadedTrigger.resolve();
         };
     }, [])

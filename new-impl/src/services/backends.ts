@@ -1,5 +1,6 @@
 import {FileListProgress, FileMetadata, SyncBackend} from "./sync";
 import {loadDropboxSession} from "./dropbox";
+import {StoredBlob} from "./storage";
 
 export const defaultUser = {
   username: "",
@@ -18,6 +19,9 @@ export const defaultSession: Session = {
   },
   syncBackend(): SyncBackend {
     return {
+      uploadFile(storedBlob: StoredBlob): Iterable<Promise<void>> {
+        return [];
+      },
       downloadFiles(metadata: FileMetadata[]): Iterable<[Promise<[FileMetadata, Blob]>[], Promise<void>]> {
         return [];
       }, syncFileList(cursor: string): Iterable<Promise<FileListProgress>> {

@@ -1,6 +1,6 @@
 import {Answer, newSchedule} from "./scheduler";
-import {IndexedTable} from "./utils/indexable";
 import {mapSome, Maybe} from "./utils/maybe";
+import {endKeyMatchingWithin, Indexed, Indexer} from "./utils/indexable";
 
 export const newNote = {
   attributes: {
@@ -124,22 +124,107 @@ export function stringifyNote(note: NormalizedNote): string {
   return note.attributes.content + divisor + JSON.stringify({...note.attributes, content: undefined}, null, 2);
 }
 
-const notesIndex = new IndexedTable((v: Note) => [v.id] as [string], {})
-    .addIndex({byAudioFileId: 0}, ({attributes: {audioFileId}}) => [audioFileId] as [string])
-    .addIndex({byLanguage: 0}, ({attributes: {language}}) => [language] as [string])
-    .addIndex({byPath: 0}, ({path}) => path.split('/'));
+export type NotesStore = {
+  byPath: Indexed<Note>;
+  byId: Indexed<Note>;
+  byLanguage: Indexed<Note>;
+  byAudioFileId: Indexed<Note>;
+};
 
-const termsIndex = new IndexedTable((v: Term) => [v.noteId, v.attributes.reference, v.attributes.marker] as [string, string, string], {})
-    .addIndex({byLanguage: 0}, ({language}) => [language] as [string])
+export type TermsStore = {
+  byNoteIdReferenceAndMarker: Indexed<Term>;
+  byLanguage: Indexed<Term>;
+};
 
-const clozesIndex = new IndexedTable((v: Cloze) => [v.noteId, v.reference, v.marker, v.clozeIdx] as [string, string, string, number], {})
-  .addIndex({byLanguageSpokenAndNextDue: 0}, ({language, attributes: {type, schedule: {delayIntervalMinutes, nextDueMinutes}}}) => [language, type === "listen" || type === "speak", !delayIntervalMinutes, nextDueMinutes] as [string, boolean, boolean, number])
-  .addIndex({byLanguageSpokenNewAndNextDue: 0}, ({language, attributes: {type, schedule: {isNew, delayIntervalMinutes, nextDueMinutes}}}) => [language, type === "listen" || type === "speak", isNew, !delayIntervalMinutes, nextDueMinutes] as [string, boolean, boolean, boolean, number])
-  .addIndex({byNextDue: 0}, ({attributes: {schedule: {nextDueMinutes, delayIntervalMinutes}}}) => [!delayIntervalMinutes, nextDueMinutes] as [boolean, number]);
+export type ClozesStore = {
+  byNoteIdReferenceMarkerAndClozeIdx: Indexed<Cloze>;
+  byLanguageSpokenAndNextDue: Indexed<Cloze>;
+  byLanguageSpokenNewAndNextDue: Indexed<Cloze>;
+  byNextDue: Indexed<Cloze>;
+};
 
-const clozeAnswerIndex = new IndexedTable((v: ClozeAnswer) => [v.noteId, v.reference, v.marker, v.clozeIdx, v.answerIdx > 0 ? 1 : 0] as [string, string, string, number, number], {})
-  .addIndex({byLanguageAndAnswered: 0}, ({language, answer}) => [language, answer[0]])
+export type ClozeAnswersStore = {
+  byNoteIdReferenceMarkerClozeIdxAndAnswerIdx: Indexed<ClozeAnswer>;
+  byLanguageAndAnswered: Indexed<ClozeAnswer>;
+  byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx: Indexed<ClozeAnswer>;
+  byLanguageAndLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx: Indexed<ClozeAnswer>;
+};
 
+export const notesIndexer = new Indexer<Note, NotesStore>("byPath");
+notesIndexer.setKeyer("byPath", note => note.path.split("/"));
+notesIndexer.setKeyer("byId", note => [note.id]);
+notesIndexer.setKeyer("byLanguage", note => [note.attributes.language]);
+notesIndexer.setKeyer("byAudioFileId", note => [note.attributes.audioFileId]);
+
+export const termsIndexer = new Indexer<Term, TermsStore>("byNoteIdReferenceAndMarker");
+termsIndexer.setKeyer("byNoteIdReferenceAndMarker", term => [
+  term.noteId,
+  term.attributes.reference,
+  term.attributes.marker,
+]);
+termsIndexer.setKeyer("byLanguage", term => [term.language]);
+
+export const clozesIndexer = new Indexer<Cloze, ClozesStore>(
+    "byNoteIdReferenceMarkerAndClozeIdx"
+);
+clozesIndexer.setKeyer("byNoteIdReferenceMarkerAndClozeIdx", cloze => [
+  cloze.noteId,
+  cloze.reference,
+  cloze.marker,
+  cloze.clozeIdx,
+]);
+clozesIndexer.setKeyer("byLanguageSpokenAndNextDue", cloze => [
+  cloze.language,
+  cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
+  !cloze.attributes.schedule.delayIntervalMinutes,
+  cloze.attributes.schedule.nextDueMinutes,
+]);
+clozesIndexer.setKeyer("byLanguageSpokenNewAndNextDue", cloze => [
+  cloze.language,
+  cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
+  cloze.attributes.schedule.isNew,
+  !cloze.attributes.schedule.delayIntervalMinutes,
+  cloze.attributes.schedule.nextDueMinutes,
+]);
+
+clozesIndexer.setKeyer("byNextDue", cloze => [
+  !cloze.attributes.schedule.delayIntervalMinutes,
+  cloze.attributes.schedule.nextDueMinutes,
+]);
+
+
+export const clozeAnswersIndexer = new Indexer<ClozeAnswer, ClozeAnswersStore>(
+    "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx"
+);
+clozeAnswersIndexer.setKeyer(
+    "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx",
+    answer => [
+      answer.noteId,
+      answer.reference,
+      answer.marker,
+      answer.clozeIdx,
+      answer.answerIdx > 0 ? 1 : 0,
+    ]
+);
+clozeAnswersIndexer.setKeyer("byLanguageAndAnswered", answer => [
+  answer.language,
+  answer.answer[0],
+]);
+clozeAnswersIndexer.addGroupedIndex(
+    "byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx",
+    answer => [answer.language, answer.answer[0]],
+    "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx",
+    answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx],
+    (iter, reverseIter) => iter()
+);
+
+clozeAnswersIndexer.addGroupedIndex(
+    "byLanguageAndLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx",
+    answer => [answer.language, answer.answer[0]],
+    "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx",
+    answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx],
+    (iter, reverseIter) => reverseIter()
+);
 
 export const defaultNoteTree = {
   note: newNote,
@@ -149,56 +234,6 @@ export const defaultNoteTree = {
 }
 
 export type NoteTree = typeof defaultNoteTree;
-
-export class NotesIndex {
-  public notesIndex = notesIndex.dup();
-  public termsIndex = termsIndex.dup();
-  public clozesIndex = clozesIndex.dup();
-  public clozeAnswerIndex = clozeAnswerIndex.dup();
-
-  removeByPath(path: string) {
-    const parts = path.split('/');
-    const ids = this.notesIndex.indexes.byPath.sliceMatching(parts, [...parts, Infinity]).map(({id}) => id);
-
-    for (let id of ids) {
-      const pk = [id] as [string];
-      this.notesIndex.remove(pk);
-    }
-  }
-
-  addNotes(...trees: NoteTree[]) {
-    const notes: Note[] = [];
-    const terms: Term[] = [];
-    const clozes: Cloze[] = [];
-    const answers: ClozeAnswer[] = [];
-
-    for (let tree of trees) {
-      notes.push(tree.note);
-      terms.push(...tree.terms);
-      clozes.push(...tree.clozes);
-      answers.push(...tree.clozeAnswers);
-    }
-
-    this.notesIndex.insert(...notes);
-    this.termsIndex.insert(...terms);
-    this.clozesIndex.insert(...clozes);
-    this.clozeAnswerIndex.insert(...answers);
-  }
-
-  findNoteTree(noteId: string): Maybe<NoteTree> {
-    const note = this.notesIndex.pkIndex.find([noteId]);
-    return mapSome(note, note => {
-
-      return {
-        note,
-        terms: this.termsIndex.pkIndex.sliceMatching([note.id], [note.id, Infinity]),
-        clozes: this.clozesIndex.pkIndex.sliceMatching([note.id], [note.id, Infinity]),
-        clozeAnswers: this.clozeAnswerIndex.pkIndex.sliceMatching([note.id], [note.id, Infinity]),
-      }
-    })
-  }
-}
-
 
 export function normalizedNote(noteTree: NoteTree): NormalizedNote {
   let {note, terms, clozes, clozeAnswers} = noteTree;
@@ -352,4 +387,46 @@ export function denormalizedNote(normalizedNote: NormalizedNote, id: string, pat
   }
 
   return noteTree;
+}
+
+export const indexesInitialState = {
+  notes: notesIndexer.empty(),
+  terms: termsIndexer.empty(),
+  clozes: clozesIndexer.empty(),
+  clozeAnswers: clozeAnswersIndexer.empty(),
+};
+
+export type NoteIndexes = typeof indexesInitialState;
+
+export function updateNotes(indexes: NoteIndexes, ...trees: NoteTree[]) {
+  const notes: Note[] = [];
+  const terms: Term[] = [];
+  const clozes: Cloze[] = [];
+  const clozeAnswers: ClozeAnswer[] = [];
+
+  for (let tree of trees) {
+    notes.push(tree.note);
+    terms.push(...tree.terms);
+    clozes.push(...tree.clozes);
+    clozeAnswers.push(...tree.clozeAnswers);
+  }
+
+  indexes.notes = notesIndexer.update(indexes.notes, notes);
+  indexes.terms = termsIndexer.update(indexes.terms, terms);
+  indexes.clozes = clozesIndexer.update(indexes.clozes, clozes);
+  indexes.clozeAnswers = clozeAnswersIndexer.update(indexes.clozeAnswers, clozeAnswers);
+}
+
+export function removeNotesByPath(indexes: NoteIndexes, path: string) {
+  const parts = path.split('/');
+  const {startIdx, endIdx} = Indexer.getRangeFrom(indexes.notes.byPath, parts, endKeyMatchingWithin(parts))
+  const notes = indexes.notes.byPath[1].slice(startIdx, endIdx)
+  const noteIds = notes.map(({id}) => id);
+
+  indexes.notes = notesIndexer.removeAll(indexes.notes, notes);
+  for (let noteId of noteIds) {
+    indexes.terms = termsIndexer.removeAll(indexes.terms, Indexer.getAllMatching(indexes.terms.byNoteIdReferenceAndMarker, [noteId]));
+    indexes.clozes = clozesIndexer.removeAll(indexes.clozes, Indexer.getAllMatching(indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [noteId]));
+    indexes.clozeAnswers = clozeAnswersIndexer.removeAll(indexes.clozeAnswers, Indexer.getAllMatching(indexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx, [noteId]));
+  }
 }

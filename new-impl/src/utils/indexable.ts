@@ -1,5 +1,5 @@
 import 'regenerator-runtime';
-import {Maybe, some} from "./maybe";
+import {mapSome, Maybe} from "./maybe";
 
 export function arrayCmp(a: ReadonlyArray<any>, b: ReadonlyArray<any>): number {
     for (let i = 0; i < a.length && i < b.length; ++i) {
@@ -38,173 +38,237 @@ export function bisect<T, E>(array: ReadonlyArray<T>, e: E, cmp: (a: E, b: T) =>
     return l;
 }
 
-export type Indexed<K extends any[], T> = [K[], T[]];
-export class Index<K extends any[], T> {
-    constructor(public data: Indexed<K, T> = [[], []]) {}
+export type Indexed<T> = [any[], T[]];
+export type IndexStore<T> = {[k: string]: Indexed<T>}
+export type Keyers<T> = {[k: string]: Keyer<T>};
+export type Keyer<V> = (v: V) => any[];
+export type IndexIterator<V> = () => Maybe<V>
+export type GroupReducer<V> = (iter: IndexIterator<V>, reverseIter: IndexIterator<V>) => Maybe<V>
+export type Reducers<V> = {[k: string]: GroupReducer<V>};
 
-    dup(): Index<K, T> {
-        return new Index<K, T>([[...this.data[0]], [...this.data[1]]]);
-    }
-
-    insert(k: K, t: T) {
-        const [ks, ts] = this.data;
-        const idx = bisect(ks, k, arrayCmp);
-        ts.splice(idx, 0, t);
-        ks.splice(idx, 0, k);
-    }
-
-    remove(k: K) {
-        const [ks, ts] = this.data;
-        const idx = bisect(ks, k, arrayCmp);
-        if (arrayCmp(ks[idx], k) !== 0) return;
-        ts.splice(idx, 1);
-        ks.splice(idx, 1);
-    }
-
-    find(k: K): Maybe<T> {
-        const [ks, ts] = this.data;
-        const [l, r] = this.range(k, [...k, Infinity]);
-        if (r > l) return some(ts[l]);
-        return null;
-    }
-
-    findAll(k: K): T[] {
-        const [ks, ts] = this.data;
-        const [l, r] = this.range(k, [...k, Infinity]);
-        return this.slice([l, r]);
-    }
-
-    get length() {
-        return this.data[0].length;
-    }
-
-    removeRange([l, r]: [number, number]) {
-        const [ks, ts] = this.data;
-        ts.splice(l, r - l);
-        ks.splice(l, r - l);
-    }
-
-    range(start: any[], end: any[]): [number, number] {
-        const [ks] = this.data;
-        return [bisect(ks, start, arrayCmp), bisect(ks, end, arrayCmp)];
-    }
-
-    rightRange<K extends any[], T>(start: K, end: K): [number, number] {
-        const [ks] = this.data;
-        return [bisect(ks, start.concat(null), arrayCmp), bisect(ks, end.concat(null), arrayCmp)];
-    }
-
-    slice([l, r]: [number, number]): T[] {
-        const [_, ts] = this.data;
-        return ts.slice(l, r);
-    }
-
-    sliceMatching(start: any[], end: any[]): T[] {
-        return this.slice(this.range(start, end));
-    }
-}
-
-export function recursivelyInstallData<T>(dest: T, src: T) {
-    for (let k in src) {
-        const n = src[k]
-        if (typeof n === "object") {
-            if (n != null && !Array.isArray(n)) {
-                recursivelyInstallData(dest[k], n);
-                continue;
-            }
-        }
-
-        dest[k] = n;
-    }
-}
-
-export function recursivelyExtractData<T>(v: T): T {
-    const result: any = {};
-    for (let k in v) {
-        const n = v[k];
-        if (typeof n === "object") {
-            if (n != null && !Array.isArray(n)) {
-                result[k] = recursivelyExtractData<any>(n);
-                continue;
-            }
-        } else if (typeof n === "function") {
-            continue;
-        }
-
-        result[k] = n;
-    }
-
-    return result;
-}
-
-export class IndexedTable<T, PK extends any[], Indexes extends {[k: string]: Index<any, T>} = {}> {
+export class Indexer<V, I extends IndexStore<V>> {
     constructor(
-        public pkMapper: (v: T) => PK,
-        public indexes: Indexes,
-        public pkIndex: Index<PK, T> = new Index(),
-        private keyMappers: {[k: string]: (v: T) => any[]} = {},
-    ) {}
-
-    dup(): IndexedTable<T, PK, Indexes> {
-        return new IndexedTable<T, PK, Indexes>(
-            this.pkMapper,
-            {...this.indexes},
-            this.pkIndex,
-            this.keyMappers,
-        )
+        private mainIndexName: keyof I,
+        private indexKeyers: Keyers<V> = {},
+        private indexDependentGroup: { [k: string]: keyof I } = {},
+        private indexGroupKeyers:  Keyers<V> = {},
+        private indexReducers: Reducers<V> = {},
+    ) {
     }
 
-    addIndex<K extends any[], O extends {[k: string]: any}>(o: O, mapper: (v: T) => K): IndexedTable<T, PK, Indexes & {[k in keyof O]: Index<K, T>}> {
-        const newIndexes: any = {...this.indexes};
-        const newKeyMappers: any = {...this.keyMappers};
-
-        Object.entries(o).forEach(([k, v]) => {
-            newIndexes[k] = new Index()
-            newKeyMappers[k] = mapper;
-        })
-
-        return new IndexedTable<T, PK, Indexes & {[k in keyof O]: Index<K, T>}>(
-            this.pkMapper,
-            newIndexes,
-            this.pkIndex,
-            newKeyMappers,
-        )
+    setKeyer(attr: keyof I, keyer: Keyer<V>) {
+        this.indexKeyers[attr as string] = keyer;
     }
 
-    insert(...ts: T[]) {
-        const pkIndex = this.pkIndex = this.pkIndex.dup();
+    addGroupedIndex(attr: keyof I,
+                    keyer: Keyer<V>,
+                    groupAttr: keyof I,
+                    groupKeyer: Keyer<V>,
+                    reducer: GroupReducer<V>) {
+        if (!this.indexKeyers[groupAttr as string]) {
+            throw new Error("Dependent index " + groupAttr + " should be defined before " + attr);
+        }
 
-        for (let t of ts) {
-            const pk = this.pkMapper(t);
+        this.setKeyer(attr, keyer);
 
-            const [l, r] = pkIndex.range(pk, [...pk, null]);
-            pkIndex.data[1].splice(l, r - l, t);
+        this.indexDependentGroup[attr as string] = groupAttr;
+        this.indexGroupKeyers[attr as string] = groupKeyer;
+        this.indexReducers[attr as string] = reducer;
+    }
 
-            const {indexes, keyMappers} = this;
-            for (let k in indexes) {
-                const key = [...keyMappers[k](t), ...pk];
-                const index: Index<any, T> = indexes[k] = indexes[k].dup() as any;
-                const [l, r] = index.range(key, [...key, null]);
-                index.data[0].splice(l, r - l, key);
-                index.data[1].splice(l, r - l, t);
+    empty(): I {
+        let result = {} as I;
+        for (let k in this.indexKeyers) {
+            (result as any)[k] = [[], []];
+        }
+
+        return result;
+    }
+
+    removeAll(indexes: I, values: V[]) {
+        return this.splice(indexes, values, []);
+    }
+
+    removeByPk(indexes: I, primaryKey: any[]): I {
+        return this.removeAll(indexes, Indexer.getAllMatching(indexes[this.mainIndexName], primaryKey));
+    }
+
+    update(indexes: I, values: V[]): I {
+        let oldValues = [] as V[];
+        let newValues = [] as V[];
+
+        let [uniqueKeys, uniqueValues] = uniqueIndex<V>(this.indexKeyers[this.mainIndexName as string], values);
+        uniqueValues.forEach((v, i) => {
+            let existing = Indexer.getFirstMatching(indexes[this.mainIndexName], uniqueKeys[i]);
+            mapSome(existing, existing => oldValues.push(existing));
+            newValues.push(v);
+        });
+
+        return this.splice(indexes, oldValues, newValues);
+    }
+
+    static iterator<V>(index: Indexed<V>, startKey: any[] | null = null, endKey: any[] | null = null): IndexIterator<V> {
+        const {startIdx, endIdx} = Indexer.getRangeFrom(index, startKey, endKey);
+        let idx = startIdx;
+
+        return () => {
+            if (idx < endIdx) {
+                return index[idx++][1];
+            }
+            return null;
+        }
+    }
+
+    static reverseIter<V>(index: Indexed<V>, startKey: any[] | null = null, endKey: any[] | null = null): IndexIterator<V> {
+        if (startKey) startKey = endKeyMatchingOnly(startKey);
+        if (endKey) endKey = endKeyMatchingOnly(endKey);
+
+        let {startIdx, endIdx} = Indexer.getRangeFrom(index, endKey, startKey);
+        let idx = endIdx;
+
+        return () => {
+            if (idx > startIdx) {
+                return index[--idx][1];
+            }
+            return null;
+        }
+    }
+
+    static getAllMatching<V>(index: Indexed<V>, key: any[]): V[] {
+        let {startIdx, endIdx} = Indexer.getRangeFrom(index, key, endKeyMatchingWithin(key));
+        return index[1].slice(startIdx, endIdx);
+    }
+
+    static getRangeFrom([ks]: Indexed<any>, startKey: any[] | null = null, endKey: any[] | null = null) {
+        let startIdx: number;
+        let endIdx: number;
+
+        if (startKey == null) {
+            startIdx = 0;
+        } else {
+            startIdx = bisect(ks, startKey, arrayCmp);
+        }
+
+        if (endKey == null) {
+            endIdx = ks.length;
+        } else {
+            endIdx = bisect(ks, endKey, arrayCmp);
+        }
+
+        return {startIdx, endIdx};
+    }
+
+    static getFirstMatching<V>(index: Indexed<V>, key: any[]): Maybe<V> {
+        return Indexer.iterator(index, key, endKeyMatchingWithin(key))();
+    }
+
+    private splice(indexes: I, removeValues: V[], addValues: V[]) {
+        const oldIndexes = indexes;
+        if (!removeValues.length && !addValues.length) {
+            return indexes;
+        }
+
+        indexes = {...(indexes as any)};
+
+        for (let indexName of Object.keys(this.indexKeyers)) {
+            let index = indexes[indexName];
+            let valuesToRemove = removeValues;
+            let valuesToAdd = addValues;
+
+            const groupIndexName = this.indexDependentGroup[indexName];
+            if (groupIndexName) {
+                let groupKeyer = this.indexGroupKeyers[indexName];
+                let reducer = this.indexReducers[indexName];
+
+                let updateGroups = uniqueIndex(groupKeyer, [...valuesToRemove, ...valuesToAdd]);
+                valuesToRemove = [];
+                valuesToAdd = [];
+
+                for (let updateGroup of updateGroups) {
+                    let updateGroupKey = updateGroup[0];
+                    const prevGroupIndex = oldIndexes[groupIndexName];
+                    const updateGroupKeyRight = endKeyMatchingWithin(updateGroupKey);
+                    let iter = Indexer.iterator(prevGroupIndex,
+                        updateGroupKey,
+                        updateGroupKeyRight);
+                    let reverseIter = Indexer.reverseIter(prevGroupIndex,
+                        updateGroupKeyRight,
+                        updateGroupKey);
+                    const remove = reducer(iter, reverseIter);
+
+                    const curGroupIndex = indexes[groupIndexName];
+                    iter = Indexer.iterator(curGroupIndex,
+                        updateGroupKey,
+                        updateGroupKeyRight);
+                    reverseIter = Indexer.reverseIter(curGroupIndex,
+                        updateGroupKeyRight,
+                        updateGroupKey);
+                    const add = reducer(iter, reverseIter);
+
+                    if (remove === add) continue;
+                    mapSome(remove, remove => valuesToRemove.push(remove));
+                    mapSome(add, add => valuesToAdd.push(add));
+                }
+            }
+
+            if (!valuesToAdd.length && !valuesToRemove.length) {
+                continue;
+            }
+
+            index = (indexes as any)[indexName] = [[...index[0]], [...index[1]]] as Indexed<V>;
+
+            for (let value of valuesToRemove) {
+                this.removeFromIndex(index, indexName, value);
+            }
+
+            for (let value of valuesToAdd) {
+                this.addToIndex(index, indexName, value);
             }
         }
+
+        return indexes;
     }
 
-    remove(pk: PK) {
-        const [l, r] = this.pkIndex.range(pk, [...pk, null]);
-        const pkIndex = this.pkIndex = this.pkIndex.dup();
-        const t = pkIndex.data[1].splice(l, r - l)[0];
-        if (!t) return;
-        pkIndex.data[0].splice(l, r - l);
+    private strictValueKeyOf(indexName: keyof I, value: V): any[] {
+        let pk = this.indexKeyers[this.mainIndexName as string](value);
 
-        const {indexes, keyMappers} = this;
-        for (let k in indexes) {
-            const key = [...keyMappers[k](t), ...pk];
-            const index: Index<any, T> = indexes[k] = indexes[k].dup() as any;
-            const [l, r] = index.range(key, [...key, null]);
-            index.data[0].splice(l, r - l);
-            index.data[1].splice(l, r - l);
+        if (indexName === this.mainIndexName) {
+            return pk;
         }
+
+        return [...this.indexKeyers[indexName as string](value), ...pk]
     }
+
+    private addToIndex(index: Indexed<V>, indexName: keyof I, v: V) {
+        const key = this.strictValueKeyOf(indexName, v);
+        const {startIdx} = Indexer.getRangeFrom(index, key);
+        index[0].splice(startIdx, 0, key);
+        index[1].splice(startIdx, 0, v);
+    }
+
+    private removeFromIndex(index: Indexed<any>, indexName: keyof I, v: V) {
+        const key = this.strictValueKeyOf(indexName, v);
+        const {startIdx, endIdx} = Indexer.getRangeFrom(index, key, endKeyMatchingOnly(key));
+        index[0].splice(startIdx, endIdx - startIdx);
+        index[1].splice(startIdx, endIdx - startIdx);
+    }
+}
+
+function uniqueIndex<V>(keyer: Keyer<V>, values: V[], index = [[], []] as Indexed<V>): Indexed<V> {
+    for (let value of values) {
+        let key = keyer(value);
+        let {startIdx, endIdx} = Indexer.getRangeFrom(index, key, endKeyMatchingOnly(key));
+        index[0].splice(startIdx, endIdx - startIdx, key);
+        index[1].splice(startIdx, endIdx - startIdx, value);
+    }
+
+    return index;
+}
+
+export function endKeyMatchingOnly(start: any[]): any[] {
+    return [...start, null];
+}
+
+export function endKeyMatchingWithin(start: any[]): any[] {
+    return [...start, Infinity];
 }

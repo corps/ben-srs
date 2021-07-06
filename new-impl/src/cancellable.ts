@@ -1,6 +1,6 @@
 import 'regenerator-runtime'
 import {useState, useEffect} from 'react';
-import {isSome, Maybe, some} from "./utils/maybe";
+import {isSome, mapSome, Maybe, some} from "./utils/maybe";
 import {UnbufferedChannel, Trigger} from "./utils/semaphore";
 
 export function useWithContext(fn: (context: Cancellable) => void, deps: any[] = []) {
@@ -11,17 +11,14 @@ export function useWithContext(fn: (context: Cancellable) => void, deps: any[] =
   }, deps);
 }
 
-export function useAsync<Result, P>(fn: () => AsyncGenerator<Result, P>, deps: any[] = []): [Maybe<Result>, Maybe<any>] {
-  const [result, setResult] = useState(null as Maybe<Result>);
-  const [error, setError] = useState(null as Maybe<any>);
+export function useAsync<Result>(fn: () => AsyncGenerator<Result, any>, deps: any[] = []) {
+  const [resultChannel] = useState(new UnbufferedChannel<Result>());
 
   useWithContext((context) => {
-    setError(null);
-    setResult(null);
-    context.run(fn()).then(setResult, setError);
+    context.run(fn()).then((v) => mapSome(v, v => resultChannel.send(v)), e => resultChannel.reject(e));
   }, deps);
 
-  return [result, error];
+  return resultChannel;
 }
 
 

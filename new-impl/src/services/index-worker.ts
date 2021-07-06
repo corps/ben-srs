@@ -1,10 +1,9 @@
-import {defaultNoteTree, denormalizedNote, normalizedNote, NotesIndex, parseNote} from "../notes";
+import {defaultNoteTree, denormalizedNote, indexesInitialState, normalizedNote, parseNote, updateNotes} from "../notes";
 import {StoredBlob} from "./storage";
-import {recursivelyExtractData} from "../utils/indexable";
 
 const worker = self;
 worker.onmessage = ({ data: { noteBlobs } }: { data: { noteBlobs: StoredBlob[] }}) => {
-    const index = new NotesIndex();
+    const indexes = {...indexesInitialState};
     Promise.all(noteBlobs.map(async ({blob, id, rev, path}) => {
         try {
             const contents = await blob.text();
@@ -15,11 +14,11 @@ worker.onmessage = ({ data: { noteBlobs } }: { data: { noteBlobs: StoredBlob[] }
             return defaultNoteTree;
         }
     })).then(trees => {
-        index.addNotes(...trees);
+        updateNotes(indexes, ...trees);
 
         // @ts-ignore
         worker.postMessage({
-            index: recursivelyExtractData(index)
+            indexes,
         });
     });
 };
