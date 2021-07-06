@@ -2,6 +2,7 @@ import 'regenerator-runtime';
 import {Dexie} from "dexie";
 import {FileMetadata} from "./sync";
 import {bindSome, fromVoid, mapSome, Maybe, some, withDefault} from "../utils/maybe";
+import {Blob} from "buffer";
 
 export function withNamespace(storage: Storage, ns: string): Storage {
   return {
@@ -79,46 +80,31 @@ export const contentTypes: {[k: string]: string} = {
   "opus": "audio/opus",
 };
 
-// For testing purposes, as node does not support blob in a reasonable fashion.
-let blobHackIdx = 0;
-let blobHack: any = {};
+export interface StoredMetadata extends FileMetadata {
+  ext: string,
+  dirty: 0 | 1,
+  updatedAt: number,
+}
+
+export interface StoredBlob extends StoredMetadata {
+  blob: Blob,
+}
 
 export class FileStore {
-  public lastUpdatedAt = Date.now();
-
   constructor(private db: Dexie, private blobHack = false) {
     this.db.version(1).stores({
       'cursors': '&backend',
-      'metadata': '&id,path,ext,dirty,updatedAt',
-      'blobs': '&id,path',
+      'metadata': '&id,path,dirty',
+      'blobs': '&id,path,ext,dirty',
     });
+  }
+
+  fetchDirty(): Promise<StoredBlob[]> {
+    return this.db.table('blobs').where('dirty').equals(1).toArray()
   }
 
   async allKeys(): Promise<string[]> {
     return this.db.table('metadata').toCollection().keys() as Promise<string[]>;
-  }
-
-  serializeBlob(blob: Blob): any {
-    if (this.blobHack) {
-      blobHack[++blobHackIdx] = blob;
-      return blobHackIdx;
-    }
-
-    return blob
-  }
-
-  deserializeBlob(data: any): Blob {
-    if (this.blobHack) {
-      return blobHack[data];
-    }
-
-    return data;
-  }
-
-  async latestUpdate(): Promise<number> {
-    const row = await this.db.table('metadata').orderBy('updatedAt').last();
-    if (!row) return this.lastUpdatedAt;
-    return row.updatedAt;
   }
 
   async clear() {
@@ -138,16 +124,12 @@ export class FileStore {
   async storeBlob(blob: Blob, metadata: FileMetadata, localChange: boolean): Promise<void> {
     const ext = withDefault(getExt(metadata.path), '');
 
-    const lastUpdatedAt = Date.now();
     await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
-      const {id, path} = metadata;
-      const storedMetadata = { ...metadata, ext, dirty: localChange, updatedAt: lastUpdatedAt };
-      const serializedBlob = this.serializeBlob(blob);
+      const storedMetadata: StoredMetadata = { ...metadata, ext, dirty: localChange ? 1 : 0, updatedAt: Date.now() };
+      const storedBlob: StoredBlob = {...storedMetadata, blob };
       await this.db.table('metadata').put(storedMetadata);
-      await this.db.table('blobs').put({ id, blob: serializedBlob, path });
+      await this.db.table('blobs').put(storedBlob);
     })
-
-    this.lastUpdatedAt = lastUpdatedAt;
   }
 
   async deletePath(path: string): Promise<void> {
@@ -159,14 +141,12 @@ export class FileStore {
     })
   }
 
-  async fetchBlobs(ids: string[]): Promise<Blob[]> {
-    const data = await this.db.table('blobs').where('id').anyOf(ids).toArray();
-    return data.map(({blob}) => this.deserializeBlob(blob));
+  async fetchBlob(id: string): Promise<Maybe<StoredBlob>> {
+    return this.db.table('blobs').where('id').equals(id).first().then(fromVoid);
   }
 
-  async fetchText(ids: string[]): Promise<string[]> {
-    const blobs = await this.fetchBlobs(ids);
-    return Promise.all(blobs.map(blob => blob.text().catch(() => "/non text data/")));
+  async fetchBlobsByExt(ext: string): Promise<StoredBlob[]> {
+    return this.db.table('blobs').where('ext').equals(ext).toArray();
   }
 
   async fetchMetadata(): Promise<FileMetadata[]> {

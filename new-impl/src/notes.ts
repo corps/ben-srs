@@ -125,8 +125,9 @@ export function stringifyNote(note: NormalizedNote): string {
 }
 
 const notesIndex = new IndexedTable((v: Note) => [v.id] as [string], {})
-    .addIndex({byAudioFileId: 0}, ({id, attributes: {audioFileId}}) => [audioFileId] as [string])
-    .addIndex({byLanguage: 0}, ({id, attributes: {language}}) => [language] as [string]);
+    .addIndex({byAudioFileId: 0}, ({attributes: {audioFileId}}) => [audioFileId] as [string])
+    .addIndex({byLanguage: 0}, ({attributes: {language}}) => [language] as [string])
+    .addIndex({byPath: 0}, ({path}) => path.split('/'));
 
 const termsIndex = new IndexedTable((v: Term) => [v.noteId, v.attributes.reference, v.attributes.marker] as [string, string, string], {})
     .addIndex({byLanguage: 0}, ({language}) => [language] as [string])
@@ -154,6 +155,35 @@ export class NotesIndex {
   public termsIndex = termsIndex.dup();
   public clozesIndex = clozesIndex.dup();
   public clozeAnswerIndex = clozeAnswerIndex.dup();
+
+  removeByPath(path: string) {
+    const parts = path.split('/');
+    const ids = this.notesIndex.indexes.byPath.sliceMatching(parts, [...parts, Infinity]).map(({id}) => id);
+
+    for (let id of ids) {
+      const pk = [id] as [string];
+      this.notesIndex.remove(pk);
+    }
+  }
+
+  addNotes(...trees: NoteTree[]) {
+    const notes: Note[] = [];
+    const terms: Term[] = [];
+    const clozes: Cloze[] = [];
+    const answers: ClozeAnswer[] = [];
+
+    for (let tree of trees) {
+      notes.push(tree.note);
+      terms.push(...tree.terms);
+      clozes.push(...tree.clozes);
+      answers.push(...tree.clozeAnswers);
+    }
+
+    this.notesIndex.insert(...notes);
+    this.termsIndex.insert(...terms);
+    this.clozesIndex.insert(...clozes);
+    this.clozeAnswerIndex.insert(...answers);
+  }
 
   findNoteTree(noteId: string): Maybe<NoteTree> {
     const note = this.notesIndex.pkIndex.find([noteId]);

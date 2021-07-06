@@ -5,6 +5,7 @@ import {FileStore, withNamespace} from "../services/storage";
 import {FileStorageContext, NotesIndexContext, SessionContext} from "../hooks/contexts";
 import Dexie from "dexie";
 import {NotesIndex} from "../notes";
+import {Router} from "./Router";
 
 const loginStorage = withNamespace(localStorage, "dropboxLogin");
 
@@ -21,7 +22,7 @@ export function App() {
     <SessionContext.Provider value={session[0]}>
       <FileStorageContext.Provider value={fileStorage}>
         <NotesIndexContext.Provider value={notesIndex}>
-          Hello World!
+          <Router/>
         </NotesIndexContext.Provider>
       </FileStorageContext.Provider>
     </SessionContext.Provider>

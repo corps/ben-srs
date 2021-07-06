@@ -17,14 +17,7 @@ describe('sync', () => {
         describe((backend as any).constructor.name, () => {
             describe('sync down process', () => {
                 it('e2e works', async () => {
-                    const [syncProcess, finished] = syncFiles(new Cancellable(), backend, store);
-                    for (let progress of syncProcess) {
-                        const data = await progress;
-                        // console.log(data);
-                    }
-
-                    console.log('done')
-                    await finished;
+                    await syncFiles(new Cancellable(), backend, store);
                 }, 60000000)
             });
         });

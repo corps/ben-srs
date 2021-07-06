@@ -104,6 +104,39 @@ export class Index<K extends any[], T> {
     }
 }
 
+export function recursivelyInstallData<T>(dest: T, src: T) {
+    for (let k in src) {
+        const n = src[k]
+        if (typeof n === "object") {
+            if (n != null && !Array.isArray(n)) {
+                recursivelyInstallData(dest[k], n);
+                continue;
+            }
+        }
+
+        dest[k] = n;
+    }
+}
+
+export function recursivelyExtractData<T>(v: T): T {
+    const result: any = {};
+    for (let k in v) {
+        const n = v[k];
+        if (typeof n === "object") {
+            if (n != null && !Array.isArray(n)) {
+                result[k] = recursivelyExtractData<any>(n);
+                continue;
+            }
+        } else if (typeof n === "function") {
+            continue;
+        }
+
+        result[k] = n;
+    }
+
+    return result;
+}
+
 export class IndexedTable<T, PK extends any[], Indexes extends {[k: string]: Index<any, T>} = {}> {
     constructor(
         public pkMapper: (v: T) => PK,
@@ -138,20 +171,23 @@ export class IndexedTable<T, PK extends any[], Indexes extends {[k: string]: Ind
         )
     }
 
-    insert(t: T) {
-        const pk = this.pkMapper(t);
-
+    insert(...ts: T[]) {
         const pkIndex = this.pkIndex = this.pkIndex.dup();
-        const [l, r] = pkIndex.range(pk, [...pk, null]);
-        pkIndex.data[1].splice(l, r - l, t);
 
-        const {indexes, keyMappers} = this;
-        for (let k in indexes) {
-            const key = [...keyMappers[k](t), ...pk];
-            const index: Index<any, T> = indexes[k] = indexes[k].dup() as any;
-            const [l, r] = index.range(key, [...key, null]);
-            index.data[0].splice(l, r - l, key);
-            index.data[1].splice(l, r - l, t);
+        for (let t of ts) {
+            const pk = this.pkMapper(t);
+
+            const [l, r] = pkIndex.range(pk, [...pk, null]);
+            pkIndex.data[1].splice(l, r - l, t);
+
+            const {indexes, keyMappers} = this;
+            for (let k in indexes) {
+                const key = [...keyMappers[k](t), ...pk];
+                const index: Index<any, T> = indexes[k] = indexes[k].dup() as any;
+                const [l, r] = index.range(key, [...key, null]);
+                index.data[0].splice(l, r - l, key);
+                index.data[1].splice(l, r - l, t);
+            }
         }
     }
 

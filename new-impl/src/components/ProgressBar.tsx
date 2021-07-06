@@ -19,7 +19,11 @@ const classNameGenerator = classNamesGeneratorFor<Props>(add => {
 export function ProgressBar(props: Props) {
     const [tween, setTween] = useState(0);
     const {pendingNum, completed} = props;
-    const progress = (pendingNum === 0 ? 1 : ((pendingNum - completed + tween / (tween + 2)) / pendingNum)) * 100 ;
+    const tweened = tween / (tween + 2);
+    const total = pendingNum + completed;
+    const running = pendingNum + tweened;
+
+    const progress = (pendingNum === 0 ? 1 : running / total * 100);
 
     useEffect(() => {
         setTween(0);
