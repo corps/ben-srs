@@ -50,7 +50,6 @@ export class DropboxSyncBackend implements SyncBackend {
         if (e.status === 429) {
           if (e.headers['Retry-After']) {
             const until = Date.now() + parseInt(e.headers['Retry-After'], 10);
-            console.log('hit gating until', until);
             throw new GatingException(until, e);
           }
         }
@@ -179,7 +178,6 @@ export function loadDropboxSession(clientId: string) {
     const auth = await getDropboxAuthOrLogin(clientId, storage);
 
     let user = {...defaultUser, needsRefreshAt: auth.getAccessTokenExpiresAt() };
-
     const existingUserName = storage.getItem('username');
     if (existingUserName) {
       user = {...user, username: existingUserName };
@@ -227,7 +225,7 @@ export function getDropboxAuthOrLogin(clientId: string, storage: Storage): Promi
           .then((response) => {
             const result: DropboxAccessTokenAuthResponse = response.result as any;
             auth.setAccessToken(result.access_token);
-            auth.setAccessTokenExpiresAt(new Date(new Date().getTime() + result.expires_in))
+            auth.setAccessTokenExpiresAt(new Date(new Date().getTime() + result.expires_in * 1000))
 
             storage.setItem('token', result.access_token);
             storage.setItem('expires', auth.getAccessTokenExpiresAt().getTime() + "");

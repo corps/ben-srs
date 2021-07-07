@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {useFileStorage, useNotesIndex, useSession} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
 import {endKeyMatchingWithin, Indexer} from "../utils/indexable";
@@ -26,6 +26,12 @@ export function MainMenu({ syncFailed }: { syncFailed: boolean }) {
     }, [notesIndex.notes.byLanguage]);
 
     const [language, setLanguage] = useState(() => languages[0]);
+    useEffect(() => {
+        if (!languages.includes(language)) {
+            setLanguage(languages[0]);
+        }
+    }, [languages, language]);
+
     const [audioStudy, setAudioStudy] = useState(false);
     const toggleAudioStudy = useToggle(setAudioStudy);
 

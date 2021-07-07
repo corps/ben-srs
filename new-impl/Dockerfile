@@ -11,6 +11,7 @@ RUN unzip websocketd*
 RUN mv websocketd /bin/
 RUN apt-get -y install jq curl
 RUN mkdir -p /app
+RUN groupadd -g $GID app
 RUN useradd -ms /bin/bash -u $UID -g $GID app
 RUN mkdir -p /app
 

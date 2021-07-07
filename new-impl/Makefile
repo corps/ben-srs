@@ -5,6 +5,7 @@
 bash: .image
 	docker run --rm -it -v $$PWD:/app -u $(shell id -u):$(shell id -g) bensrs bash
 
+.PHONY: up
 up: .image
 	docker run -d -p 8080:8080 -v $$PWD:/app -u $(shell id -u):$(shell id -g) --name bensrs-srv bensrs websocketd --port 8080 --staticdir dist ./server.sh || true
 	docker run -d -v $$PWD:/app -u $(shell id -u):$(shell id -g) --name bensrs-webpack bensrs webpack --watch || true
@@ -16,4 +17,4 @@ down:
 	docker rm bensrs-webpack || true
 
 logs:
-	@ docker logs -f bensrs-srv
+	@ docker logs -f bensrs-webpack

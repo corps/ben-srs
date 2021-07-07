@@ -58,12 +58,10 @@ export function* syncFiles(
     }
 
     let cursor = yield* runPromise(storage.getCursor());
-    console.log('got cursor', cursor);
 
     for (let fileList of backend.syncFileList(cursor)) {
         updatePending(1);
         const {delta, cursor: nextCursor} = yield* runPromise(fileList);
-        console.log({delta});
         updatePending(-1);
 
         const deletePaths: string[] = [];
