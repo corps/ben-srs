@@ -10,6 +10,7 @@ export function useNoteLoader() {
     // @ts-ignore
     const [worker] = useState(() => new Worker(new URL('../services/index-worker.ts', import.meta.url)));
 
+
     useEffect(() => {
         storage.fetchBlobsByExt('txt').then(noteBlobs => {
             worker.postMessage({
