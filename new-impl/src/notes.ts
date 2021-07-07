@@ -129,6 +129,7 @@ export type NotesStore = {
   byId: Indexed<Note>;
   byLanguage: Indexed<Note>;
   byAudioFileId: Indexed<Note>;
+  byEditsComplete: Indexed<Note>;
 };
 
 export type TermsStore = {
@@ -155,6 +156,7 @@ notesIndexer.setKeyer("byPath", note => note.path.split("/"));
 notesIndexer.setKeyer("byId", note => [note.id]);
 notesIndexer.setKeyer("byLanguage", note => [note.attributes.language]);
 notesIndexer.setKeyer("byAudioFileId", note => [note.attributes.audioFileId]);
+notesIndexer.setKeyer("byEditsComplete", note => [note.attributes.editsComplete]);
 
 export const termsIndexer = new Indexer<Term, TermsStore>("byNoteIdReferenceAndMarker");
 termsIndexer.setKeyer("byNoteIdReferenceAndMarker", term => [

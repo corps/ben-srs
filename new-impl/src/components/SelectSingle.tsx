@@ -21,7 +21,7 @@ export function SelectSingle(props: SelectSingleProps & { className?: string }) 
     const selected = (event.target as HTMLSelectElement).value;
     const valueNum = parseInt(selected, 10);
     changeCb && changeCb(values[valueNum])
-  }, []);
+  }, [values]);
 
   let valueIdx = -1;
   if (value) {
@@ -29,11 +29,11 @@ export function SelectSingle(props: SelectSingleProps & { className?: string }) 
   }
 
   return <select className={classNamesForSelectSingle(props)} value={valueIdx + ""} onChange={onChange}>
-    { props.placeholder ? <option key="-1" value="-1" label={props.placeholder}>{props.placeholder}</option> : null }
-    { valueIdx === -1 && props.value ?
-      <option key="-1" value="-1" label={labeler(props.value)}>{labeler(props.value)}</option> :
+    { placeholder ? <option key="-1" value="-1" label={placeholder}>{placeholder}</option> : null }
+    { valueIdx === -1 && value ?
+      <option key="-1" value="-1" label={labeler(value)}>{labeler(value)}</option> :
       null }
-    { props.values.map((value, idx) => {
+    { values.map((value, idx) => {
       return <option key={idx + ""} value={idx + ""} label={labeler(value)}>{labeler(value)}</option>
     }) }
   </select>

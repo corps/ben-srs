@@ -87,10 +87,6 @@ export function MainMenu({ syncFailed }: { syncFailed: boolean }) {
                 実績: {studyData.studied}
             </div>
 
-            <div className="tc f4 fw2 mb1">
-                次: {studyData.nextDueAt ? describeDuration(time - studyData.nextDueAt, false) : "none"}
-            </div>
-
             <div className="tc f4 fw4 mb3 red">
                 {syncFailed ? <span className="red mr1">オフライン</span> : null}
             </div>

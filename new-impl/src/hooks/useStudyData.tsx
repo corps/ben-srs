@@ -11,7 +11,6 @@ export const newStudyData = {
     new: 0,
     terms: 0,
     clozes: 0,
-    nextDueAt: 0,
 };
 
 export type StudyData = typeof newStudyData;
@@ -51,11 +50,6 @@ export function useStudyData(
         range = Indexer.getRangeFrom(notesIndex.clozes.byLanguageSpokenAndNextDue,
             [language, audioStudy, true], [language, audioStudy, true, 1]);
         result.new = range.endIdx - range.startIdx;
-
-        const nextDue = findNextStudyCloze(language, minutesNow, notesIndex, audioStudy);
-        mapSome(nextDue, nextDue => {
-            result.nextDueAt = timeOfMinutes(nextDue.attributes.schedule.nextDueMinutes);
-        })
 
         return result;
     }, [
