@@ -22,7 +22,7 @@ export function useNoteLoader() {
             Object.assign(index, indexedData);
             loadedTrigger.resolve();
         };
-    }, [])
+    }, [index, loadedTrigger, storage, worker])
 
     return loadedTrigger.promise;
 }

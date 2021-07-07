@@ -4,9 +4,10 @@ import {MainMenu} from "./MainMenu";
 import {ProgressBar} from "./ProgressBar";
 import {useProgress} from "../hooks/useProgress";
 import {useSync} from "../hooks/useSync";
+import {Maybe, withDefault} from "../utils/maybe";
 
 export function Router() {
-    const [route, setRoute] = useState([] as ReactElement[]);
+    const [route, setRoute] = useState(null as Maybe<ReactElement>);
     const {pending, completed, onProgress} = useProgress();
     const [_, syncError] = useSync(onProgress);
 
@@ -14,7 +15,7 @@ export function Router() {
         syncError && console.error(syncError);
     }, [syncError]);
 
-    const ele = route[route.length - 1] || <MainMenu syncFailed={!!syncError}/>;
+    const ele = withDefault(route, <MainMenu syncFailed={!!syncError}/>);
 
     return <RouteContext.Provider value={setRoute}>
         <div className="fixed w-100" style={{height: "5px"}}>

@@ -2,11 +2,12 @@ import {createContext, Dispatch, ReactElement, useContext} from "react";
 import {defaultSession} from "../services/backends";
 import {indexesInitialState} from "../notes";
 import {FileStore} from "../services/storage";
+import {Maybe} from "../utils/maybe";
 
 export const SessionContext = createContext(defaultSession);
 export const NotesIndexContext = createContext({...indexesInitialState});
 export const FileStorageContext = createContext({} as FileStore);
-export const RouteContext = createContext((() => []) as Dispatch<(v: ReactElement[]) => ReactElement[]>);
+export const RouteContext = createContext((() => []) as Dispatch<(v: Maybe<ReactElement>) => Maybe<ReactElement>>);
 
 export function useSession() {
     return useContext(SessionContext);

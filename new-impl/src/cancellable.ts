@@ -8,6 +8,7 @@ export function useWithContext(fn: (context: Cancellable) => void, deps: any[] =
     const cancellable = new Cancellable();
     fn(cancellable);
     return () => cancellable.cancel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 }
 

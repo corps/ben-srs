@@ -2,7 +2,6 @@ import 'regenerator-runtime';
 import {Dexie} from "dexie";
 import {FileMetadata} from "./sync";
 import {bindSome, fromVoid, mapSome, Maybe, some, withDefault} from "../utils/maybe";
-import {Blob} from "buffer";
 
 export function withNamespace(storage: Storage, ns: string): Storage {
   return {

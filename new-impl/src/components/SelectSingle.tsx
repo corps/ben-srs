@@ -21,7 +21,7 @@ export function SelectSingle(props: SelectSingleProps & { className?: string }) 
     const selected = (event.target as HTMLSelectElement).value;
     const valueNum = parseInt(selected, 10);
     changeCb && changeCb(values[valueNum])
-  }, [values]);
+  }, [changeCb, values]);
 
   let valueIdx = -1;
   if (value) {

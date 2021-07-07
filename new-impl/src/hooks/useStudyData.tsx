@@ -1,14 +1,13 @@
 import {useNotesIndex} from "./contexts";
-import {endOfDay, minutesOfTime, startOfDay, timeOfMinutes} from "../utils/time";
+import {endOfDay, minutesOfTime, startOfDay} from "../utils/time";
 import {useMemo} from "react";
 import {Indexer} from "../utils/indexable";
-import {findNextStudyCloze, findNextStudyDetails} from "../study";
-import {mapSome} from "../utils/maybe";
 
 export const newStudyData = {
     studied: 0,
     due: 0,
     new: 0,
+    delayed: 0,
     terms: 0,
     clozes: 0,
 };
@@ -51,9 +50,10 @@ export function useStudyData(
             [language, audioStudy, true], [language, audioStudy, true, 1]);
         result.new = range.endIdx - range.startIdx;
 
+        range = Indexer.getRangeFrom(notesIndex.clozes.byLanguageSpokenAndNextDue,
+          [language, audioStudy, false], [language, audioStudy, false, Infinity]);
+        result.delayed = range.endIdx - range.startIdx;
+
         return result;
-    }, [
-        minutesNow, language, audioStudy, notesIndex.notes,
-        notesIndex.clozes, notesIndex.terms, notesIndex.clozeAnswers
-    ]);
+    }, [minutesNow, language, audioStudy, notesIndex.clozes, notesIndex.terms, notesIndex.clozeAnswers]);
 }

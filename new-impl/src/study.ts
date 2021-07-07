@@ -321,6 +321,24 @@ export function findTermInNormalizedNote(note: NormalizedNote,
   return null;
 }
 
+export function updateTermInNormalizedNote(note: NormalizedNote, update: NormalizedTerm): NormalizedNote {
+  const updatedTerms = [...note.attributes.terms];
+
+  for (let i = 0; i < updatedTerms.length; ++i) {
+    const term = updatedTerms[i];
+    if (
+      (term.attributes.reference === update.attributes.reference &&
+        term.attributes.marker === update.attributes.marker)
+    ) {
+      updatedTerms[i] = update;
+      return {...note, attributes: {...note.attributes, terms: updatedTerms}};
+    }
+  }
+
+  updatedTerms.push(update);
+  return {...note, attributes: {...note.attributes, terms: updatedTerms}};
+}
+
 export function fullTermMarker(term: TermId) {
   if (term.attributes.marker.indexOf(term.attributes.reference) === 0)
     return term.attributes.marker;

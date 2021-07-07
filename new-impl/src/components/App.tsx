@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 import 'tachyons';
+import '../css/index.css';
 import {useLogin} from "../hooks/useLogin";
 import {FileStore, withNamespace} from "../services/storage";
 import {FileStorageContext, NotesIndexContext, SessionContext} from "../hooks/contexts";

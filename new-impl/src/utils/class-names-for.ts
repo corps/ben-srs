@@ -1,6 +1,9 @@
-import React from "react";
+import React, {PropsWithChildren} from "react";
 
-export interface StyleAdder<T extends {className?: string}> {
+export type PropsWithClassName<P extends {}> = P & { className?: string };
+export type PropsWithChildrenAndClassName<P extends {}> = PropsWithChildren<PropsWithClassName<P>>;
+
+interface StyleAdder<T extends {className?: string}> {
   (
     k: keyof T & string,
     e: React.ReactElement<{className: string}>,
