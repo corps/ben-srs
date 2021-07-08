@@ -1,5 +1,5 @@
-import React, {ChangeEvent, Dispatch, SetStateAction, useCallback, useEffect, useState} from 'react';
-import {mapSome, mapSomeAsync, Maybe, some, withDefault} from "../utils/maybe";
+import React, {ChangeEvent, Dispatch, SetStateAction, useCallback, useState} from 'react';
+import {mapSomeAsync, Maybe, withDefault} from "../utils/maybe";
 import {
   ClozeType,
   findNoteTree,
@@ -11,7 +11,6 @@ import {
   NoteTree
 } from "../notes";
 import {useFileStorage, useNotesIndex, useRoute} from "../hooks/contexts";
-import {EditNote} from "./EditNote";
 import {findTermInNormalizedNote, updateTermInNormalizedNote} from "../study";
 import {SimpleNavLink} from "./SimpleNavLink";
 import {useToggle} from "../hooks/useToggle";
@@ -22,7 +21,6 @@ import {medianSchedule} from "../scheduler";
 interface Props {
   onReturn?: () => void,
   onApply: (tree: Maybe<NoteTree>, updated: NormalizedNote) => Promise<void>,
-  onDelete: () => void,
   noteId: string,
   reference: string,
   marker: string,
@@ -40,13 +38,7 @@ export function EditTerm(props: Props) {
   const notesIndex = useNotesIndex();
   const store = useFileStorage();
 
-  const editNote = useCallback(() => {
-    setRoute(() => some(<EditNote onApply={async (tree, updated) => {
-      setRoute(() => some(<EditTerm {...{...props, normalized: updated}}/>))
-    }} noteId={props.noteId}/>));
-  }, [props, setRoute]);
-
-  const {onReturn = editNote, normalized, reference, marker, noteId, onDelete} = props;
+  const {onReturn = () => setRoute(() => null), normalized, reference, marker, noteId} = props;
 
   const [workingTerm, setWorkingTerm] = useState(() => {
     return withDefault(findTermInNormalizedNote(normalized, reference, marker),
@@ -71,6 +63,22 @@ export function EditTerm(props: Props) {
       )
     );
   }, [notesIndex, noteId, props, normalized, workingTerm, produce, pronounce, recognize, listen, clozeSplit]);
+
+  const onDelete = useCallback(async () => {
+    const updated = {...normalized};
+    const attributes = updated.attributes = {...updated.attributes};
+    for (let i = 0; i < attributes.terms.length; ++i) {
+      const term = attributes.terms[i];
+      if (term.attributes.reference === workingTerm.attributes.reference && term.attributes.marker === workingTerm.attributes.marker) {
+        attributes.terms = [...attributes.terms];
+        attributes.terms.splice(i, 1);
+        break;
+      }
+    }
+
+    const tree = findNoteTree(notesIndex, noteId);
+    await props.onApply(tree, updated);
+  }, [normalized, noteId, notesIndex, props, workingTerm.attributes.marker, workingTerm.attributes.reference]);
 
   const onChangeHint = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setWorkingTerm(term => {

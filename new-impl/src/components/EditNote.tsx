@@ -18,11 +18,10 @@ interface Props {
   noteId: string,
 }
 
-const allLanguages = ['Japanese', 'Cantonese', 'English'];
+const allLanguages = ['Japanese', 'Cantonese', 'English', 'Test'];
 
 export function EditNote(props: Props) {
   const notesIndex = useNotesIndex();
-  const storage = useFileStorage();
   const setRoute = useRoute();
   const {onReturn = () => setRoute(() => null), noteId} = props;
   const [normalized, setNormalized] = useState(() => {
