@@ -1,14 +1,15 @@
 import {
   Cloze,
   ClozeType,
-  Language,
+  findNoteTree,
   newNormalizedTerm,
   NormalizedNote,
+  normalizedNote,
   NormalizedTerm,
-} from "./storage";
-import {Indexer} from "redux-indexers";
-import {State} from "./state";
-import {findNoteTree, normalizedNote} from "./indexes";
+  NoteIndexes
+} from "./notes";
+import {applySome, bindSome, mapSome, Maybe, some, toVoid} from "./utils/maybe";
+import {Indexer} from "./utils/indexable";
 
 export interface StudyDetails {
   cloze: Cloze;
@@ -22,7 +23,7 @@ export interface StudyDetails {
   hint: string;
   definition: string;
   type: ClozeType;
-  audioFileId: string | void;
+  audioFileId: string | undefined | null;
 }
 
 export interface TermId {
@@ -96,21 +97,18 @@ const allNotDivisibleRegex = new RegExp("[^" + divisibleRegex.source + "]*");
 const allNotDivisibleTailRegex = new RegExp(allNotDivisibleRegex.source + "$");
 const allNotDivisibleHeadRegex = new RegExp("^" + allNotDivisibleRegex.source);
 
-export function findNextStudyDetails(language: Language,
+export function findNextStudyDetails(language: string,
                                      fromMinutes: number,
-                                     indexes: State["indexes"],
-                                     spoken: boolean): StudyDetails | 0 {
-  let nextCloze = findNextStudyCloze(language, fromMinutes, indexes, spoken);
-
-  if (nextCloze) {
-    return studyDetailsForCloze(nextCloze, indexes);
-  }
+                                     indexes: NoteIndexes,
+                                     spoken: boolean): Maybe<StudyDetails> {
+  return bindSome(findNextStudyCloze(language, fromMinutes, indexes, spoken),
+          nextCloze => studyDetailsForCloze(nextCloze, indexes));
 }
 
-export function findNextStudyCloze(language: Language,
+export function findNextStudyCloze(language: string,
                                    fromMinutes: number,
-                                   indexes: State["indexes"],
-                                   spoken: boolean) {
+                                   indexes: NoteIndexes,
+                                   spoken: boolean): Maybe<Cloze> {
   let nextCloze = Indexer.reverseIter(
     indexes.clozes.byLanguageSpokenNewAndNextDue,
     [language, spoken, true, true, fromMinutes],
@@ -134,18 +132,17 @@ export function findNextStudyCloze(language: Language,
   return nextCloze;
 }
 
-export function studyDetailsForCloze(cloze: Cloze,
-                                     indexes: State["indexes"]): StudyDetails | 0 {
-  let term = Indexer.getFirstMatching(
+export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<StudyDetails> {
+  const term = toVoid(Indexer.getFirstMatching(
     indexes.terms.byNoteIdReferenceAndMarker,
     [cloze.noteId, cloze.reference, cloze.marker]
-  );
-  let note = Indexer.getFirstMatching(indexes.notes.byId, [cloze.noteId]);
-  let clozes = Indexer.getAllMatching(
+  ));
+  const note = toVoid(Indexer.getFirstMatching(indexes.notes.byId, [cloze.noteId]));
+  const clozes = Indexer.getAllMatching(
     indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx,
     [cloze.noteId, cloze.reference, cloze.marker]
   );
-  let noteTree = findNoteTree(indexes, cloze.noteId);
+  const noteTree = toVoid(findNoteTree(indexes, cloze.noteId));
 
   if (term && note && noteTree) {
     let normalized = normalizedNote(noteTree);
@@ -156,7 +153,7 @@ export function studyDetailsForCloze(cloze: Cloze,
 
     clozeSplits = clozeSplits.slice(0, 2 * (cloze.clozeIdx + 1));
 
-    return {
+    return some({
       cloze,
       definition: term.attributes.definition || note.attributes.content,
       content: content,
@@ -177,8 +174,10 @@ export function studyDetailsForCloze(cloze: Cloze,
       hint: term.attributes.hint,
       type: cloze.attributes.type,
       audioFileId: note.attributes.audioFileId,
-    };
+    });
   }
+
+  return null;
 }
 
 export function findTermRange(term: TermId, text: string): [number, number] {
@@ -236,7 +235,7 @@ export function findContentRange(term: TermId,
 
   let partialLeftSide = leftSide.slice(leftSide.length - leftSideGrab);
   let unusedLeft = leftSide.slice(0, leftSide.length - partialLeftSide.length);
-  let leftSideIdx = unusedLeft.match(allNotDivisibleTailRegex).index;
+  let leftSideIdx = unusedLeft.match(allNotDivisibleTailRegex)?.index || 0;
 
   let rightSide = content.slice(termEnd);
   let unusedRight = rightSide.slice(grabCharsMax);
@@ -244,16 +243,14 @@ export function findContentRange(term: TermId,
   let rightSideIdx = Math.min(
     termEnd +
     grabCharsMax +
-    unusedRight.match(allNotDivisibleHeadRegex)[0].length,
+      (unusedRight.match(allNotDivisibleHeadRegex) || [""])[0].length,
     content.length
   );
 
   return [leftSideIdx, rightSideIdx];
 }
 
-export function addNewTerm(note: NormalizedNote,
-                           left: number,
-                           right: number): NormalizedNote {
+export function addNewTerm(note: NormalizedNote, left: number, right: number): NormalizedNote {
   let content = note.attributes.content;
   let reference = content.slice(left, right);
   let marker = findNextUniqueMarker(content);
@@ -312,23 +309,34 @@ export function getTermFragment(note: NormalizedNote,
 
 export function findTermInNormalizedNote(note: NormalizedNote,
                                          reference: string,
-                                         marker: string): NormalizedTerm | 0 {
+                                         marker: string): Maybe<NormalizedTerm> {
   for (let term of note.attributes.terms) {
     if (
-      (term.attributes.reference === reference,
+      (term.attributes.reference === reference &&
       term.attributes.marker === marker)
     )
-      return term;
+      return some(term);
   }
+
+  return null;
 }
 
-export function findNextEditableNote(indexes: State["indexes"],
-                                     lastNoteId = undefined as string) {
-  return Indexer.iterator(
-    indexes.notes.byEditsComplete,
-    [false, lastNoteId],
-    [false, Infinity]
-  )();
+export function updateTermInNormalizedNote(note: NormalizedNote, update: NormalizedTerm): NormalizedNote {
+  const updatedTerms = [...note.attributes.terms];
+
+  for (let i = 0; i < updatedTerms.length; ++i) {
+    const term = updatedTerms[i];
+    if (
+      (term.attributes.reference === update.attributes.reference &&
+        term.attributes.marker === update.attributes.marker)
+    ) {
+      updatedTerms[i] = update;
+      return {...note, attributes: {...note.attributes, terms: updatedTerms}};
+    }
+  }
+
+  updatedTerms.push(update);
+  return {...note, attributes: {...note.attributes, terms: updatedTerms}};
 }
 
 export function fullTermMarker(term: TermId) {

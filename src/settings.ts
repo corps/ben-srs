@@ -1,4 +1,4 @@
-export const defaultLanguageSettings = {
+export const defaultLanguageSettings: {[k: string]: {codes: string[]}} = {
   "Japanese": {
     codes: ["ja-JP"],
   },

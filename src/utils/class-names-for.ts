@@ -1,27 +1,19 @@
-import * as React from "react";
+import React, {PropsWithChildren} from "react";
 
-export interface ClassAndChildren {
-  className?: string;
-  children?: (JSX.Element | string | number)[] | JSX.Element | string | number;
-  [k: string]: any;
-}
+export type PropsWithClassName<P extends {}> = P & { className?: string };
+export type PropsWithChildrenAndClassName<P extends {}> = PropsWithChildren<PropsWithClassName<P>>;
 
-export interface StyleAdder<T extends ClassAndChildren> {
+interface StyleAdder<T extends {className?: string}> {
   (
-    k: keyof T,
+    k: keyof T & string,
     e: React.ReactElement<{className: string}>,
     inverse?: React.ReactElement<{className: string}>
   ): void;
-  match?<K extends keyof T>(
-    key: K,
-    value: T[K],
-    e: React.ReactElement<{className: string}>
-  ): void;
 }
 
-export function classNamesGeneratorFor<T extends ClassAndChildren>(
+export function classNamesGeneratorFor<T extends {}>(
   initializer: (add: StyleAdder<T>) => void,
-  defaults: React.ReactElement<{className: string}> = null,
+  defaults: React.ReactElement<{className: string}> | null = null,
   ignoreGivenStyles = false
 ): (properties: T) => string {
   const classesForProps = {} as {[k: string]: string};
@@ -38,17 +30,6 @@ export function classNamesGeneratorFor<T extends ClassAndChildren>(
     if (inverse) {
       classesForInverseProps[k] = inverse.props.className;
     }
-  };
-
-  adder.match = function<K extends keyof T>(
-    key: K,
-    value: T[K],
-    e: React.ReactElement<{className: string}>
-  ) {
-    (classesForMatches[key] = classesForMatches[key] || []).push([
-      value,
-      e.props.className,
-    ]);
   };
 
   initializer(adder);
@@ -90,8 +71,8 @@ export function classNamesGeneratorFor<T extends ClassAndChildren>(
       classNames += " " + unusedInverseClasses[k];
     }
 
-    if (props.className && !ignoreGivenStyles)
-      classNames += " " + props.className;
+    if ('className' in props && !ignoreGivenStyles)
+      classNames += " " + (props as any).className;
 
     return classNames;
   };
