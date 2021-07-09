@@ -11,6 +11,9 @@ import {NormalizedNote, NoteIndexes, NoteTree} from "../notes";
 import {mapSome, Maybe, some, withDefault} from "../utils/maybe";
 import {Study} from "./Study";
 import {useUpdateNote} from "../hooks/useUpdateNote";
+import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
+import {EditNote} from "./EditNote";
+import {createId} from "../services/storage";
 
 export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const session = useSession();
@@ -42,10 +45,12 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const time = useTime();
 
   const updateNote = useUpdateNote();
-  const saveNewNote = useCallback(async (baseTree: Maybe<NoteTree>, updated: NormalizedNote) => {
-    updateNote(baseTree, updated);
-    setRoute(() => null);
-  }, [setRoute, updateNote]);
+  const newNoteRouting = useWorkflowRouting(EditNote, MainMenu, updateNote);
+  const visitNewNote = useCallback(() => {
+    newNoteRouting({
+      noteId: createId(),
+    }, {syncFailed}, () => ({syncFailed}))
+  }, [newNoteRouting, syncFailed]);
 
   useOptimizeNextStudy(notesIndex, minutesOfTime(time), language, audioStudy, setLanguage, setAudioStudy);
 
@@ -115,7 +120,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
         </CircleButton>
 
         <CircleButton
-          // onClick={() => dispatch(visitNewNote)}
+          onClick={visitNewNote}
           green
           className="mh2 pointer dim">
           <span className="fw4">新</span>

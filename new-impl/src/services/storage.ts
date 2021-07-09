@@ -69,10 +69,10 @@ export function getExt(name: string): Maybe<string> {
 }
 
 export function getMimeFromFileName(name: string): Maybe<string> {
-    return bindSome(getExt(name), ext => fromVoid(contentTypes[ext.toLowerCase()]));
+    return bindSome(getExt(name), ext => fromVoid(audioContentTypes[ext.toLowerCase()]));
 }
 
-export const contentTypes: {[k: string]: string} = {
+export const audioContentTypes: {[k: string]: string} = {
   "mp3": "audio/mpeg",
   "ogg": "audio/ogg",
   "wav": "audio/wav",
@@ -149,13 +149,13 @@ export class FileStore {
     return this.db.table('blobs').where('ext').equals(ext).toArray();
   }
 
-  async fetchMetadata(): Promise<FileMetadata[]> {
-    return this.db.table('metadata').toArray();
+  async fetchMetadataByExts(exts: string[]): Promise<FileMetadata[]> {
+    return this.db.table('metadata').where('ext').anyOf(exts).toArray();
   }
 }
 
 export function createId() {
-  return 'xxxx-xxyy-xxyy-xxxxx'.replace(/[xy]/g, function(c) {
+  return 'xxxxyy-xxyy-xxyy-xxxxyy'.replace(/[xy]/g, function(c) {
     var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });

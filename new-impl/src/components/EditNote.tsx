@@ -1,16 +1,14 @@
-import React, {ChangeEvent, Dispatch, useCallback, useState} from 'react';
+import React, {ChangeEvent, useCallback, useMemo, useState} from 'react';
 import {useFileStorage, useNotesIndex, useRoute} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
 import {
-  denormalizedNote,
-  findNoteTree,
-  newNormalizedNote,
-  NormalizedNote,
-  normalizedNote, NoteTree,
-  stringifyNote,
-  updateNotes
+  findNoteTree, newNormalizedNote, NormalizedNote, normalizedNote, NoteTree,
 } from "../notes";
 import {mapSome, Maybe, withDefault} from "../utils/maybe";
+import {useLiveQuery} from "dexie-react-hooks";
+import {audioContentTypes} from "../services/storage";
+import {Indexer} from "../utils/indexable";
+import {playAudio} from "../services/speechAndAudio";
 
 interface Props {
   onReturn?: () => void,
@@ -23,10 +21,38 @@ const allLanguages = ['Japanese', 'Cantonese', 'English', 'Test'];
 export function EditNote(props: Props) {
   const notesIndex = useNotesIndex();
   const setRoute = useRoute();
+  const store = useFileStorage();
   const {onReturn = () => setRoute(() => null), noteId} = props;
+
   const [normalized, setNormalized] = useState(() => {
     return withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote), {...newNormalizedNote});
   });
+
+  const audioMetadatas = useUnusedAudioFiles();
+  const audioPaths = useMemo(() => audioMetadatas.map(({path}) => path), [audioMetadatas]);
+  const curSelectedAudioPath = useMemo(
+    () => audioMetadatas.find(({id}) => id === normalized.attributes.audioFileId)?.path || "",
+    [audioMetadatas, normalized.attributes.audioFileId]
+  );
+  const setAudioPath = useCallback((selected: string) => {
+    const md = audioMetadatas.find(({path}) => path === selected);
+    if (!md) return;
+
+    setNormalized(note => ({
+      ...note, attributes: {
+        ...note.attributes, audioFileId: md.id,
+      }
+    }))
+  }, [audioMetadatas])
+  const playAudioPath = useCallback(async () => {
+    const id = normalized.attributes.audioFileId;
+    if (!id) return;
+
+    const metadata = await store.fetchBlob(id);
+    if (!metadata) return;
+    const {blob, path} = metadata[0];
+    await playAudio(blob, path);
+  }, [normalized.attributes.audioFileId, store])
 
   const onApply = useCallback(async () => {
     const baseTree = findNoteTree(notesIndex, noteId);
@@ -35,20 +61,16 @@ export function EditNote(props: Props) {
 
   const setNoteContent = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
     setNormalized(note => ({
-      ...note,
-      attributes: {
-        ...note.attributes,
-        content: (e.target as HTMLTextAreaElement).value
+      ...note, attributes: {
+        ...note.attributes, content: (e.target as HTMLTextAreaElement).value
       }
     }))
   }, [])
 
   const setNoteLanguage = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
     setNormalized(note => ({
-      ...note,
-      attributes: {
-        ...note.attributes,
-        language: (e.target as HTMLSelectElement).value
+      ...note, attributes: {
+        ...note.attributes, language: (e.target as HTMLSelectElement).value
       }
     }))
   }, [])
@@ -63,6 +85,21 @@ export function EditNote(props: Props) {
             value={normalized.attributes.language}
             values={allLanguages}
           />
+        </div>
+
+        <div className="ml2 w4 dib">
+          <SelectSingle
+            placeholder="オーディオ "
+            onChange={setAudioPath}
+            value={curSelectedAudioPath}
+            values={audioPaths}
+          />
+        </div>
+
+        <div className="ml2 w4 dib">
+          <button onClick={playAudioPath}>
+            テスト
+          </button>
         </div>
       </div>
     </div>
@@ -81,10 +118,7 @@ export function EditNote(props: Props) {
         <button
           className="mh1 pa2 br2"
           onClick={onApply}
-          disabled={
-            !normalized.attributes.content ||
-            !normalized.attributes.language
-          }>
+          disabled={!normalized.attributes.content || !normalized.attributes.language}>
           適用
         </button>
 
@@ -94,4 +128,13 @@ export function EditNote(props: Props) {
       </div>
     </div>
   </div>
+}
+
+function useUnusedAudioFiles() {
+  const store = useFileStorage();
+  const {notes} = useNotesIndex();
+  const audioMetadatas = useLiveQuery(async () => store.fetchMetadataByExts(Object.keys(audioContentTypes)), [], []);
+  return useMemo(() => audioMetadatas.filter(metadata => !!Indexer.getFirstMatching(notes.byAudioFileId,
+    [metadata.id]
+  )), [audioMetadatas, notes.byAudioFileId]);
 }

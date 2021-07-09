@@ -8,7 +8,7 @@ const classNamesForSelectSingle = classNamesGeneratorFor<SelectSingleProps>(add 
 export interface SelectSingleProps {
   values: any[],
   labeler?: (t: any) => string,
-  value?: any | 0
+  value?: any
   onChange?: (v: any) => void
   placeholder?: string
 }

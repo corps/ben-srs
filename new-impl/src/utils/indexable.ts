@@ -46,6 +46,28 @@ export type IndexIterator<V> = () => Maybe<V>
 export type GroupReducer<V> = (iter: IndexIterator<V>, reverseIter: IndexIterator<V>) => Maybe<V>
 export type Reducers<V> = {[k: string]: GroupReducer<V>};
 
+export function mapIndexIterator<A, B>(iterator: IndexIterator<A>, f: (a: A) => B): IndexIterator<B> {
+    return () => mapSome(iterator(), f);
+}
+
+export function filterIndexIterator<A>(iterator: IndexIterator<A>, f: (a: A) => boolean): IndexIterator<A> {
+    return () => {
+        let next = iterator();
+        while (next && !f(next[0])) next = iterator();
+        return next;
+    }
+}
+
+export function flattenIndexIterator<A>(iterator: IndexIterator<Maybe<A>>): IndexIterator<A> {
+    return () => {
+        while (true) {
+            const next = iterator();
+            if (!next) return null;
+            if (next[0]) return next[0];
+        }
+    }
+}
+
 export class Indexer<V, I extends IndexStore<V>> {
     constructor(
         private mainIndexName: keyof I,

@@ -147,8 +147,8 @@ export type ClozesStore = {
 export type ClozeAnswersStore = {
   byNoteIdReferenceMarkerClozeIdxAndAnswerIdx: Indexed<ClozeAnswer>;
   byLanguageAndAnswered: Indexed<ClozeAnswer>;
-  byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx: Indexed<ClozeAnswer>;
-  byLanguageAndLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx: Indexed<ClozeAnswer>;
+  byFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx: Indexed<ClozeAnswer>;
+  byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx: Indexed<ClozeAnswer>;
 };
 
 export const notesIndexer = new Indexer<Note, NotesStore>("byPath");
@@ -213,16 +213,16 @@ clozeAnswersIndexer.setKeyer("byLanguageAndAnswered", answer => [
   answer.answer[0],
 ]);
 clozeAnswersIndexer.addGroupedIndex(
-    "byLanguageAndFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx",
-    answer => [answer.language, answer.answer[0]],
+    "byFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx",
+    answer => [answer.answer[0]],
     "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx",
     answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx],
     (iter, reverseIter) => iter()
 );
 
 clozeAnswersIndexer.addGroupedIndex(
-    "byLanguageAndLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx",
-    answer => [answer.language, answer.answer[0]],
+    "byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx",
+    answer => [answer.answer[0]],
     "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx",
     answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx],
     (iter, reverseIter) => reverseIter()

@@ -1,10 +1,9 @@
 import {defaultLanguageSettings} from "../settings";
-import {contentTypes, getMimeFromFileName} from "./storage";
+import {getMimeFromFileName} from "./storage";
 import {mapSome, mapSomeAsync, Maybe, some} from "../utils/maybe";
 
 export function speak(language: string, text: string) {
   speechSynthesis.cancel();
-  console.log('speeech');
 
   let utterance = new SpeechSynthesisUtterance();
   utterance.text = text;

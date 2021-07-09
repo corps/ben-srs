@@ -13,6 +13,7 @@ export function useUpdateNote() {
       return denormalizedNote(updated, tree.note.id, tree.note.path, tree.note.version);
     }), denormalizedNote(updated, newNoteId, `/${newNoteId}.txt`, ""));
 
+    updateNotes(notesIndex, appliedTree);
 
     const blob = new Blob([stringifyNote(updated)]);
     await storage.storeBlob(blob, {
@@ -21,7 +22,5 @@ export function useUpdateNote() {
       rev: appliedTree.note.version,
       size: blob.size,
     }, true);
-
-    updateNotes(notesIndex, appliedTree);
   }, [storage, notesIndex]);
 }
