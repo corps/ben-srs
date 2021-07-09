@@ -133,14 +133,15 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
 
       <div className="mv2">
         <CircleButton
-          // onClick={() => dispatch(visitEditNote)}
-          yellow
+        // onClick={() => dispatch(visitSearch)}
+          purple
           className="mh2 pointer dim">
-          <span className="fw3">編</span>
-          <span className="fw5">集</span>
+          <span className="fw5">検</span>
+          <br/>
+          <span className="fw1">索</span>
         </CircleButton>
 
-        {session.user.needsRefreshAt.getTime() < time ? (<CircleButton
+        <CircleButton
           onClick={() => session.refresh()}
           blue
           className="mh2 pointer dim">
@@ -148,14 +149,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
           <br/>
           <span className="fw1">認</span>
           <span className="fw3">証</span>
-        </CircleButton>) : (<CircleButton
-          // onClick={() => dispatch(visitSearch)}
-          purple
-          className="mh2 pointer dim">
-          <span className="fw5">検</span>
-          <br/>
-          <span className="fw1">索</span>
-        </CircleButton>)}
+        </CircleButton>
       </div>
     </div>
 
