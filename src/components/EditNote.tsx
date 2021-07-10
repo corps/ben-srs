@@ -67,10 +67,10 @@ export function EditNote(props: Props) {
     }))
   }, [])
 
-  const setNoteLanguage = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
+  const setNoteLanguage = useCallback((language: string) => {
     setNormalized(note => ({
       ...note, attributes: {
-        ...note.attributes, language: (e.target as HTMLSelectElement).value
+        ...note.attributes, language
       }
     }))
   }, [])
@@ -134,7 +134,7 @@ function useUnusedAudioFiles() {
   const store = useFileStorage();
   const {notes} = useNotesIndex();
   const audioMetadatas = useLiveQuery(async () => store.fetchMetadataByExts(Object.keys(audioContentTypes)), [], []);
-  return useMemo(() => audioMetadatas.filter(metadata => !!Indexer.getFirstMatching(notes.byAudioFileId,
+  return useMemo(() => audioMetadatas.filter(metadata => !Indexer.getFirstMatching(notes.byAudioFileId,
     [metadata.id]
   )), [audioMetadatas, notes.byAudioFileId]);
 }

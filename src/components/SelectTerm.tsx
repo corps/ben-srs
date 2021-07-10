@@ -33,7 +33,7 @@ export function SelectTerm(props: Props) {
   const editContent = useCallback(() => {
     routeEdits({
       noteId
-    }, props, (baseTree, updated) => ({...props, normalized}));
+    }, props, (baseTree, normalized) => ({...props, normalized}));
   }, [normalized, noteId, props, routeEdits]);
 
   const onApply = useCallback(async () => {
@@ -105,7 +105,7 @@ export function SelectTerm(props: Props) {
         let isSelected = i == selectTermLeft;
         let onClick = isTerm ? () => onSelectTerm(termRanges[termIdx].term) : () => onSelectCell(i);
 
-        return <CharacterCell onClick={onClick} selected={isSelected} isTerm={isTerm}>
+        return <CharacterCell key={i + ""} onClick={onClick} selected={isSelected} isTerm={isTerm}>
           {char}
         </CharacterCell>
       })}

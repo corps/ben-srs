@@ -2,6 +2,7 @@ import 'regenerator-runtime';
 import {Dexie} from "dexie";
 import {FileMetadata} from "./sync";
 import {bindSome, fromVoid, mapSome, Maybe, some, withDefault} from "../utils/maybe";
+import {Semaphore} from "../utils/semaphore";
 
 export function withNamespace(storage: Storage, ns: string): Storage {
   return {
@@ -69,7 +70,7 @@ export function getExt(name: string): Maybe<string> {
 }
 
 export function getMimeFromFileName(name: string): Maybe<string> {
-    return bindSome(getExt(name), ext => fromVoid(audioContentTypes[ext.toLowerCase()]));
+    return bindSome(getExt(name), ext => fromVoid(allContentTypes[ext.toLowerCase()]));
 }
 
 export const audioContentTypes: {[k: string]: string} = {
@@ -78,6 +79,12 @@ export const audioContentTypes: {[k: string]: string} = {
   "wav": "audio/wav",
   "opus": "audio/opus",
 };
+
+export const noteContentTypes: {[k: string]: string} = {
+  "text": "text/plain; charset=UTF-8",
+};
+
+export const allContentTypes = {...audioContentTypes, ...noteContentTypes};
 
 export interface StoredMetadata extends FileMetadata {
   ext: string,
@@ -90,10 +97,12 @@ export interface StoredBlob extends StoredMetadata {
 }
 
 export class FileStore {
+  writeSemaphore = new Semaphore();
+
   constructor(private db: Dexie) {
-    this.db.version(1).stores({
+    this.db.version(2).stores({
       'cursors': '&backend',
-      'metadata': '&id,path,dirty',
+      'metadata': '&id,path,dirty,ext',
       'blobs': '&id,path,ext,dirty',
     });
   }
@@ -107,13 +116,17 @@ export class FileStore {
   }
 
   async clear() {
-    await this.db.table('metadata').clear();
-    await this.db.table('blobs').clear();
-    await this.db.table('cursors').clear();
+    await this.writeSemaphore.ready(async () => {
+      await this.db.table('metadata').clear();
+      await this.db.table('blobs').clear();
+      await this.db.table('cursors').clear();
+    });
   }
 
   async storeCursor(cursor: string) {
-    await this.db.table('cursors').put({ backend: 'default', cursor });
+    await this.writeSemaphore.ready(async () => {
+      await this.db.table('cursors').put({backend: 'default', cursor});
+    });
   }
 
   async getCursor() {
@@ -122,23 +135,26 @@ export class FileStore {
   }
 
   async storeBlob(blob: Blob, metadata: FileMetadata, localChange: boolean): Promise<void> {
-    const ext = withDefault(getExt(metadata.path), '');
+    await this.writeSemaphore.ready(async () => {
+      const ext = withDefault(getExt(metadata.path), '');
+      // blob = blob.slice(0, blob.size, withDefault(getMimeFromFileName(metadata.path), blob.type))
 
-    await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
-      const storedMetadata: StoredMetadata = { ...metadata, ext, dirty: localChange ? 1 : 0, updatedAt: Date.now() };
-      const storedBlob: StoredBlob = {...storedMetadata, blob };
-      await this.db.table('metadata').put(storedMetadata);
-      await this.db.table('blobs').put(storedBlob);
-    })
+      await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
+        const storedMetadata: StoredMetadata = {...metadata, ext, dirty: localChange ? 1 : 0, updatedAt: Date.now()};
+        const storedBlob: StoredBlob = {...storedMetadata, blob};
+        await this.db.table('metadata').put(storedMetadata);
+        await this.db.table('blobs').put(storedBlob);
+      })
+    });
   }
 
   async deletePath(path: string): Promise<void> {
-    await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
-      await this.db.table('metadata').where('path').between(path,
-          path + "\uFFFE", true, false).delete();
-      await this.db.table('blobs').where('path').between(path,
-          path + "\uFFFE", true, false).delete();
-    })
+    await this.writeSemaphore.ready(async () => {
+      await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
+        await this.db.table('metadata').where('path').between(path, path + "\uFFFE", true, false).delete();
+        await this.db.table('blobs').where('path').between(path, path + "\uFFFE", true, false).delete();
+      })
+    });
   }
 
   async fetchBlob(id: string): Promise<Maybe<StoredBlob>> {
@@ -159,4 +175,14 @@ export function createId() {
     var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
+}
+
+
+export function readText(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result as string);
+    fr.onerror = reject;
+    fr.readAsText(blob);
+  })
 }

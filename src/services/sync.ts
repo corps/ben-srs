@@ -1,7 +1,7 @@
 import {mapSome, Maybe, withDefault} from "../utils/maybe";
 import {runPromise} from "../cancellable";
 import 'regenerator-runtime';
-import {FileStore, getExt, StoredBlob} from "./storage";
+import {FileStore, getExt, readText, StoredBlob} from "./storage";
 import {denormalizedNote, NoteIndexes, parseNote, removeNotesByPath, updateNotes} from "../notes";
 
 export const defaultFileMetadata = {
@@ -78,13 +78,11 @@ export function* syncFiles(
             for (let download of batch) {
                 pendingWork.push(download.then(async ([md, blob]) => {
                     if (withDefault(getExt(md.path), '') === 'txt') {
-                        const contents = await blob.text();
+                        const contents = await readText(blob);
                         const note = denormalizedNote(parseNote(contents), md.id, md.path, md.rev);
-                        console.log('going to update notes...')
                         updateNotes(notesIndex, note);
                     }
 
-                    console.log('preparing to store blob in db', md);
                     try {
                         await storage.storeBlob(blob, md, false);
                     } catch(e) {
@@ -114,11 +112,12 @@ export function* syncFiles(
             updatePending(-1);
         }
 
-        console.log('storing next cursor');
         yield storage.storeCursor(nextCursor);
-    }
 
-    updatePending(-1);
+        pending = 0;
+        updatePending(0);
+        updatePending(1);
+    }
 
     return null;
 }

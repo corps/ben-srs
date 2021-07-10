@@ -35,3 +35,25 @@ export class UnbufferedChannel<T = void> {
         this.closed = true;
     }
 }
+
+export class Semaphore {
+    private channel = new UnbufferedChannel();
+    private open = true;
+
+    async ready<T>(work: () => Promise<T>): Promise<T> {
+          while (true) {
+              if (this.open) {
+                  this.open = false;
+                  try {
+                      return await work();
+                  } finally {
+                      this.channel.send();
+                      this.open = true;
+                  }
+              }
+
+              await this.channel.receive();
+          }
+
+    }
+}

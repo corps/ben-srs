@@ -31,8 +31,8 @@ export function SearchList({iterator, perPage = 10, children, onReturn}: PropsWi
     </div>
 
     <div className="mt3">
-      {data.map(row =>
-        <div className="break-word truncate pv1 ph2 mv2 bl bb pointer b--light-gray">
+      {data.map((row, idx) =>
+        <div key={idx + ""} className="break-word truncate pv1 ph2 mv2 bl bb pointer b--light-gray">
           {row}
         </div>)}
     </div>

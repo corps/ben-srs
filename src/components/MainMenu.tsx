@@ -7,13 +7,14 @@ import {useTime} from "../hooks/useTime";
 import {useStudyData} from "../hooks/useStudyData";
 import {CircleButton} from "./CircleButton";
 import {minutesOfTime} from "../utils/time";
-import {NormalizedNote, NoteIndexes, NoteTree} from "../notes";
-import {mapSome, Maybe, some, withDefault} from "../utils/maybe";
+import {NoteIndexes} from "../notes";
+import {mapSome, some, withDefault} from "../utils/maybe";
 import {Study} from "./Study";
 import {useUpdateNote} from "../hooks/useUpdateNote";
 import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
 import {EditNote} from "./EditNote";
 import {createId} from "../services/storage";
+import {Search} from "./Search";
 
 export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const session = useSession();
@@ -133,7 +134,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
 
       <div className="mv2">
         <CircleButton
-        // onClick={() => dispatch(visitSearch)}
+        onClick={() => setRoute(() => some(<Search/>))}
           yellow
           className="mh2 pointer dim">
           <span className="fw5">検</span>
@@ -141,7 +142,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
           <br/>
         </CircleButton>
 
-        <CircleButton
+        { session.user.needsRefreshAt.getTime() < time || syncFailed ? <CircleButton
           onClick={() => session.refresh()}
           blue
           className="mh2 pointer dim">
@@ -149,7 +150,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
           <br/>
           <span className="fw1">認</span>
           <span className="fw3">証</span>
-        </CircleButton>
+        </CircleButton> : null }
       </div>
     </div>
 

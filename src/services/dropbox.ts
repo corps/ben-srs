@@ -240,18 +240,13 @@ export function getDropboxAuthOrLogin(clientId: string, storage: Storage, force 
     }
   }
 
-  console.log('going authentication url')
   return auth.getAuthenticationUrl(
     window.location.href, undefined, 'code', 'offline', undefined, undefined, true)
     .then(authUrl => {
       storage.clear();
       storage.setItem("verifier", auth.getCodeVerifier());
-      console.log('ok!', authUrl);
       window.location.href = authUrl.toString();
       return null as any;
-    }, e => {
-      console.error(e);
-      throw e;
     })
 }
 

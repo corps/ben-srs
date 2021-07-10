@@ -86,7 +86,7 @@ function useSearchResults(mode: string, search: string, onReturn: () => void): I
       if (search) baseIterator = filterIndexIterator(baseIterator, note => note.attributes.content.includes(search))
 
       return mapIndexIterator(baseIterator, note => {
-        return <span onClick={() => visitNote(note.id)}>
+        return <span onClick={() => visitNote(note.id)} className={note.attributes.editsComplete ? '' : 'bg-lightest-blue'}>
           {note.attributes.content}
         </span>
       })
@@ -103,7 +103,7 @@ function useSearchResults(mode: string, search: string, onReturn: () => void): I
           if (search) {
             const term = Indexer.getFirstMatching(
               terms.byNoteIdReferenceAndMarker,
-              [noteId, reference, marker, clozeIdx]
+              [noteId, reference, marker]
             );
             if (!withDefault(mapSome(term,
               term => term.attributes.reference.includes(search) || term.attributes.hint.includes(search) || term.attributes.definition.includes(
@@ -117,7 +117,7 @@ function useSearchResults(mode: string, search: string, onReturn: () => void): I
 
       return mapIndexIterator(baseIterator, details => {
         return <span onClick={() => visitTerm(details.cloze.noteId)}>
-          <b>{details.beforeCloze}{details.clozed}{details.afterCloze}</b> {details.afterTerm}
+          {details.beforeTerm}<b>{details.beforeCloze}{details.clozed}{details.afterCloze}</b> {details.afterTerm}
         </span>
       })
     }
