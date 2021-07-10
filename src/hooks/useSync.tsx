@@ -23,8 +23,7 @@ export function useSync(onProgress: Dispatch<number>) {
     return useAsync(function *() {
         onProgress(0);
         onProgress(1);
-        console.log('entering the thing')
         yield notesLoaded;
         yield* syncFiles(session.syncBackend(), storage, onProgress, notesIndex)
-    }, [syncCounter], () => onProgress(0));
+    }, [syncCounter, onProgress], () => onProgress(0));
 }

@@ -134,11 +134,11 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
       <div className="mv2">
         <CircleButton
         // onClick={() => dispatch(visitSearch)}
-          purple
+          yellow
           className="mh2 pointer dim">
           <span className="fw5">検</span>
-          <br/>
           <span className="fw1">索</span>
+          <br/>
         </CircleButton>
 
         <CircleButton

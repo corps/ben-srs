@@ -90,7 +90,7 @@ export interface StoredBlob extends StoredMetadata {
 }
 
 export class FileStore {
-  constructor(private db: Dexie, private blobHack = false) {
+  constructor(private db: Dexie) {
     this.db.version(1).stores({
       'cursors': '&backend',
       'metadata': '&id,path,dirty',

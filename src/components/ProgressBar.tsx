@@ -22,7 +22,7 @@ export function ProgressBar(props: Props) {
     const tweened = tween / (tween + 2);
     const total = pendingNum + completed;
 
-    const progress = (pendingNum === 0 ? 100 : (completed + tweened) / total * 100);
+    const progress = (pendingNum === 0 ? 100 : ((completed + tweened) / total * 100));
 
     useEffect(() => {
         setTween(0);

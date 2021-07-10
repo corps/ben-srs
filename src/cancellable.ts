@@ -75,25 +75,34 @@ export class Cancellable {
     async function doWork(): Promise<Maybe<Result>> {
       await self.race(pullChannel.receive());
       let next: P = null as any;
+      let error: Maybe<any> = null;
       let deferred: Promise<P> | Result;
 
       try {
         while (!pullChannel.closed) {
-          ({value: deferred, done} = gen.next(next));
+          if (error)  {
+            ({value: deferred, done} = gen.throw(error[0]));
+            error = null;
+          }
+          else ({value: deferred, done} = gen.next(next));
 
           if (done) {
             return some(deferred as Result);
           }
 
-          const nextValue = await self.race<P>(deferred as Promise<P>);
-          if (isSome(nextValue)) {
-            yieldChannel.send(nextValue);
-            next = nextValue[0]
-          } else {
-            break;
-          }
+          try {
+            const nextValue = await self.race<P>(deferred as Promise<P>);
+            if (isSome(nextValue)) {
+              yieldChannel.send(nextValue);
+              next = nextValue[0]
+            } else {
+              break;
+            }
 
-          await pullChannel.receive();
+            await pullChannel.receive();
+          } catch (e) {
+            error = some(e);
+          }
         }
 
         return null;

@@ -80,17 +80,24 @@ export function* syncFiles(
                     if (withDefault(getExt(md.path), '') === 'txt') {
                         const contents = await blob.text();
                         const note = denormalizedNote(parseNote(contents), md.id, md.path, md.rev);
+                        console.log('going to update notes...')
                         updateNotes(notesIndex, note);
                     }
 
-                    await storage.storeBlob(blob, md, false);
-                    updatePending(-1);
+                    console.log('preparing to store blob in db', md);
+                    try {
+                        await storage.storeBlob(blob, md, false);
+                    } catch(e) {
+                        console.error('problem storing', md, blob, blob.constructor === Blob);
+                        throw e;
+                    }
                 }));
             }
 
             if (pendingWork.length > 0) {
                 const idx = yield* runPromise(
                     Promise.race(pendingWork.map((work, idx) => work.then(v => idx))))
+                updatePending(-1);
 
                 pendingWork.splice(idx, 1);
             }
@@ -107,6 +114,7 @@ export function* syncFiles(
             updatePending(-1);
         }
 
+        console.log('storing next cursor');
         yield storage.storeCursor(nextCursor);
     }
 

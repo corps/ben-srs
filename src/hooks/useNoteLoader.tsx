@@ -7,22 +7,20 @@ export function useNoteLoader() {
     const index = useNotesIndex();
     const storage = useFileStorage();
     const [loadedTrigger] = useState(() => new Trigger<void>());
+    const [fired, setFired] = useState(false);
     // @ts-ignore
     const [worker] = useState(() => new Worker(new URL('../services/index-worker.ts', import.meta.url)));
 
 
     useEffect(() => {
-        storage.fetchBlobsByExt('txt').then(noteBlobs => {
-            worker.postMessage({
-                noteBlobs
-            });
-        }, loadedTrigger.reject)
-
+        if (fired) return;
+        setFired(true);
+        worker.postMessage({});
         worker.onmessage = ({ data: { indexes: indexedData } }: {data: {indexes: NoteIndexes}}) => {
             Object.assign(index, indexedData);
             loadedTrigger.resolve();
         };
-    }, [index, loadedTrigger, storage, worker])
+    }, [fired, index, loadedTrigger, worker])
 
     return loadedTrigger.promise;
 }

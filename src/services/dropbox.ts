@@ -174,8 +174,8 @@ export function mapDropboxListResponse(response: files.ListFolderResult): FileLi
 }
 
 export function loadDropboxSession(clientId: string) {
-  return async function loadDropboxSession(storage: Storage): Promise<Session> {
-    const auth = await getDropboxAuthOrLogin(clientId, storage);
+  return async function loadDropboxSession(storage: Storage, force = false): Promise<Session> {
+    const auth = await getDropboxAuthOrLogin(clientId, storage, force);
 
     let user = {...defaultUser, needsRefreshAt: auth.getAccessTokenExpiresAt() };
     const existingUserName = storage.getItem('username');
@@ -190,22 +190,20 @@ export function loadDropboxSession(clientId: string) {
       user = { ...user, username };
     }
 
-    return new DropboxSession(auth, user, storage, () => loadDropboxSession(storage));
+    return new DropboxSession(auth, user, storage, () => loadDropboxSession(storage, true));
   }
 }
 
-export function getDropboxAuthOrLogin(clientId: string, storage: Storage): Promise<DropboxAuth> {
+export function getDropboxAuthOrLogin(clientId: string, storage: Storage, force = false): Promise<DropboxAuth> {
   const existingToken = storage.getItem('token');
   const existingExpiresAt = storage.getItem('expires');
 
-  if (existingToken && existingExpiresAt) {
-    try {
+  if (!force && existingToken && existingExpiresAt) {
+    const expiresAt = parseInt(existingExpiresAt, 10);
+    if (expiresAt > Date.now()) {
       return Promise.resolve(new DropboxAuth({
-        accessToken: existingToken,
-        accessTokenExpiresAt: new Date(parseInt(existingExpiresAt, 10)),
+        accessToken: existingToken, accessTokenExpiresAt: new Date(expiresAt),
       }));
-    } catch(e) {
-      console.error(e);
     }
   }
 
@@ -242,13 +240,18 @@ export function getDropboxAuthOrLogin(clientId: string, storage: Storage): Promi
     }
   }
 
+  console.log('going authentication url')
   return auth.getAuthenticationUrl(
     window.location.href, undefined, 'code', 'offline', undefined, undefined, true)
     .then(authUrl => {
       storage.clear();
       storage.setItem("verifier", auth.getCodeVerifier());
+      console.log('ok!', authUrl);
       window.location.href = authUrl.toString();
       return null as any;
+    }, e => {
+      console.error(e);
+      throw e;
     })
 }
 

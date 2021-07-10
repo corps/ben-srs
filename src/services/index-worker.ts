@@ -1,25 +1,33 @@
 import {defaultNoteTree, denormalizedNote, indexesInitialState, normalizedNote, parseNote, updateNotes} from "../notes";
-import {StoredBlob} from "./storage";
+import {FileStore, StoredBlob} from "./storage";
+import {createDexie} from "./dexie";
 
+const store = new FileStore(createDexie());
 const worker = self;
-worker.onmessage = ({ data: { noteBlobs } }: { data: { noteBlobs: StoredBlob[] }}) => {
+worker.onmessage = async () => {
+  try {
     const indexes = {...indexesInitialState};
-    Promise.all(noteBlobs.map(async ({blob, id, rev, path}) => {
-        try {
-          const contents = await blob.text();
-          const normalized = parseNote(contents);
-          return denormalizedNote(normalized, id, path, rev);
-        } catch (e) {
-            // console.error({blob});
-            return defaultNoteTree;
-        }
-    })).then(trees => {
-        updateNotes(indexes, ...trees);
+    const noteBlobs = await store.fetchBlobsByExt('txt');
+    console.log('blobs?', noteBlobs.length);
+    const trees = await Promise.all(noteBlobs.map(async ({blob, id, rev, path}) => {
+      // try {
+      // const contents = await blob.text();
+      // const normalized = parseNote(contents);
+      // return denormalizedNote(normalized, id, path, rev);
+      // } catch (e) {
+      //     console.error('failed to load....', e);
+      //     throw e;
+          return defaultNoteTree;
+      // }
+    }))
+    updateNotes(indexes, ...trees);
 
-        console.log('posting back...')
-        // @ts-ignore
-        worker.postMessage({
-            indexes,
-        });
+    console.log('posting back...', indexes)
+    // @ts-ignore
+    worker.postMessage({
+      indexes,
     });
+  } catch (e) {
+    console.error(e);
+  }
 };
