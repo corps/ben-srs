@@ -5,7 +5,7 @@ import {useTime} from "../hooks/useTime";
 import {findNextStudyDetails, findTermInNormalizedNote, StudyDetails} from "../study";
 import {describeDuration, minutesOfTime, timeOfMinutes} from "../utils/time";
 import {
-  ClozeType, denormalizedNote, findNoteTree, normalizedNote, NoteIndexes, NotesStore, stringifyNote, updateNotes
+  ClozeType, findNoteTree, newNormalizedNote, normalizedNote, NoteIndexes
 } from "../notes";
 import {mapSome, mapSomeAsync, Maybe, some, withDefault} from "../utils/maybe";
 import {FileStore} from "../services/storage";
@@ -18,6 +18,8 @@ import {useKeypresses} from "../hooks/useKeypress";
 import {BackSide} from "./BackSide";
 import {FrontSide} from "./FrontSide";
 import {useUpdateNote} from "../hooks/useUpdateNote";
+import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
+import {SelectTerm} from "./SelectTerm";
 
 interface Props {
   onReturn?: Dispatch<void>,
@@ -36,16 +38,18 @@ export function Study(props: Props) {
 
   const {language, audioStudy, onReturn = () => setRoute(() => null)} = props;
 
+  const updateNoteAndConfirm = useUpdateNote(true);
+  const selectTermRouting = useWorkflowRouting(SelectTerm, Study, updateNoteAndConfirm);
+  const editNote = useCallback((noteId: string) => {
+    const normalized = withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote), {...newNormalizedNote});
+    selectTermRouting({noteId, normalized}, {onReturn, language, audioStudy}, () => ({onReturn, language, audioStudy}))
+  }, [audioStudy, language, notesIndex, onReturn, selectTermRouting])
+
   const prepareNext = useCallback(() => {
     setCardStartedAt(Date.now());
     setShowBack(false);
 
-    return findNextStudyDetails(
-      language,
-      minutesOfTime(time),
-      notesIndex,
-      audioStudy
-    );
+    return findNextStudyDetails(language, minutesOfTime(time), notesIndex, audioStudy);
   }, [language, time, notesIndex, audioStudy]);
   const studyData = useStudyData(time, language, audioStudy);
   const [studyDetails, setStudyDetails] = useState(prepareNext);
@@ -53,8 +57,14 @@ export function Study(props: Props) {
   const answerCard = useAnswerCard(studyDetails, notesIndex, startNext);
   const readCard = useReadCard(studyDetails, storage);
 
-  const dueTime = withDefault(mapSome(studyDetails, studyDetails => timeOfMinutes(studyDetails.cloze.attributes.schedule.nextDueMinutes)), 0);
-  const intervalTime = withDefault(mapSome(studyDetails, studyDetails => timeOfMinutes(studyDetails.cloze.attributes.schedule.intervalMinutes)), 0);
+  const dueTime = withDefault(mapSome(
+    studyDetails,
+    studyDetails => timeOfMinutes(studyDetails.cloze.attributes.schedule.nextDueMinutes)
+  ), 0);
+  const intervalTime = withDefault(mapSome(
+    studyDetails,
+    studyDetails => timeOfMinutes(studyDetails.cloze.attributes.schedule.intervalMinutes)
+  ), 0);
 
   useKeypresses((key: string) => {
     if (key === " " || key === "f") toggleShowBack();
@@ -68,47 +78,51 @@ export function Study(props: Props) {
     if (!studyDetails) onReturn();
   }, [studyDetails, onReturn]);
 
-  return withDefault(mapSome(studyDetails, studyDetails => <FlexContainer vertical className="vh-100 overflow-x-hidden overflow-y-hidden">
-    <Row fixedRow className="h3 w-100">
-      <VCenteringContainer>
-        <VCentered className="tc">
-          <div>
+  return withDefault(mapSome(
+    studyDetails,
+    studyDetails => <FlexContainer vertical className="vh-100 overflow-x-hidden overflow-y-hidden">
+      <Row fixedRow className="h3 w-100">
+        <VCenteringContainer>
+          <VCentered className="tc">
+            <div>
             <span className="dn dib-l">
               <span className="pv1 ph2 br2 bg-gray white">f</span>
             </span>
 
-            <span className="mh2">経過</span>
-            {studyData.studied}/{studyData.studied + studyData.due}
-            <span className="mh2">{describeDuration(time - cardStartedAt)}</span>
+              <span className="mh2">経過</span>
+              {studyData.studied}/{studyData.studied + studyData.due}
+              <span className="mh2">{describeDuration(time - cardStartedAt)}</span>
 
-            <SimpleNavLink
-              onClick={onReturn}
-              className="mh2">
-              戻る
-            </SimpleNavLink>
-          </div>
+              <SimpleNavLink
+                onClick={onReturn}
+                className="mh2">
+                戻る
+              </SimpleNavLink>
+            </div>
 
-          <div>
-            期日: {describeDuration(time - dueTime, false)} <br/>
-            期間: {describeDuration(intervalTime)}
-          </div>
-        </VCentered>
-      </VCenteringContainer>
-    </Row>
-
-    <Row stretchRow className="w-100 overflow-y-auto word-wrap">
-      <div className="w-100 f3 pv2"
-           onClick={(e) => e.target instanceof HTMLButtonElement ? null : toggleShowBack()}>
-        <VCenteringContainer>
-          <VCentered>
-            {showBack ?
-              <BackSide studyDetails={studyDetails} answerCard={answerCard} readCard={readCard} now={time} studyStarted={cardStartedAt}/> :
-              <FrontSide readCard={readCard} studyDetails={studyDetails}/>}
+            <div>
+              期日: {describeDuration(time - dueTime, false)} <br/>
+              期間: {describeDuration(intervalTime)}
+            </div>
           </VCentered>
         </VCenteringContainer>
-      </div>
-    </Row>
-  </FlexContainer>), null);
+      </Row>
+
+      <Row stretchRow className="w-100 overflow-y-auto word-wrap">
+        <div className="w-100 f3 pv2"
+             onClick={(e) => e.target instanceof HTMLButtonElement ? null : toggleShowBack()}>
+          <VCenteringContainer>
+            <VCentered>
+              {showBack ?
+                <BackSide editNote={editNote} studyDetails={studyDetails} answerCard={answerCard} readCard={readCard}
+                          now={time} studyStarted={cardStartedAt}/> :
+                <FrontSide readCard={readCard} studyDetails={studyDetails}/>}
+            </VCentered>
+          </VCenteringContainer>
+        </div>
+      </Row>
+    </FlexContainer>
+  ), null);
 }
 
 function useReadCard(studyDetails: Maybe<StudyDetails>, store: FileStore) {
@@ -135,11 +149,7 @@ function useAnswerCard(studyDetails: Maybe<StudyDetails>, noteIndexes: NoteIndex
       const schedule = scheduledBy(cloze.attributes.schedule, answer);
       await mapSomeAsync(findNoteTree(noteIndexes, cloze.noteId), async tree => {
         let normalized = normalizedNote(tree);
-        await mapSomeAsync(findTermInNormalizedNote(
-          normalized,
-          cloze.reference,
-          cloze.marker
-        ), async term => {
+        await mapSomeAsync(findTermInNormalizedNote(normalized, cloze.reference, cloze.marker), async term => {
           if (term.attributes.clozes.length > cloze.clozeIdx) return;
 
           const termIdx = normalized.attributes.terms.indexOf(term);
@@ -159,9 +169,7 @@ function useAnswerCard(studyDetails: Maybe<StudyDetails>, noteIndexes: NoteIndex
           };
           updatingCloze.attributes = {...updatingCloze.attributes};
           updatingCloze.attributes.schedule = schedule;
-          updatingCloze.attributes.answers = updatingCloze.attributes.answers.concat(
-            [answer]
-          );
+          updatingCloze.attributes.answers = updatingCloze.attributes.answers.concat([answer]);
 
           await updateNote(some(tree), normalized);
           startNext();

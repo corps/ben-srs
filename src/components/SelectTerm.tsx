@@ -1,6 +1,6 @@
 import React, {useCallback, useMemo, useState} from 'react';
-import {mapSome, Maybe, some, withDefault} from "../utils/maybe";
-import {findNoteTree, newNormalizedNote, normalizedNote, NormalizedNote, NormalizedTerm, NoteTree} from "../notes";
+import {Maybe} from "../utils/maybe";
+import {findNoteTree, NormalizedNote, NormalizedTerm, NoteTree} from "../notes";
 import {useNotesIndex, useRoute} from "../hooks/contexts";
 import {addNewTerm, findTermRange} from "../study";
 import {EditNote} from "./EditNote";
@@ -34,7 +34,7 @@ export function SelectTerm(props: Props) {
     routeEdits({
       noteId
     }, props, (baseTree, normalized) => ({...props, normalized}));
-  }, [normalized, noteId, props, routeEdits]);
+  }, [noteId, props, routeEdits]);
 
   const onApply = useCallback(async () => {
     await props.onApply(findNoteTree(notesIndex, noteId), normalized);

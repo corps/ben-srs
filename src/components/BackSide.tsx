@@ -1,7 +1,7 @@
-import React from 'react';
+import React, {useCallback} from 'react';
 import {StudyDetails} from "../study";
 import {Answer} from "../scheduler";
-import {answerMiss, answerOk, answerSkip} from "./Study";
+import {answerMiss, answerOk, answerSkip, Study} from "./Study";
 
 interface Props {
   studyDetails: StudyDetails,
@@ -9,9 +9,10 @@ interface Props {
   answerCard: (answer: Answer) => void,
   now: number,
   studyStarted: number,
+  editNote: (noteId: string) => void,
 }
 
-export function BackSide({studyDetails, readCard, answerCard, now, studyStarted}: Props) {
+export function BackSide({studyDetails, readCard, answerCard, now, studyStarted, editNote}: Props) {
   return <div className="mw6 center">
     <div className="f4 ph3 mb2 tc">
       {studyDetails.beforeCloze}
@@ -47,7 +48,7 @@ export function BackSide({studyDetails, readCard, answerCard, now, studyStarted}
               onClick={() => answerCard(answerMiss(now))}>
         間違えた！
       </button>
-      <button className="mh1 pa1 br2" onClick={null}>
+      <button className="mh1 pa1 br2" onClick={() => editNote(studyDetails.cloze.noteId)}>
         編集
       </button>
     </div>

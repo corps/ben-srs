@@ -4,12 +4,16 @@ import {mapSome, Maybe, withDefault} from "../utils/maybe";
 import {denormalizedNote, findNoteTree, NormalizedNote, NoteTree, stringifyNote, updateNotes} from "../notes";
 import {createId} from "../services/storage";
 
-export function useUpdateNote() {
+export function useUpdateNote(confirmEdit = false) {
   const storage = useFileStorage();
   const notesIndex = useNotesIndex();
 
   return useCallback(async (baseTree: Maybe<NoteTree>, updated: NormalizedNote, newNoteId = createId()) => {
     const appliedTree = withDefault(mapSome(baseTree, tree => {
+      if (confirmEdit) {
+        const editsComplete = confirm("Set edits completed?")
+        updated = {...updated, attributes: {...updated.attributes, editsComplete}};
+      }
       return denormalizedNote(updated, tree.note.id, tree.note.path, tree.note.version);
     }), denormalizedNote(updated, newNoteId, `/${newNoteId}.txt`, ""));
 
@@ -22,5 +26,5 @@ export function useUpdateNote() {
       rev: appliedTree.note.version,
       size: blob.size,
     }, true);
-  }, [storage, notesIndex]);
+  }, [notesIndex, storage, confirmEdit]);
 }

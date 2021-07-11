@@ -55,30 +55,16 @@ export function Search(props: Props) {
 
 function useSearchResults(mode: string, search: string, onReturn: () => void): IndexIterator<ReactElement> {
   const {notes, clozeAnswers, clozes, terms} = useNotesIndex();
-  const updateNote = useUpdateNote();
+  const updateNoteAndConfirmEditsFinished = useUpdateNote(true);
 
-  const updateNoteAndConfirmEditsFinished = useCallback(async (baseTree: Maybe<NoteTree>, updated: NormalizedNote) => {
-    const editsComplete = confirm("Set edits completed?")
-    updated = {...updated, attributes: {...updated.attributes, editsComplete}};
-    await updateNote(baseTree, updated);
-  }, [updateNote])
-
-  const noteRouting = useWorkflowRouting(EditNote, Search, updateNoteAndConfirmEditsFinished);
-  const editTermRouting = useWorkflowRouting(SelectTerm, Search, updateNoteAndConfirmEditsFinished);
-
+  const selectTermRouting = useWorkflowRouting(SelectTerm, Search, updateNoteAndConfirmEditsFinished);
   const visitNote = useCallback((noteId: string) => {
-    noteRouting({
-      noteId,
-    }, {onReturn}, () => ({onReturn}))
-  }, [noteRouting, onReturn]);
-
-  const visitTerm = useCallback((noteId: string) => {
     const normalized = withDefault(
       mapSome(findNoteTree({notes, clozeAnswers, clozes, terms}, noteId), normalizedNote),
       {...newNormalizedNote}
     );
-    editTermRouting({noteId, normalized}, {onReturn}, () => ({onReturn}))
-  }, [clozeAnswers, clozes, editTermRouting, notes, onReturn, terms])
+    selectTermRouting({noteId, normalized}, {onReturn}, () => ({onReturn}))
+  }, [clozeAnswers, clozes, selectTermRouting, notes, onReturn, terms])
 
   return useMemo(() => {
     if (mode === "notes") {
@@ -116,12 +102,12 @@ function useSearchResults(mode: string, search: string, onReturn: () => void): I
       ));
 
       return mapIndexIterator(baseIterator, details => {
-        return <span onClick={() => visitTerm(details.cloze.noteId)}>
+        return <span onClick={() => visitNote(details.cloze.noteId)}>
           {details.beforeTerm}<b>{details.beforeCloze}{details.clozed}{details.afterCloze}</b> {details.afterTerm}
         </span>
       })
     }
 
     return () => null;
-  }, [clozeAnswers, clozes, mode, notes, search, terms, visitNote, visitTerm]);
+  }, [clozeAnswers, clozes, mode, notes, search, terms, visitNote]);
 }
