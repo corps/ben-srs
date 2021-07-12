@@ -107,6 +107,9 @@ define("./service-worker.js",['./workbox-2a8a8a96'], function (workbox) { 'use s
     "url": "index.html",
     "revision": "e5ea8cacb44bf4cb3aa834acdcddd1b3"
   }, {
+    "url": "main.js",
+    "revision": "fb24d2edd0c3ff3a3d590fd96a5c6837"
+  }, {
     "url": "src_services_index-worker_ts.js",
     "revision": "00bfe28a89920acdfde52f12df8a74f2"
   }, {
