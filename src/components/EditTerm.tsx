@@ -50,6 +50,7 @@ export function EditTerm(props: Props) {
   const [produce, toggleProduce] = useTypeToggle(workingTerm, "produce");
   const [listen, toggleListen] = useTypeToggle(workingTerm, "listen");
   const [pronounce, toggleSpeak] = useTypeToggle(workingTerm, "speak");
+  const [flash, toggleFlash] = useTypeToggle(workingTerm, "flash");
   const [clozeSplit, setClozeSplit] = useState(() => workingTerm.attributes.clozes.filter(c => c.attributes.type === "produce")
     .map(c => c.attributes.clozed).join(",") || workingTerm.attributes.reference);
 
@@ -59,10 +60,10 @@ export function EditTerm(props: Props) {
       tree,
       updateTermInNormalizedNote(
         normalized,
-        applyClozes(workingTerm, produce, pronounce, recognize, listen, clozeSplit)
+        applyClozes(workingTerm, produce, pronounce, recognize, listen, flash, clozeSplit)
       )
     );
-  }, [notesIndex, noteId, props, normalized, workingTerm, produce, pronounce, recognize, listen, clozeSplit]);
+  }, [notesIndex, noteId, props, normalized, workingTerm, produce, pronounce, recognize, listen, flash, clozeSplit]);
 
   const onDelete = useCallback(async () => {
     const updated = {...normalized};
@@ -137,7 +138,7 @@ export function EditTerm(props: Props) {
       </div>
 
       <div>
-        定義:
+        { flash ? "質問" : "定義" }:
         <div className="w-100">
           <textarea
             onChange={onChangeDefinition}
@@ -181,6 +182,14 @@ export function EditTerm(props: Props) {
             type="checkbox"
             onChange={toggleSpeak}
             checked={pronounce}
+          />
+          </label>
+          <label className="dib">
+            出題<input
+            className="ml2 mr3"
+            type="checkbox"
+            onChange={toggleFlash}
+            checked={flash}
           />
           </label>
         </div>
@@ -232,6 +241,7 @@ export function applyClozes(workingTerm: NormalizedTerm,
   speak: boolean,
   recognize: boolean,
   listen: boolean,
+  flash: boolean,
   clozeSplits: string
 ): NormalizedTerm {
   const attributes = {...workingTerm.attributes};
@@ -268,6 +278,10 @@ export function applyClozes(workingTerm: NormalizedTerm,
       attributes.clozes.push(next);
     }
   };
+
+  if (flash) {
+    addClozeType("flash");
+  }
 
   if (speak) {
     addClozeType("speak");

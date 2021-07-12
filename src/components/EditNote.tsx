@@ -1,5 +1,5 @@
 import React, {ChangeEvent, useCallback, useMemo, useState} from 'react';
-import {useFileStorage, useNotesIndex, useRoute} from "../hooks/contexts";
+import {useFileStorage, useNotesIndex, useRoute, useSession} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
 import {
   findNoteTree, newNormalizedNote, NormalizedNote, normalizedNote, NoteTree,
@@ -22,11 +22,18 @@ export function EditNote(props: Props) {
   const notesIndex = useNotesIndex();
   const setRoute = useRoute();
   const store = useFileStorage();
+
   const {onReturn = () => setRoute(() => null), noteId} = props;
 
   const [normalized, setNormalized] = useState(() => {
     return withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote), {...newNormalizedNote});
   });
+  const deleteNote = useCallback(async () => {
+    if (confirm("Delete?")) {
+      setRoute(() => null);
+      await store.markDeleted(noteId);
+    }
+  }, [noteId, setRoute, store]);
 
   const audioMetadatas = useUnusedAudioFiles();
   const audioPaths = useMemo(() => audioMetadatas.map(({path}) => path), [audioMetadatas]);
@@ -96,9 +103,15 @@ export function EditNote(props: Props) {
           />
         </div>
 
-        <div className="ml2 w4 dib">
+        <div className="ml2 dib">
           <button onClick={playAudioPath}>
             テスト
+          </button>
+        </div>
+
+        <div className="ml2 dib">
+          <button onClick={deleteNote}>
+            削除
           </button>
         </div>
       </div>

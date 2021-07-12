@@ -12,7 +12,7 @@ export function useWithContext(fn: (context: Cancellable) => void, deps: any[] =
   }, deps);
 }
 
-export function useAsync<Result, P>(fn: () => AsyncGenerator<Result, P>, deps: any[] = [], cleanup: () => void = () => null): [Maybe<Result>, Maybe<any>] {
+export function useAsync<Result>(fn: () => AsyncGenerator<Result, any>, deps: any[] = [], cleanup: () => void = () => null): [Maybe<Result>, Maybe<any>] {
   const [result, setResult] = useState(null as Maybe<Result>);
   const [error, setError] = useState(null as Maybe<any>);
 

@@ -9,7 +9,7 @@ interface Props {
   onReturn: () => void,
 }
 
-export function SearchList({iterator, perPage = 10, children, onReturn}: PropsWithChildren<Props>) {
+export function SearchList({iterator, perPage = 15, children, onReturn}: PropsWithChildren<Props>) {
   const {nextPage, data, prevPage, hasMore, page} = usePagination(iterator, perPage);
 
   return <div className="mw6 center">

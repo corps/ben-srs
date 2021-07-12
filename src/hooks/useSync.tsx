@@ -9,21 +9,22 @@ export function useSync(onProgress: Dispatch<number>) {
     const session = useSession();
     const storage = useFileStorage();
     const dirtyRecords = useLiveQuery(async () => storage.fetchDirty(), [], []);
-    const [syncCounter, setSyncCounter] = useState(0);
+    const [syncLastUpdate, setSyncLastUpdate] = useState(0);
     const notesIndex = useNotesIndex();
     const notesLoaded = useNoteLoader();
 
     useEffect(() => {
+        console.log('sync triggered...');
         const lastUpdate = dirtyRecords[dirtyRecords.length - 1]?.updatedAt || 0;
-        if (lastUpdate > syncCounter) {
-            setSyncCounter(i => Math.max(i, lastUpdate));
+        if (lastUpdate > syncLastUpdate) {
+            setSyncLastUpdate(i => Math.max(i, lastUpdate));
         }
-    }, [dirtyRecords, syncCounter]);
+    }, [dirtyRecords, syncLastUpdate]);
 
     return useAsync(function *() {
         onProgress(0);
         onProgress(1);
         yield notesLoaded;
         yield* syncFiles(session.syncBackend(), storage, onProgress, notesIndex)
-    }, [syncCounter, onProgress], () => onProgress(0));
+    }, [syncLastUpdate, onProgress], () => onProgress(0));
 }

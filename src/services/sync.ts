@@ -31,6 +31,7 @@ export interface SyncBackend {
     syncFileList(cursor: string): Iterable<Promise<FileListProgress>>,
     downloadFiles(metadata: FileMetadata[]): Iterable<[Promise<[FileMetadata, Blob]>[], Promise<void>]>,
     uploadFile(storedBlob: StoredBlob): Iterable<Promise<void>>,
+    deleteFile(metadata: FileMetadata): Promise<void>,
 }
 
 export function* syncFiles(
@@ -50,8 +51,14 @@ export function* syncFiles(
     updatePending(dirty.length);
 
     for (let d of dirty) {
-        for (let work of backend.uploadFile(d)) {
-            yield work;
+        if (d.deleted) {
+            yield backend.deleteFile(d);
+            yield storage.deletePath(d.path);
+            removeNotesByPath(notesIndex, d.path);
+        } else {
+            for (let work of backend.uploadFile(d)) {
+                yield work;
+            }
         }
 
         updatePending(-1);

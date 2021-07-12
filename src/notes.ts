@@ -57,7 +57,7 @@ export const newNormalizedTerm = {
 
 export type NormalizedTerm = typeof newNormalizedTerm;
 
-export type ClozeType = "produce" | "recognize" | "listen" | "speak"
+export type ClozeType = "produce" | "recognize" | "listen" | "speak" | "flash"
 
 export const newCloze = {
   noteId: "",
@@ -418,6 +418,7 @@ export function updateNotes(indexes: NoteIndexes, ...trees: NoteTree[]) {
   indexes.clozes = clozesIndexer.update(indexes.clozes, clozes);
   indexes.clozeAnswers = clozeAnswersIndexer.update(indexes.clozeAnswers, clozeAnswers);
 }
+
 
 export function removeNotesByPath(indexes: NoteIndexes, path: string) {
   const parts = path.split('/');

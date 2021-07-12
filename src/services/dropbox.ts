@@ -32,6 +32,17 @@ export class DropboxSyncBackend implements SyncBackend {
   constructor(public db: Dropbox) {
   }
 
+  async deleteFile(metadata: FileMetadata) {
+    if (!metadata.rev) return;
+    await this.db.filesDeleteV2({path: metadata.path, parent_rev: metadata.rev}).catch(error => {
+      if ('status' in error && error.status === 409) {
+        return null;
+      }
+
+      throw error;
+    });
+  }
+
   async handleRetry<T>(fn: () => Promise<T>): Promise<T> {
     return await withRetries(fn, (e) => {
       if ('status' in e) {

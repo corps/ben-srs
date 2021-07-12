@@ -1,7 +1,7 @@
 import 'regenerator-runtime';
 import {Dexie} from "dexie";
 import {FileMetadata} from "./sync";
-import {bindSome, fromVoid, mapSome, Maybe, some, withDefault} from "../utils/maybe";
+import {bindSome, fromVoid, Maybe, some, withDefault} from "../utils/maybe";
 import {Semaphore} from "../utils/semaphore";
 
 export function withNamespace(storage: Storage, ns: string): Storage {
@@ -70,26 +70,29 @@ export function getExt(name: string): Maybe<string> {
 }
 
 export function getMimeFromFileName(name: string): Maybe<string> {
-    return bindSome(getExt(name), ext => fromVoid(allContentTypes[ext.toLowerCase()]));
+  return bindSome(getExt(name), ext => fromVoid(allContentTypes[ext.toLowerCase()]));
 }
 
-export const audioContentTypes: {[k: string]: string} = {
-  "mp3": "audio/mpeg",
-  "ogg": "audio/ogg",
-  "wav": "audio/wav",
-  "opus": "audio/opus",
+export const audioContentTypes: { [k: string]: string } = {
+  "mp3": "audio/mpeg", "ogg": "audio/ogg", "wav": "audio/wav", "opus": "audio/opus",
 };
 
-export const noteContentTypes: {[k: string]: string} = {
+export const videoContentTypes: { [k: string]: string } = {
+  "mp4": "video/mp4", "ogg": "video/ogg"
+};
+
+
+export const noteContentTypes: { [k: string]: string } = {
   "text": "text/plain; charset=UTF-8",
 };
 
-export const allContentTypes = {...audioContentTypes, ...noteContentTypes};
+export const allContentTypes = {...audioContentTypes, ...noteContentTypes, ...videoContentTypes};
 
 export interface StoredMetadata extends FileMetadata {
   ext: string,
   dirty: 0 | 1,
   updatedAt: number,
+  deleted?: true,
 }
 
 export interface StoredBlob extends StoredMetadata {
@@ -105,6 +108,13 @@ export class FileStore {
       'metadata': '&id,path,dirty,ext',
       'blobs': '&id,path,ext,dirty',
     });
+  }
+
+  async markDeleted(id: string) {
+    let storedMetadata: StoredMetadata = await this.db.table('metadata').where('id').equals(id).first();
+    if (!storedMetadata) return;
+    storedMetadata = {...storedMetadata, dirty: 1, updatedAt: Date.now(), deleted: true};
+    await this.storeBlobAndMetadata(storedMetadata, new Blob());
   }
 
   fetchDirty(): Promise<StoredBlob[]> {
@@ -135,13 +145,15 @@ export class FileStore {
   }
 
   async storeBlob(blob: Blob, metadata: FileMetadata, localChange: boolean): Promise<void> {
-    await this.writeSemaphore.ready(async () => {
-      const ext = withDefault(getExt(metadata.path), '');
-      // blob = blob.slice(0, blob.size, withDefault(getMimeFromFileName(metadata.path), blob.type))
+    const ext = withDefault(getExt(metadata.path), '');
+    const storedMetadata: StoredMetadata = {...metadata, ext, dirty: localChange ? 1 : 0, updatedAt: Date.now()};
+    await this.storeBlobAndMetadata(storedMetadata, blob);
+  }
 
+  private async storeBlobAndMetadata(storedMetadata: StoredMetadata, blob: Blob) {
+    const storedBlob: StoredBlob = {...storedMetadata, blob};
+    await this.writeSemaphore.ready(async () => {
       await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
-        const storedMetadata: StoredMetadata = {...metadata, ext, dirty: localChange ? 1 : 0, updatedAt: Date.now()};
-        const storedBlob: StoredBlob = {...storedMetadata, blob};
         await this.db.table('metadata').put(storedMetadata);
         await this.db.table('blobs').put(storedBlob);
       })
@@ -153,6 +165,8 @@ export class FileStore {
       await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
         await this.db.table('metadata').where('path').between(path, path + "\uFFFE", true, false).delete();
         await this.db.table('blobs').where('path').between(path, path + "\uFFFE", true, false).delete();
+        await this.db.table('metadata').where('path').equalsIgnoreCase(path).delete();
+        await this.db.table('blobs').where('path').equalsIgnoreCase(path).delete();
       })
     });
   }
@@ -165,13 +179,13 @@ export class FileStore {
     return this.db.table('blobs').where('ext').equals(ext).toArray();
   }
 
-  async fetchMetadataByExts(exts: string[]): Promise<FileMetadata[]> {
+  async fetchMetadataByExts(exts: string[]): Promise<StoredMetadata[]> {
     return this.db.table('metadata').where('ext').anyOf(exts).toArray();
   }
 }
 
 export function createId() {
-  return 'xxxxyy-xxyy-xxyy-xxxxyy'.replace(/[xy]/g, function(c) {
+  return 'xxxxyy-xxyy-xxyy-xxxxyy'.replace(/[xy]/g, function (c) {
     var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
@@ -186,3 +200,13 @@ export function readText(blob: Blob) {
     fr.readAsText(blob);
   })
 }
+
+export function readDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result as string);
+    fr.onerror = reject;
+    fr.readAsDataURL(blob);
+  })
+}
+

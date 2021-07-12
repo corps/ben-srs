@@ -205,6 +205,9 @@ function okAnswerFactor(timeToAnswer: number, type: ClozeType) {
 
     case "speak":
       return timeToAnswer < 10000 ? 3.6 : 2.8;
+
+    case "flash":
+      return timeToAnswer <= 4000 ? 3.0 : 2.0;
   }
 
   return 1;

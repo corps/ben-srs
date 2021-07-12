@@ -23,6 +23,9 @@ export function FrontSide(props: Props) {
 
         case "recognize":
           return <Recognize {...props}/>
+
+        case "flash":
+          return <Flash {...props}/>
       }
 
       return null;
@@ -43,6 +46,12 @@ function Recognize({studyDetails}: Props) {
     <span>
         {studyDetails.afterTerm}
       </span>
+  </div>
+}
+
+function Flash({studyDetails}: Props) {
+  return <div>
+    {studyDetails.definition}
   </div>
 }
 

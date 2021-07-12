@@ -24,8 +24,12 @@ export const defaultSession: Session = {
       },
       downloadFiles(metadata: FileMetadata[]): Iterable<[Promise<[FileMetadata, Blob]>[], Promise<void>]> {
         return [];
-      }, syncFileList(cursor: string): Iterable<Promise<FileListProgress>> {
+      },
+      syncFileList(cursor: string): Iterable<Promise<FileListProgress>> {
         return [];
+      },
+      deleteFile(metadata: FileMetadata): Promise<void> {
+        return new Promise(resolve => resolve());
       }
     }
   }

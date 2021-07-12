@@ -30,4 +30,3 @@ export function App() {
     </SessionContext.Provider>
   </div>
 }
-

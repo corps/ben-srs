@@ -17,7 +17,7 @@ bash: .image ## Start a bash development shell
 
 .PHONY: up
 up: .image ## Runs a development server
-	docker run -d -p 8080:8080 -v $$PWD:/app -u $(shell id -u):$(shell id -g) --name bensrs-srv bensrs websocketd --port 8080 --staticdir docs ./server.sh || true
+	docker run -d -p 8080:8080 -v $$PWD:/app -u $(shell id -u):$(shell id -g) --name bensrs-srv bensrs websocketd --port 8080 --staticdir docs --cgidir cgi ./server.sh || true
 	docker run -d -v $$PWD:/app -u $(shell id -u):$(shell id -g) --name bensrs-webpack bensrs webpack --watch || true
 
 .PHONY: down
@@ -29,4 +29,4 @@ down:  ## Brings down the development server
 
 .PHONY: logs
 logs: ## Follows webpack logs
-	@ docker logs -f bensrs-webpack
+	@ docker logs -f bensrs-srv

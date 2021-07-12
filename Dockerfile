@@ -1,15 +1,18 @@
 FROM ubuntu:20.10
 ARG UID=1000
 ARG GID=100
+RUN echo version 1
 RUN apt-get update
-RUN apt-get install -y wget unzip
-RUN apt-get -y install nodejs
-RUN apt-get -y install npm
+RUN apt-get install -y wget unzip nodejs npm jq curl
+RUN apt-get install -y python pip
+RUN pip install --upgrade youtube-dl
+RUN apt-get install -y ffmpeg
+
 RUN npm install npm@latest -g
 RUN wget https://github.com/joewalnes/websocketd/releases/download/v0.4.1/websocketd-0.4.1-linux_amd64.zip
 RUN unzip websocketd*
 RUN mv websocketd /bin/
-RUN apt-get -y install jq curl
+
 RUN groupadd -g $GID app  || true
 RUN useradd -ms /bin/bash -u $UID -g $GID app
 
@@ -32,3 +35,6 @@ ENV BABEL_DISABLE_CACHE=1
 RUN webpack
 
 COPY --chown=$UID:$GID tsconfig.json /app/
+
+COPY --chown=$UID:$GID cgi /app/
+COPY --chown=$UID:$GID server.sh /app/

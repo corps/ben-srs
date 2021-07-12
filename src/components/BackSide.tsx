@@ -15,6 +15,7 @@ interface Props {
 export function BackSide({studyDetails, readCard, answerCard, now, studyStarted, editNote}: Props) {
   return <div className="mw6 center">
     <div className="f4 ph3 mb2 tc">
+      {studyDetails.type === "flash" && studyDetails.beforeTerm}
       {studyDetails.beforeCloze}
 
       <span className="fw8 mh1">
@@ -22,6 +23,7 @@ export function BackSide({studyDetails, readCard, answerCard, now, studyStarted,
       </span>
 
       {studyDetails.afterCloze}
+      {studyDetails.type === "flash" && studyDetails.afterTerm}
 
       <button className="mh1 pa1 br2 f5" onClick={readCard}>
         読み上げ

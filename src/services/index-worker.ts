@@ -1,5 +1,5 @@
-import {defaultNoteTree, denormalizedNote, indexesInitialState, normalizedNote, parseNote, updateNotes} from "../notes";
-import {FileStore, readText, StoredBlob} from "./storage";
+import {denormalizedNote, indexesInitialState, parseNote, updateNotes} from "../notes";
+import {FileStore, readText} from "./storage";
 import {createDexie} from "./dexie";
 
 const store = new FileStore(createDexie());
