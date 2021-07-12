@@ -5,7 +5,7 @@ import {defaultFileDelta, FileDelta, FileListProgress, FileMetadata, SyncBackend
 import {some} from "../utils/maybe";
 import {withRetries} from "../utils/retryable";
 import {DynamicRateLimitQueue, GatingException} from "../utils/rate-limiting";
-import {StoredBlob} from "./storage";
+import {normalizeBlob, StoredMedia} from "./storage";
 
 export class DropboxSession implements Session {
   constructor(
@@ -138,14 +138,14 @@ export class DropboxSyncBackend implements SyncBackend {
     return syncFileList();
   }
 
-  uploadFile(storedBlob: StoredBlob): Iterable<Promise<any>> {
+  uploadFile(media: StoredMedia): Iterable<Promise<any>> {
     const {db} = this;
 
     function* uploadFile() {
       yield db.filesUpload({
-        contents: storedBlob.blob,
-        path: storedBlob.path,
-        mode: storedBlob.rev ? {'.tag': "update", update: storedBlob.rev} : {'.tag': 'add'},
+        contents: normalizeBlob(media.blob),
+        path: media.path,
+        mode: media.rev ? {'.tag': "update", update: media.rev} : {'.tag': 'add'},
       }).then(() => null, error => {
         if ('status' in error && error.status === 409) {
           return null;

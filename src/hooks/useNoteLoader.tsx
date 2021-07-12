@@ -1,11 +1,10 @@
 import {useEffect, useState} from "react";
 import {Trigger} from "../utils/semaphore";
-import {useFileStorage, useNotesIndex} from "./contexts";
+import {useNotesIndex} from "./contexts";
 import {NoteIndexes} from "../notes";
 
 export function useNoteLoader() {
     const index = useNotesIndex();
-    const storage = useFileStorage();
     const [loadedTrigger] = useState(() => new Trigger<void>());
     const [fired, setFired] = useState(false);
     // @ts-ignore

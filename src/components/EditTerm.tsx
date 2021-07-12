@@ -17,6 +17,7 @@ import {useToggle} from "../hooks/useToggle";
 import {playAudio, speak} from "../services/speechAndAudio";
 import {DictionaryLookup} from "./DictionaryLookup";
 import {medianSchedule} from "../scheduler";
+import {normalizeBlob} from "../services/storage";
 
 interface Props {
   onReturn?: () => void,
@@ -101,9 +102,9 @@ export function EditTerm(props: Props) {
 
   const testSpeech = useCallback(async () => {
     if (normalized.attributes.audioFileId) {
-      const storedBlob = await store.fetchBlob(normalized.attributes.audioFileId);
-      await mapSomeAsync(storedBlob, async ({blob, path}) => {
-        await playAudio(blob, path);
+      const media = await store.fetchBlob(normalized.attributes.audioFileId);
+      await mapSomeAsync(media, async ({blob, path}) => {
+        await playAudio(normalizeBlob(blob), path);
       });
     } else {
       speak(normalized.attributes.language, workingTerm.attributes.pronounce || workingTerm.attributes.reference)

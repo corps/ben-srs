@@ -1,7 +1,7 @@
 import {mapSome, Maybe, withDefault} from "../utils/maybe";
 import {runPromise} from "../cancellable";
 import 'regenerator-runtime';
-import {FileStore, getExt, readText, StoredBlob} from "./storage";
+import {FileStore, getExt, readText, StoredMedia} from "./storage";
 import {denormalizedNote, NoteIndexes, parseNote, removeNotesByPath, updateNotes} from "../notes";
 
 export const defaultFileMetadata = {
@@ -30,7 +30,7 @@ export type FileListProgress = typeof defaultFileListProgress;
 export interface SyncBackend {
     syncFileList(cursor: string): Iterable<Promise<FileListProgress>>,
     downloadFiles(metadata: FileMetadata[]): Iterable<[Promise<[FileMetadata, Blob]>[], Promise<void>]>,
-    uploadFile(storedBlob: StoredBlob): Iterable<Promise<void>>,
+    uploadFile(media: StoredMedia): Iterable<Promise<void>>,
     deleteFile(metadata: FileMetadata): Promise<void>,
 }
 

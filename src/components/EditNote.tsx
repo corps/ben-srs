@@ -6,7 +6,7 @@ import {
 } from "../notes";
 import {mapSome, Maybe, withDefault} from "../utils/maybe";
 import {useLiveQuery} from "dexie-react-hooks";
-import {audioContentTypes} from "../services/storage";
+import {audioContentTypes, normalizeBlob} from "../services/storage";
 import {Indexer} from "../utils/indexable";
 import {playAudio} from "../services/speechAndAudio";
 
@@ -58,7 +58,7 @@ export function EditNote(props: Props) {
     const metadata = await store.fetchBlob(id);
     if (!metadata) return;
     const {blob, path} = metadata[0];
-    await playAudio(blob, path);
+    await playAudio(normalizeBlob(blob), path);
   }, [normalized.attributes.audioFileId, store])
 
   const onApply = useCallback(async () => {

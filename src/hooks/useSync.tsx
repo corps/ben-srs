@@ -3,8 +3,8 @@ import {useLiveQuery} from "dexie-react-hooks";
 import {useAsync} from "../cancellable";
 import {syncFiles} from "../services/sync";
 import {Dispatch, useEffect, useMemo, useState} from "react";
-import {loadNotes} from "../services/storage";
 import {Maybe} from "../utils/maybe";
+import {useNoteLoader} from "./useNoteLoader";
 
 export function useSync(onProgress: Dispatch<number>): [Maybe<any>, Maybe<any>] {
     const session = useSession();
@@ -14,9 +14,7 @@ export function useSync(onProgress: Dispatch<number>): [Maybe<any>, Maybe<any>] 
     const [syncLastUpdate, setSyncLastUpdate] = useState(0);
     const notesIndex = useNotesIndex();
 
-    const notesLoaded: Promise<any> = useMemo(async function () {
-        await loadNotes(storage, indexes);
-    }, [indexes, storage]);
+    const notesLoaded = useNoteLoader();
 
     useEffect(() => {
         console.log('sync triggered...');

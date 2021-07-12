@@ -43,7 +43,7 @@ export function Search(props: Props) {
       const [ext] = Object.entries(allContentTypes).find(([ext, mime]) => file.type === mime) || [''];
 
       const id = createId();
-      await store.storeBlob(file.slice(0, file.size, file.type),
+      await store.storeBlob(file,
         {path: `/${id}-${file.name.split('.').slice(0, 1)[0]}.${ext}`, id, rev: "", size: file.size},
         true
       );
@@ -73,7 +73,7 @@ export function Search(props: Props) {
         }
         console.log({fileName});
 
-        await store.storeBlob(blob.slice(0, blob.size, blob.type),
+        await store.storeBlob(blob,
           {path: `/${fileName}`, id, rev: "", size: blob.size},
           true
         );
@@ -221,5 +221,5 @@ function useSearchResults(mode: string, search: string, onReturn: () => void): I
     }
 
     return () => null;
-  }, [clozeAnswers, clozes, deleteFile, mediaMetadata, mode, notes, search, terms, visitNote]);
+  }, [clozeAnswers, clozes, deleteFile, downloadFile, mediaMetadata, mode, notes, search, terms, visitNote]);
 }

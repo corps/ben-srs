@@ -3,7 +3,7 @@ import {Dexie} from "dexie";
 import {FileMetadata} from "./sync";
 import {bindSome, fromVoid, Maybe, some, withDefault} from "../utils/maybe";
 import {Semaphore} from "../utils/semaphore";
-import {denormalizedNote, indexesInitialState, NoteIndexes, parseNote, updateNotes} from "../notes";
+import {denormalizedNote, indexesInitialState, NoteIndexes, NoteTree, parseNote, updateNotes} from "../notes";
 
 export function withNamespace(storage: Storage, ns: string): Storage {
   return {
@@ -96,9 +96,17 @@ export interface StoredMetadata extends FileMetadata {
   deleted?: true,
 }
 
-export interface StoredBlob extends StoredMetadata {
-  blob: Blob,
+export interface StoredMedia extends StoredMetadata {
+  blob: StoredBlob,
 }
+
+export interface ArrayBufferEnvelop {
+  size: number,
+  type: string,
+  data: ArrayBuffer,
+}
+
+export type StoredBlob = Blob | ArrayBufferEnvelop;
 
 export class FileStore {
   writeSemaphore = new Semaphore();
@@ -118,7 +126,7 @@ export class FileStore {
     await this.storeBlobAndMetadata(storedMetadata, new Blob());
   }
 
-  fetchDirty(): Promise<StoredBlob[]> {
+  fetchDirty(): Promise<StoredMedia[]> {
     return this.db.table('blobs').where('dirty').equals(1).toArray()
   }
 
@@ -152,11 +160,13 @@ export class FileStore {
   }
 
   private async storeBlobAndMetadata(storedMetadata: StoredMetadata, blob: Blob) {
-    const storedBlob: StoredBlob = {...storedMetadata, blob};
+    const data = await readAsArrayBuffer(blob);
+    const storedBlob: ArrayBufferEnvelop = { data, size: blob.size, type: blob.type };
+    const media: StoredMedia = {...storedMetadata, blob: storedBlob };
     await this.writeSemaphore.ready(async () => {
       await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
         await this.db.table('metadata').put(storedMetadata);
-        await this.db.table('blobs').put(storedBlob);
+        await this.db.table('blobs').put(media);
       })
     });
   }
@@ -172,11 +182,11 @@ export class FileStore {
     });
   }
 
-  async fetchBlob(id: string): Promise<Maybe<StoredBlob>> {
+  async fetchBlob(id: string): Promise<Maybe<StoredMedia>> {
     return this.db.table('blobs').where('id').equals(id).first().then(fromVoid);
   }
 
-  async fetchBlobsByExt(ext: string): Promise<StoredBlob[]> {
+  async fetchBlobsByExt(ext: string): Promise<StoredMedia[]> {
     return this.db.table('blobs').where('ext').equals(ext).toArray();
   }
 
@@ -193,12 +203,12 @@ export function createId() {
 }
 
 
-export function readText(blob: Blob) {
+export function readText(blob: Blob): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const fr = new FileReader();
     fr.onload = () => resolve(fr.result as string);
-    fr.onerror = reject;
-    fr.readAsText(blob);
+    fr.onerror = (e) => reject(fr.error);
+    fr.readAsText(blob)
   })
 }
 
@@ -211,12 +221,16 @@ export function readDataUrl(blob: Blob) {
   })
 }
 
-export async function loadNotes(store: FileStore, indexes: NoteIndexes) {
-  const noteBlobs = await store.fetchBlobsByExt('txt');
-  const trees = await Promise.all(noteBlobs.map(async ({blob, id, rev, path}) => {
-    const contents = await readText(blob);
-    const normalized = parseNote(contents);
-    return denormalizedNote(normalized, id, path, rev);
-  }))
-  updateNotes(indexes, ...trees);
+export function normalizeBlob(blob: StoredBlob): Blob {
+  if (blob instanceof Blob) return blob;
+  return new Blob([blob.data], { type: blob.type });
+}
+
+export function readAsArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
+  return new Promise<ArrayBuffer>((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result as ArrayBuffer);
+    fr.onerror = reject;
+    fr.readAsArrayBuffer(blob);
+  })
 }

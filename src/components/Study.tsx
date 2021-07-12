@@ -8,7 +8,7 @@ import {
   ClozeType, findNoteTree, newNormalizedNote, normalizedNote, NoteIndexes
 } from "../notes";
 import {mapSome, mapSomeAsync, Maybe, some, withDefault} from "../utils/maybe";
-import {FileStore} from "../services/storage";
+import {FileStore, normalizeBlob} from "../services/storage";
 import {playAudio, speak} from "../services/speechAndAudio";
 import {useStudyData} from "../hooks/useStudyData";
 import {FlexContainer, Row, VCentered, VCenteringContainer} from "./layout-utils";
@@ -129,9 +129,9 @@ function useReadCard(studyDetails: Maybe<StudyDetails>, store: FileStore) {
   return useCallback(async () => {
     await mapSomeAsync(studyDetails, async studyDetails => {
       if (studyDetails.audioFileId) {
-        const storedBlob = await store.fetchBlob(studyDetails.audioFileId);
-        await mapSomeAsync(storedBlob, async ({blob, path}) => {
-          await playAudio(blob, path);
+        const media = await store.fetchBlob(studyDetails.audioFileId);
+        await mapSomeAsync(media, async ({blob, path}) => {
+          await playAudio(normalizeBlob(blob), path);
         });
       } else {
         speak(studyDetails.cloze.language, studyDetails.spoken);

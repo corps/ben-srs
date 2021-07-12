@@ -1,5 +1,5 @@
 import {denormalizedNote, indexesInitialState, parseNote, updateNotes} from "../notes";
-import {FileStore, readText} from "./storage";
+import {FileStore, normalizeBlob, readText} from "./storage";
 import {createDexie} from "./dexie";
 
 const store = new FileStore(createDexie());
@@ -9,7 +9,7 @@ worker.onmessage = async () => {
     const indexes = {...indexesInitialState};
     const noteBlobs = await store.fetchBlobsByExt('txt');
     const trees = await Promise.all(noteBlobs.map(async ({blob, id, rev, path}) => {
-      const contents = await readText(blob);
+      const contents = await readText(normalizeBlob(blob));
       const normalized = parseNote(contents);
       return denormalizedNote(normalized, id, path, rev);
     }))
