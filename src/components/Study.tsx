@@ -150,7 +150,7 @@ function useAnswerCard(studyDetails: Maybe<StudyDetails>, noteIndexes: NoteIndex
       await mapSomeAsync(findNoteTree(noteIndexes, cloze.noteId), async tree => {
         let normalized = normalizedNote(tree);
         await mapSomeAsync(findTermInNormalizedNote(normalized, cloze.reference, cloze.marker), async term => {
-          if (term.attributes.clozes.length > cloze.clozeIdx) return;
+          if (cloze.clozeIdx > term.attributes.clozes.length) return;
 
           const termIdx = normalized.attributes.terms.indexOf(term);
           term = {...term};
@@ -171,7 +171,9 @@ function useAnswerCard(studyDetails: Maybe<StudyDetails>, noteIndexes: NoteIndex
           updatingCloze.attributes.schedule = schedule;
           updatingCloze.attributes.answers = updatingCloze.attributes.answers.concat([answer]);
 
+          console.log('update');
           await updateNote(some(tree), normalized);
+          console.log('done');
           startNext();
         });
       });
