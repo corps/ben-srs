@@ -27,7 +27,7 @@ export function useStudyData(
         const studyStartKey = [language, audioStudy, false];
         const result = {...newStudyData};
 
-        let startOfCurDay = startOfDay(now);
+        let startOfCurDay = minutesOfTime(startOfDay(now));
 
         let range = Indexer.getRangeFrom(notesIndex.terms.byLanguage, languageStartKey,
             [language, Infinity]);
