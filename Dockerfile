@@ -32,6 +32,7 @@ COPY --chown=$UID:$GID webpack.config.js /app/
 
 ENV PATH=/app/node_modules/.bin:$PATH
 ENV BABEL_DISABLE_CACHE=1
+ENV NODE_ENV=production
 RUN webpack
 
 COPY --chown=$UID:$GID tsconfig.json /app/
