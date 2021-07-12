@@ -1,5 +1,6 @@
 import {classNamesGeneratorFor, PropsWithChildrenAndClassName} from "../utils/class-names-for";
 import * as React from "react";
+import {MouseEventHandler, useCallback} from "react";
 
 export interface SimpleNavLinkProps {
   onClick?: () => void,
@@ -12,8 +13,13 @@ const classNames = classNamesGeneratorFor<SimpleNavLinkProps>(add => {
 }, <div className="underline mh1"/>);
 
 export function SimpleNavLink(props: PropsWithChildrenAndClassName<SimpleNavLinkProps>) {
+  const onClick: MouseEventHandler = useCallback((e) => {
+    if (props.onClick) props.onClick();
+    return false;
+  }, [props]);
+
   return <span
-    onClick={props.onClick}
+    onClick={onClick}
     className={classNames(props)}>
     {props.children}
   </span>;
