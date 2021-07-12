@@ -1,4 +1,5 @@
 import React, {ChangeEvent, ReactElement, useCallback, useMemo, useState} from 'react';
+import {saveAs} from "file-saver"
 import {useFileStorage, useNotesIndex, useRoute} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
 import {SearchList} from "./SearchList";
@@ -10,7 +11,7 @@ import {bindSome, mapSome, some, withDefault} from "../utils/maybe";
 import {SelectTerm} from "./SelectTerm";
 import {findNoteTree, newNormalizedNote, normalizedNote} from "../notes";
 import {
-  allContentTypes, audioContentTypes, createId, StoredMetadata, videoContentTypes, withNamespace
+  allContentTypes, audioContentTypes, createId, normalizeBlob, StoredMetadata, videoContentTypes, withNamespace
 } from "../services/storage";
 import {useLiveQuery} from "dexie-react-hooks";
 import {SimpleNavLink} from "./SimpleNavLink";
@@ -145,18 +146,17 @@ function useSearchResults(mode: string, search: string, onReturn: () => void): I
   }, [store])
 
   const downloadFile = useCallback(async (id: string) => {
-    const stored = await store.fetchBlob(id);
-    if (!stored) return;
-    const {blob, path} = stored[0];
-    const parts = path.split('/');
-    const filename = parts[parts.length - 1];
-    const e = document.createEvent('MouseEvents');
-    const a = document.createElement('a')
-    a.download = filename
-    a.href = window.URL.createObjectURL(blob)
-    a.dataset.downloadurl =  [blob.type, a.download, a.href].join(':')
-    e.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null)
-    a.dispatchEvent(e)
+    try {
+      const stored = await store.fetchBlob(id);
+      if (!stored) return;
+      const {blob, path} = stored[0];
+      const parts = path.split('/');
+      const filename = parts[parts.length - 1];
+      const normalized = normalizeBlob(blob);
+      saveAs(normalized, filename);
+    } catch(e) {
+      alert(e);
+    }
   }, [store]);
 
   const selectTermRouting = useWorkflowRouting(SelectTerm, Search, updateNoteAndConfirmEditsFinished);
