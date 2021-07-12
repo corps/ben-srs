@@ -3,6 +3,7 @@ import {Dexie} from "dexie";
 import {FileMetadata} from "./sync";
 import {bindSome, fromVoid, Maybe, some, withDefault} from "../utils/maybe";
 import {Semaphore} from "../utils/semaphore";
+import {denormalizedNote, indexesInitialState, NoteIndexes, parseNote, updateNotes} from "../notes";
 
 export function withNamespace(storage: Storage, ns: string): Storage {
   return {
@@ -210,3 +211,12 @@ export function readDataUrl(blob: Blob) {
   })
 }
 
+export async function loadNotes(store: FileStore, indexes: NoteIndexes) {
+  const noteBlobs = await store.fetchBlobsByExt('txt');
+  const trees = await Promise.all(noteBlobs.map(async ({blob, id, rev, path}) => {
+    const contents = await readText(blob);
+    const normalized = parseNote(contents);
+    return denormalizedNote(normalized, id, path, rev);
+  }))
+  updateNotes(indexes, ...trees);
+}

@@ -2,16 +2,21 @@ import {useFileStorage, useNotesIndex, useSession} from "./contexts";
 import {useLiveQuery} from "dexie-react-hooks";
 import {useAsync} from "../cancellable";
 import {syncFiles} from "../services/sync";
-import {Dispatch, useEffect, useState} from "react";
-import {useNoteLoader} from "./useNoteLoader";
+import {Dispatch, useEffect, useMemo, useState} from "react";
+import {loadNotes} from "../services/storage";
+import {Maybe} from "../utils/maybe";
 
-export function useSync(onProgress: Dispatch<number>) {
+export function useSync(onProgress: Dispatch<number>): [Maybe<any>, Maybe<any>] {
     const session = useSession();
     const storage = useFileStorage();
+    const indexes = useNotesIndex();
     const dirtyRecords = useLiveQuery(async () => storage.fetchDirty(), [], []);
     const [syncLastUpdate, setSyncLastUpdate] = useState(0);
     const notesIndex = useNotesIndex();
-    const notesLoaded = useNoteLoader();
+
+    const notesLoaded: Promise<any> = useMemo(async function () {
+        await loadNotes(storage, indexes);
+    }, [indexes, storage]);
 
     useEffect(() => {
         console.log('sync triggered...');
