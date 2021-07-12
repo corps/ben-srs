@@ -54,5 +54,5 @@ export function useStudyData(
         result.delayed = range.endIdx - range.startIdx;
 
         return result;
-    }, [minutesNow, language, audioStudy, notesIndex.clozes, notesIndex.terms, notesIndex.clozeAnswers]);
+    }, [minutesNow, language, audioStudy, notesIndex.clozes, notesIndex.terms, notesIndex.clozeAnswers, now]);
 }
