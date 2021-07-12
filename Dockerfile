@@ -36,5 +36,5 @@ RUN webpack
 
 COPY --chown=$UID:$GID tsconfig.json /app/
 
-COPY --chown=$UID:$GID cgi /app/
+COPY --chown=$UID:$GID cgi /app/cgi
 COPY --chown=$UID:$GID server.sh /app/
