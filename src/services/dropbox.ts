@@ -1,210 +1,271 @@
-import {
-  AjaxConfig,
-  CompleteRequest,
-  parseResponseHeaders,
-} from "kamo-reducers/services/ajax";
+import 'regenerator-runtime';
+import {Dropbox, DropboxAuth, DropboxResponseError, files} from "dropbox";
+import {defaultUser, Session, User} from "./backends";
+import {defaultFileDelta, FileDelta, FileListProgress, FileMetadata, SyncBackend} from "./sync";
+import {some} from "../utils/maybe";
+import {withRetries} from "../utils/retryable";
+import {DynamicRateLimitQueue, GatingException} from "../utils/rate-limiting";
+import {StoredBlob} from "./storage";
 
-export interface DropboxRequestResult {
-  content?: AjaxConfig["body"];
-  response?: any | void;
-}
-
-export interface DropboxListFolderResponse {
-  cursor: string;
-  has_more: boolean;
-  entries: (DropboxDeleteEntry | DropboxFileEntry | DropboxFolderEntry)[];
-}
-
-export interface DropboxDownloadResponse {
-  id: string;
-  rev: string;
-  path_lower: string;
-  size: number;
-}
-
-export interface DropboxUploadResponse {
-  name: string;
-  id: string;
-  rev: string;
-  path_lower: string;
-  size: number;
-}
-
-export interface DropboxFileEntry {
-  ".tag": "file";
-  name: string;
-  id: string;
-  path_lower: string;
-  rev: string;
-  size: number;
-}
-
-export interface DropboxFolderEntry {
-  ".tag": "folder";
-  name: string;
-  id: string;
-  path_lower: string;
-}
-
-export interface DropboxDeleteEntry {
-  ".tag": "deleted";
-  path_lower: string;
-}
-
-export function dropboxBaseHeaders(accessToken: string): AjaxConfig["headers"] {
-  return {
-    Authorization: "Bearer " + accessToken,
-  };
-}
-
-export function dropboxHeadersWithArgs(
-  accessToken: string,
-  args: any
-): AjaxConfig["headers"] {
-  return {
-    ...dropboxBaseHeaders(accessToken),
-    "Dropbox-API-Arg": JSON.stringify(args),
-  };
-}
-
-export function dropboxApiHeaders(accessToken: string): AjaxConfig["headers"] {
-  return {
-    ...dropboxBaseHeaders(accessToken),
-    "Content-Type": "application/json",
-  };
-}
-
-export function dropboxApiRequestConfig(
-  accessToken: string,
-  path: string,
-  args: any = undefined
-): AjaxConfig {
-  let config: AjaxConfig = {
-    url: "https://api.dropboxapi.com/2/" + path,
-    method: "POST",
-    headers: dropboxApiHeaders(accessToken),
-  };
-
-  if (args !== undefined) {
-    config.json = args;
-  } else {
-    delete config.headers['Content-Type'];
+export class DropboxSession implements Session {
+  constructor(
+    private auth: DropboxAuth,
+    public user: User,
+    private storage: Storage,
+    public refresh: () => Promise<Session>,
+  ) {
   }
 
-  return config;
+  logout(): Promise<void> {
+    this.storage.clear();
+    return Promise.resolve(undefined);
+  }
+
+  syncBackend(): SyncBackend {
+    return new DropboxSyncBackend(new Dropbox({ auth: this.auth }));
+  }
 }
 
-export function dropboxContentRequestConfig(
-  accessToken: string,
-  method: "GET" | "POST",
-  path: string,
-  args: any
-): AjaxConfig {
-  return {
-    url: "https://content.dropboxapi.com/2/" + path,
-    method: method,
-    headers: dropboxHeadersWithArgs(accessToken, args),
-  };
-}
+export class DropboxSyncBackend implements SyncBackend {
+  requestQ = new DynamicRateLimitQueue();
 
-export function listFolderAjaxConfig(
-  accessToken: string,
-  cursor = ""
-): AjaxConfig {
-  var config = dropboxApiRequestConfig(
-    accessToken,
-    "files/list_folder",
-    cursor
-      ? {cursor}
-      : {
-          recursive: true,
-          include_deleted: true,
-          path: "",
-        }
-  );
+  constructor(public db: Dropbox) {
+  }
 
-  if (cursor) config.url += "/continue";
-  return config;
-}
+  async deleteFile(metadata: FileMetadata) {
+    if (!metadata.rev) return;
+    await this.db.filesDeleteV2({path: metadata.path, parent_rev: metadata.rev}).catch(error => {
+      if ('status' in error && error.status === 409) {
+        return null;
+      }
 
-export function fileDownloadAjaxConfig(
-  accessToken: string,
-  pathOrId: string,
-  mimeType = "text/plain; charset=UTF-8",
-  responseType = undefined as AjaxConfig["responseType"]
-): AjaxConfig {
-  var config = dropboxContentRequestConfig(
-    accessToken,
-    "GET",
-    "files/download",
-    {
-      path: pathOrId,
-    }
-  );
+      throw error;
+    });
+  }
 
-  if (responseType) config.responseType = responseType;
-  config.overrideMimeType = mimeType;
+  async handleRetry<T>(fn: () => Promise<T>): Promise<T> {
+    return await withRetries(fn, (e) => {
+      if ('status' in e) {
+        return e.status >= 500 ? 1 : 0;
+      }
 
-  return config;
-}
+      return e instanceof GatingException ? -1 : 0;
+    })
+  }
 
-export function fileUploadAjaxConfig(
-  accessToken: string,
-  pathOrId: string,
-  version: string | void,
-  body: string | Blob
-): AjaxConfig {
-  var config = dropboxContentRequestConfig(
-    accessToken,
-    "POST",
-    "files/upload",
-    {
-      path: pathOrId,
-      mode: version
-        ? {
-            ".tag": "update",
-            update: version,
+  async handleRateLimit<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn();
+    } catch (e) {
+      if ('status' in e) {
+        if (e.status === 429) {
+          if (e.headers['Retry-After']) {
+            const until = Date.now() + parseInt(e.headers['Retry-After'], 10);
+            throw new GatingException(until, e);
           }
-        : "add",
+        }
+      }
+
+      throw e;
     }
-  );
-
-  config.body = body;
-  config.headers["Content-Type"] = "application/octet-stream";
-
-  return config;
-}
-
-export function getDropboxResult(
-  action: CompleteRequest
-): DropboxRequestResult {
-  let result: DropboxRequestResult = {};
-
-  let headers = parseResponseHeaders(action.headers);
-  const headerApiResult = headers["dropbox-api-result"];
-  if (headerApiResult) {
-    result.response = JSON.parse(headerApiResult);
-    result.content = action.response;
-  } else if (action.response) {
-    result.response = JSON.parse(action.response as string);
   }
 
-  return result;
-}
+  downloadFiles(metadata: FileMetadata[]): Iterable<[Promise<[FileMetadata, Blob]>[], Promise<void>]> {
+    const {requestQ} = this;
 
-export function getMimeFromFileName(name: string): string | void {
-  let parts = name.split(".");
-  if (parts.length > 0) {
-    let ext = parts[parts.length - 1];
-    return contentTypes[ext.toLowerCase()];
+    const requestDownload = (rev: string, path: string): Promise<Blob> => {
+        return this.handleRetry(async () => {
+          await requestQ.ungated();
+          return this.handleRateLimit(async () => {
+            const {result} = await this.db.filesDownload({ rev, path });
+            return (result as any).fileBlob;
+          })
+        });
+    }
+
+    function* downloadFiles() {
+        const remainingMetadatas = [...metadata];
+        while (remainingMetadatas.length) {
+          const [triggers, promises] = requestQ.ready<[FileMetadata, Blob]>(remainingMetadatas.length);
+
+          triggers.forEach(trigger => {
+            const next = remainingMetadatas.pop();
+            if (next) {
+              const {rev, path} = next;
+              requestDownload(rev, path).then(blob => [next, blob] as [FileMetadata, Blob]).then(trigger.resolve, trigger.reject);
+            }
+          })
+
+          yield [promises, requestQ.ungated()] as [Promise<[FileMetadata, Blob]>[], Promise<void>]
+        }
+      }
+
+    return downloadFiles();
   }
 
-  return null;
+  syncFileList(cursor: string): Iterable<Promise<FileListProgress>> {
+    const {db} = this;
+
+    const makeRequest = <T>(fn: () => Promise<T>) => {
+      return this.handleRetry(() => this.handleRateLimit(fn));
+    }
+
+    function* syncFileList() {
+      let done = false;
+      while (!done) {
+        let baseWork;
+        if (!cursor) {
+          baseWork = makeRequest(() => db.filesListFolder({
+            recursive: true,
+            include_deleted: true,
+            limit: 50,
+            path: ""
+          }));
+        } else {
+          baseWork = makeRequest(() => db.filesListFolderContinue({
+            cursor
+          }));
+        }
+
+        yield baseWork.then(listResponse => {
+          cursor = listResponse.result.cursor;
+          done = !listResponse.result.has_more;
+          return mapDropboxListResponse(listResponse.result);
+        })
+      }
+    }
+
+    return syncFileList();
+  }
+
+  uploadFile(storedBlob: StoredBlob): Iterable<Promise<any>> {
+    const {db} = this;
+
+    function* uploadFile() {
+      yield db.filesUpload({
+        contents: storedBlob.blob,
+        path: storedBlob.path,
+        mode: storedBlob.rev ? {'.tag': "update", update: storedBlob.rev} : {'.tag': 'add'},
+      }).then(() => null, error => {
+        if ('status' in error && error.status === 409) {
+          return null;
+        }
+
+        throw error;
+      })
+    }
+
+    return uploadFile();
+  }
 }
 
-export const contentTypes: {[k: string]: string} = {
-  "mp3": "audio/mpeg",
-  "ogg": "audio/ogg",
-  "wav": "audio/wav",
-  "opus": "audio/opus",
-};
+export function mapDropboxMetadata(metadata: files.FileMetadata): FileMetadata {
+  const {path_lower: path, rev, size, id, name} = metadata;
+  if (path == null) throw new Error('Unexpected filemetadata without path set!');
+
+  return {
+    path, rev, size, id
+  }
+}
+
+export function mapDropboxListResponse(response: files.ListFolderResult): FileListProgress {
+  return {
+    delta: response.entries.reduce((acc, r) => {
+      if (r[".tag"] === "file") {
+        acc.push({
+          ...defaultFileDelta,
+          updated: some(mapDropboxMetadata(r)),
+        })
+      }
+
+      return acc;
+    }, [] as FileDelta[]),
+    cursor: response.cursor,
+  };
+}
+
+export function loadDropboxSession(clientId: string) {
+  return async function loadDropboxSession(storage: Storage, force = false): Promise<Session> {
+    const auth = await getDropboxAuthOrLogin(clientId, storage, force);
+
+    let user = {...defaultUser, needsRefreshAt: auth.getAccessTokenExpiresAt() };
+    const existingUserName = storage.getItem('username');
+    if (existingUserName) {
+      user = {...user, username: existingUserName };
+    } else {
+      const dropbox = new Dropbox({ auth });
+      const account = await dropbox.usersGetCurrentAccount();
+      const username = account.result.email;
+
+      storage.setItem('username', username);
+      user = { ...user, username };
+    }
+
+    return new DropboxSession(auth, user, storage, () => loadDropboxSession(storage, true));
+  }
+}
+
+export function getDropboxAuthOrLogin(clientId: string, storage: Storage, force = false): Promise<DropboxAuth> {
+  const existingToken = storage.getItem('token');
+  const existingExpiresAt = storage.getItem('expires');
+
+  if (!force && existingToken && existingExpiresAt) {
+    const expiresAt = parseInt(existingExpiresAt, 10);
+    if (expiresAt > Date.now()) {
+      return Promise.resolve(new DropboxAuth({
+        accessToken: existingToken, accessTokenExpiresAt: new Date(expiresAt),
+      }));
+    }
+  }
+
+  const auth = new DropboxAuth({
+    clientId,
+  });
+
+  let match;
+  if ((match = window.location.search.match(/code=([^&]+)/))) {
+    const code = match[1];
+    if (code) {
+      const verifier = storage.getItem('verifier');
+      if (verifier) {
+        auth.setCodeVerifier(verifier);
+
+        return auth.getAccessTokenFromCode(window.location.origin + window.location.pathname, code)
+          .then((response) => {
+            const result: DropboxAccessTokenAuthResponse = response.result as any;
+            auth.setAccessToken(result.access_token);
+            auth.setAccessTokenExpiresAt(new Date(new Date().getTime() + result.expires_in * 1000))
+
+            storage.setItem('token', result.access_token);
+            storage.setItem('expires', auth.getAccessTokenExpiresAt().getTime() + "");
+            location.href = location.origin + location.pathname;
+            return auth;
+          }, e => {
+            storage.clear();
+            location.href = location.origin + location.pathname;
+            throw e;
+          });
+      }
+
+      return Promise.reject('Dropbox authentication failed, code verifier not found in storage!');
+    }
+  }
+
+  return auth.getAuthenticationUrl(
+    window.location.href, undefined, 'code', 'offline', undefined, undefined, true)
+    .then(authUrl => {
+      storage.clear();
+      storage.setItem("verifier", auth.getCodeVerifier());
+      window.location.href = authUrl.toString();
+      return null as any;
+    })
+}
+
+
+export interface DropboxAccessTokenAuthResponse {
+  access_token: string,
+  uid: string,
+  expires_in: number,
+  refresh_token: string,
+  account_id: string,
+}

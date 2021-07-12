@@ -1,5 +1,8 @@
 import * as React from "react";
-import {ClassAndChildren, classNamesGeneratorFor} from "../utils/class-names-for";
+import {
+  classNamesGeneratorFor, PropsWithChildrenAndClassName,
+} from "../utils/class-names-for";
+import {PropsWithChildren} from "react";
 
 export interface FlexContainerOptions {
   topContainer?: boolean
@@ -15,7 +18,7 @@ const classesForFlexContainer = classNamesGeneratorFor<FlexContainerOptions>(add
   add("horizontal", <div className="flex-row"/>);
 }, <div className="flex flex-auto"/>);
 
-export function FlexContainer(props: FlexContainerOptions & ClassAndChildren) {
+export function FlexContainer(props: PropsWithChildrenAndClassName<FlexContainerOptions>) {
   return <div className={classesForFlexContainer(props)} key={props.key} id={props.id}>
     {props.children}
   </div>
@@ -31,7 +34,7 @@ const classesForColumn = classNamesGeneratorFor<ColumnOptions>(add => {
   add("stretchColumn", <div className="flex-auto"/>);
 }, <div className="flex-column flex items-stretch"/>);
 
-export function Column(props: ColumnOptions & ClassAndChildren) {
+export function Column(props: PropsWithChildrenAndClassName<ColumnOptions>) {
   return <div className={classesForColumn(props)}>
     {props.children}
   </div>;
@@ -47,7 +50,7 @@ const classesForRow = classNamesGeneratorFor<RowOptions>(add => {
   add("fixedRow", <div className="flex-none"/>);
 }, <div className="flex flex-row items-stretch"/>);
 
-export function Row(props: RowOptions & ClassAndChildren) {
+export function Row(props: PropsWithChildrenAndClassName<RowOptions>) {
   return <div className={classesForRow(props)}>
     {props.children}
   </div>
@@ -59,7 +62,7 @@ const classesForVCenteringContainer = classNamesGeneratorFor<{}>(
   <div className="dt w-100 h-100"/>
 )
 
-export function VCenteringContainer(props: ClassAndChildren) {
+export function VCenteringContainer(props: PropsWithChildrenAndClassName<{}>) {
   return <div className={classesForVCenteringContainer(props)}>
     {props.children}
   </div>
@@ -71,7 +74,7 @@ const classesForVCentered = classNamesGeneratorFor<{}>(
   <div className="dtc v-mid"/>
 );
 
-export function VCentered(props: ClassAndChildren) {
+export function VCentered(props: PropsWithChildrenAndClassName<{}>) {
   return <div className={classesForVCentered(props)}>
     {props.children}
   </div>;
@@ -83,7 +86,7 @@ const classesForVBottomed = classNamesGeneratorFor<{}>(
   <div className="dtc v-btm"/>
 );
 
-export function VBottomed(props: ClassAndChildren) {
+export function VBottomed(props: PropsWithChildrenAndClassName<{}>) {
   return <div className={classesForVBottomed(props)}>
     {props.children}
   </div>;
