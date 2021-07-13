@@ -40,7 +40,7 @@ export function SelectTerm(props: Props) {
     await props.onApply(findNoteTree(notesIndex, noteId), normalized);
   }, [normalized, noteId, notesIndex, props])
 
-  const [selectTermLeft, setSelectTermLeft] = useState(-1);
+  const [selectTermLeft, setSelectTermLeft] = useState(Infinity);
 
   const onSelectCell = useCallback((i: number) => {
     if (i < selectTermLeft) {
