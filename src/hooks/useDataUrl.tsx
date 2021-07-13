@@ -15,6 +15,7 @@ export function useDataUrl(audioFileId: string | null | undefined): Maybe<string
     if (!media) return;
     const blob = normalizeBlob(media[0].blob);
     const dataUrl = yield* runPromise(readDataUrl(blob));
+    alert('setting it with ' + dataUrl);
     setDataUrl(some(dataUrl));
   }, [audioFileId, store])
 
