@@ -1,6 +1,6 @@
 import React, {ChangeEvent, ReactElement, useCallback, useMemo, useState} from 'react';
 import {saveAs} from "file-saver"
-import {useFileStorage, useNotesIndex, useRoute} from "../hooks/contexts";
+import {useFileStorage, useNotesIndex, useRoute, useTriggerSync} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
 import {SearchList} from "./SearchList";
 import {filterIndexIterator, flattenIndexIterator, Indexer, IndexIterator, mapIndexIterator} from "../utils/indexable";
@@ -16,7 +16,6 @@ import {
 import {useLiveQuery} from "dexie-react-hooks";
 import {SimpleNavLink} from "./SimpleNavLink";
 import {useStoredState} from "../hooks/useStoredState";
-import {useTriggerSync} from "../hooks/useSync";
 
 interface Props {
   onReturn?: () => void,

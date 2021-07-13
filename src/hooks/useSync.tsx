@@ -1,19 +1,9 @@
-import {useFileStorage, useNotesIndex, useSession} from "./contexts";
+import {useFileStorage, useNotesIndex, useSession, useTriggerSync} from "./contexts";
 import {useAsync} from "../cancellable";
 import {syncFiles} from "../services/sync";
 import {Dispatch, useCallback, useEffect, useState} from "react";
 import {Maybe} from "../utils/maybe";
 import {useNoteLoader} from "./useNoteLoader";
-
-export function useTriggerSync(): [Dispatch<void>, number] {
-    const [syncLastUpdate, setSyncLastUpdate] = useState(0);
-
-    const triggerSync = useCallback(() => {
-        setSyncLastUpdate(i => i + 1)
-    }, []);
-
-    return [triggerSync, syncLastUpdate];
-}
 
 export function useSync(onProgress: Dispatch<number>): [Maybe<any>, Maybe<any>] {
     const session = useSession();
@@ -30,11 +20,9 @@ export function useSync(onProgress: Dispatch<number>): [Maybe<any>, Maybe<any>] 
     }, [triggerSync]);
 
     return useAsync(function *() {
-        alert('sync activated');
         onProgress(0);
         onProgress(1);
         yield notesLoaded;
-        alert('prepared to yield all the sync actions');
         yield* syncFiles(session.syncBackend(), storage, onProgress, notesIndex)
     }, [syncLastUpdate, onProgress, session, storage, onProgress, notesIndex, notesLoaded], () => onProgress(0));
 }

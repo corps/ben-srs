@@ -1,9 +1,8 @@
-import {useFileStorage, useNotesIndex} from "./contexts";
+import {useFileStorage, useNotesIndex, useTriggerSync} from "./contexts";
 import {useCallback} from "react";
 import {mapSome, Maybe, withDefault} from "../utils/maybe";
 import {denormalizedNote, findNoteTree, NormalizedNote, NoteTree, stringifyNote, updateNotes} from "../notes";
 import {createId} from "../services/storage";
-import {useTriggerSync} from "./useSync";
 
 export function useUpdateNote(confirmEdit = false) {
   const storage = useFileStorage();

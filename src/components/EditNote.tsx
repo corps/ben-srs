@@ -1,5 +1,5 @@
 import React, {ChangeEvent, useCallback, useMemo, useState} from 'react';
-import {useFileStorage, useNotesIndex, useRoute, useSession} from "../hooks/contexts";
+import {useFileStorage, useNotesIndex, useRoute, useSession, useTriggerSync} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
 import {
   findNoteTree, newNormalizedNote, NormalizedNote, normalizedNote, NoteTree,
@@ -10,7 +10,6 @@ import {audioContentTypes, normalizeBlob} from "../services/storage";
 import {Indexer} from "../utils/indexable";
 import {playAudio} from "../services/speechAndAudio";
 import {useDataUrl} from "../hooks/useDataUrl";
-import {useTriggerSync} from "../hooks/useSync";
 
 interface Props {
   onReturn?: () => void,
@@ -18,7 +17,7 @@ interface Props {
   noteId: string,
 }
 
-const allLanguages = ['Japanese', 'Cantonese', 'English', 'Test'];
+const allLanguages = ['Japanese', 'Cantonese', 'English', 'Todos'];
 
 export function EditNote(props: Props) {
   const notesIndex = useNotesIndex();
