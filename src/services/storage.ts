@@ -3,9 +3,6 @@ import {Dexie} from "dexie";
 import {FileMetadata} from "./sync";
 import {bindSome, fromVoid, Maybe, some, withDefault} from "../utils/maybe";
 import {Semaphore} from "../utils/semaphore";
-import {
-  ClozeAnswer, denormalizedNote, indexesInitialState, Note, NoteIndexes, NotesStore, NoteTree, parseNote, updateNotes
-} from "../notes";
 import {Indexed, Indexer} from "../utils/indexable";
 
 export function withNamespace(storage: Storage, ns: string): Storage {
@@ -123,15 +120,17 @@ dirtyStoreIndexer.setKeyer("byId", ({id}) => [id]);
 export class FileStore {
   writeSemaphore = new Semaphore();
   dirtyIndex = dirtyStoreIndexer.empty();
-  dirtiesLoaded = this.db.table('blobs').where('dirty').equals(1).toArray().then(media => {
-    this.dirtyIndex = dirtyStoreIndexer.update(this.dirtyIndex, media);
-  });
+  dirtiesLoaded: Promise<void>;
 
   constructor(private db: Dexie) {
     this.db.version(2).stores({
       'cursors': '&backend',
       'metadata': '&id,path,dirty,ext',
       'blobs': '&id,path,ext,dirty',
+    });
+
+    this.dirtiesLoaded = this.db.table('blobs').where('dirty').equals(1).toArray().then(media => {
+      this.dirtyIndex = dirtyStoreIndexer.update(this.dirtyIndex, media);
     });
   }
 
