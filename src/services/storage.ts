@@ -123,6 +123,9 @@ dirtyStoreIndexer.setKeyer("byId", ({id}) => [id]);
 export class FileStore {
   writeSemaphore = new Semaphore();
   dirtyIndex = dirtyStoreIndexer.empty();
+  dirtiesLoaded = this.db.table('blobs').where('dirty').equals(1).toArray().then(media => {
+    this.dirtyIndex = dirtyStoreIndexer.update(this.dirtyIndex, media);
+  });
 
   constructor(private db: Dexie) {
     this.db.version(2).stores({
@@ -151,12 +154,14 @@ export class FileStore {
     })
   }
 
-  fetchDirty(): Promise<StoredMedia[]> {
-    return this.db.table('blobs').where('dirty').equals(1).toArray().then(media => this.replaceFromDirty(media));
+  async fetchDirty(): Promise<StoredMedia[]> {
+    await this.dirtiesLoaded;
+    return this.dirtyIndex.byId[1];
   }
 
   async clear() {
     this.dirtyIndex = dirtyStoreIndexer.empty();
+    await this.dirtiesLoaded;
     await this.writeSemaphore.ready(async () => {
       await this.db.table('metadata').clear();
       await this.db.table('blobs').clear();
@@ -185,6 +190,7 @@ export class FileStore {
     const data = await readAsArrayBuffer(blob);
     const storedBlob: ArrayBufferEnvelop = { data, size: blob.size, type: blob.type };
     const media: StoredMedia = {...storedMetadata, blob: storedBlob };
+    await this.dirtiesLoaded;
 
     const work = this.writeSemaphore.ready(async () => {
       await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
@@ -203,6 +209,7 @@ export class FileStore {
   }
 
   async deleteId(id: string): Promise<void> {
+    await this.dirtiesLoaded;
     this.dirtyIndex = dirtyStoreIndexer.removeByPk(this.dirtyIndex, [id]);
     await this.writeSemaphore.ready(async () => {
       await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
@@ -213,6 +220,7 @@ export class FileStore {
   }
 
   async deletePath(path: string): Promise<void> {
+    await this.dirtiesLoaded;
     this.dirtyIndex = dirtyStoreIndexer.removeAll(this.dirtyIndex, Indexer.getAllMatching(this.dirtyIndex.byPath, path.split("/")));
 
     await this.writeSemaphore.ready(async () => {

@@ -30,9 +30,11 @@ export function useSync(onProgress: Dispatch<number>): [Maybe<any>, Maybe<any>] 
     }, [triggerSync]);
 
     return useAsync(function *() {
+        alert('sync activated');
         onProgress(0);
         onProgress(1);
         yield notesLoaded;
+        alert('prepared to yield all the sync actions');
         yield* syncFiles(session.syncBackend(), storage, onProgress, notesIndex)
     }, [syncLastUpdate, onProgress, session, storage, onProgress, notesIndex, notesLoaded], () => onProgress(0));
 }
