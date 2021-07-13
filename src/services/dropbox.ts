@@ -211,15 +211,9 @@ export function getDropboxAuthOrLogin(clientId: string, storage: Storage, force 
 
   if (!force && existingToken && existingExpiresAt) {
     const expiresAt = parseInt(existingExpiresAt, 10);
-    const existing = Promise.resolve(new DropboxAuth({
+    return Promise.resolve(new DropboxAuth({
       accessToken: existingToken, accessTokenExpiresAt: new Date(expiresAt),
     }));
-
-    if (expiresAt < Date.now()) {
-      return getDropboxAuthOrLogin(clientId, storage, true).catch(() => existing);
-    }
-
-    return existing;
   }
 
   const auth = new DropboxAuth({

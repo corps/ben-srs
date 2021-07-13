@@ -1,5 +1,5 @@
 import React, {ChangeEvent, Dispatch, SetStateAction, useCallback, useState} from 'react';
-import {mapSome, mapSomeAsync, Maybe, withDefault} from "../utils/maybe";
+import {mapSome, Maybe, withDefault} from "../utils/maybe";
 import {
   ClozeType,
   findNoteTree,
@@ -10,14 +10,13 @@ import {
   NormalizedTerm,
   NoteTree
 } from "../notes";
-import {useFileStorage, useNotesIndex, useRoute} from "../hooks/contexts";
-import {findTermInNormalizedNote, updateTermInNormalizedNote} from "../study";
+import {useNotesIndex, useRoute} from "../hooks/contexts";
+import {findTermInNormalizedNote, findTermRange, updateTermInNormalizedNote} from "../study";
 import {SimpleNavLink} from "./SimpleNavLink";
 import {useToggle} from "../hooks/useToggle";
 import {playAudio, speak} from "../services/speechAndAudio";
 import {DictionaryLookup} from "./DictionaryLookup";
 import {medianSchedule} from "../scheduler";
-import {normalizeBlob} from "../services/storage";
 import {useDataUrl} from "../hooks/useDataUrl";
 
 interface Props {
@@ -38,7 +37,6 @@ function useTypeToggle(workingTerm: NormalizedTerm, type: ClozeType) {
 export function EditTerm(props: Props) {
   const setRoute = useRoute();
   const notesIndex = useNotesIndex();
-  const store = useFileStorage();
 
   const {onReturn = () => setRoute(() => null), normalized, reference, marker, noteId} = props;
 
@@ -75,6 +73,12 @@ export function EditTerm(props: Props) {
       if (term.attributes.reference === workingTerm.attributes.reference && term.attributes.marker === workingTerm.attributes.marker) {
         attributes.terms = [...attributes.terms];
         attributes.terms.splice(i, 1);
+
+        const [left, right] = findTermRange(term, attributes.content);
+        if (left >= 0 && right >= 0) {
+          attributes.content = attributes.content.slice(0, left) + attributes.content.slice(right);
+        }
+
         break;
       }
     }
@@ -257,7 +261,7 @@ export function applyClozes(workingTerm: NormalizedTerm,
 
   const newSchedule = medianSchedule(attributes.clozes.map(c => c.attributes.schedule));
 
-  attributes.clozes = produceSplits.map((clozed, i) => {
+  const newProduced = produceSplits.map((clozed, i) => {
     if (i < produced.length) {
       next = {...produced[i]};
     } else {
@@ -269,6 +273,8 @@ export function applyClozes(workingTerm: NormalizedTerm,
     next.attributes.type = "produce";
     return next;
   });
+
+  attributes.clozes = produce ? newProduced : [];
 
   const addClozeType = (type: ClozeType) => {
     let existing = oldClozes.find(c => c.attributes.type === type);
