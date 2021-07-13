@@ -26,7 +26,6 @@ export function speak(language: string, text: string) {
 
 let lastAudio: Maybe<HTMLAudioElement> = null;
 export function playAudio(dataUrl: string) {
-  alert(dataUrl);
   mapSome(lastAudio, lastAudio => lastAudio.pause());
   const audio = new Audio(dataUrl);
   lastAudio = some(audio);

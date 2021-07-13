@@ -187,7 +187,8 @@ export class FileStore {
 
   private async storeBlobAndMetadata(storedMetadata: StoredMetadata, blob: Blob) {
     const data = await readAsArrayBuffer(blob);
-    const storedBlob: ArrayBufferEnvelop = { data, size: blob.size, type: blob.type };
+    const type = withDefault(getMimeFromFileName(storedMetadata.path), blob.type);
+    const storedBlob: ArrayBufferEnvelop = { data, type, size: blob.size };
     const media: StoredMedia = {...storedMetadata, blob: storedBlob };
     await this.dirtiesLoaded;
 
