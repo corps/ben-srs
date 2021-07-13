@@ -224,8 +224,9 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
         baseIter = filterIndexIterator(baseIter, md => md.path.includes(search));
       }
 
-      return mapIndexIterator(baseIter, md => <span onClick={() => downloadFile(md.id)}>
-        <SimpleNavLink onClick={() => deleteFile(md.id)}>Delete</SimpleNavLink> - {md.path}
+      return mapIndexIterator(baseIter, md => <span key={md.path}>
+        <SimpleNavLink onClick={() => deleteFile(md.id)}>Delete</SimpleNavLink>
+        <span onClick={() => downloadFile(md.id)}> - {md.path}</span>
       </span>)
     }
 

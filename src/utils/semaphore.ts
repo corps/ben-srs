@@ -54,6 +54,5 @@ export class Semaphore {
 
               await this.channel.receive();
           }
-
     }
 }

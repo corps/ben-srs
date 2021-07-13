@@ -3,7 +3,10 @@ import {Dexie} from "dexie";
 import {FileMetadata} from "./sync";
 import {bindSome, fromVoid, Maybe, some, withDefault} from "../utils/maybe";
 import {Semaphore} from "../utils/semaphore";
-import {denormalizedNote, indexesInitialState, NoteIndexes, NoteTree, parseNote, updateNotes} from "../notes";
+import {
+  ClozeAnswer, denormalizedNote, indexesInitialState, Note, NoteIndexes, NotesStore, NoteTree, parseNote, updateNotes
+} from "../notes";
+import {Indexed, Indexer} from "../utils/indexable";
 
 export function withNamespace(storage: Storage, ns: string): Storage {
   return {
@@ -108,8 +111,18 @@ export interface ArrayBufferEnvelop {
 
 export type StoredBlob = Blob | ArrayBufferEnvelop;
 
+export type DirtyStoreIndex = {
+  byPath: Indexed<StoredMedia>;
+  byId: Indexed<StoredMedia>;
+};
+
+export const dirtyStoreIndexer = new Indexer<StoredMedia, DirtyStoreIndex>("byId");
+dirtyStoreIndexer.setKeyer("byPath", ({path}) => path.split("/"));
+dirtyStoreIndexer.setKeyer("byId", ({id}) => [id]);
+
 export class FileStore {
   writeSemaphore = new Semaphore();
+  dirtyIndex = dirtyStoreIndexer.empty();
 
   constructor(private db: Dexie) {
     this.db.version(2).stores({
@@ -126,15 +139,24 @@ export class FileStore {
     await this.storeBlobAndMetadata(storedMetadata, new Blob());
   }
 
-  fetchDirty(): Promise<StoredMedia[]> {
-    return this.db.table('blobs').where('dirty').equals(1).toArray()
+  private replaceFromDirty(medias: StoredMedia[]): StoredMedia[] {
+    const byId: {[k: string]: StoredMedia} = {};
+    this.dirtyIndex.byId[1].map(media => {
+      byId[media.id] = media;
+    })
+
+    return medias.map(media => {
+      if (media.id in byId) return byId[media.id];
+      return media;
+    })
   }
 
-  async allKeys(): Promise<string[]> {
-    return this.db.table('metadata').toCollection().keys() as Promise<string[]>;
+  fetchDirty(): Promise<StoredMedia[]> {
+    return this.db.table('blobs').where('dirty').equals(1).toArray().then(media => this.replaceFromDirty(media));
   }
 
   async clear() {
+    this.dirtyIndex = dirtyStoreIndexer.empty();
     await this.writeSemaphore.ready(async () => {
       await this.db.table('metadata').clear();
       await this.db.table('blobs').clear();
@@ -163,15 +185,25 @@ export class FileStore {
     const data = await readAsArrayBuffer(blob);
     const storedBlob: ArrayBufferEnvelop = { data, size: blob.size, type: blob.type };
     const media: StoredMedia = {...storedMetadata, blob: storedBlob };
-    await this.writeSemaphore.ready(async () => {
+
+    const work = this.writeSemaphore.ready(async () => {
       await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
         await this.db.table('metadata').put(storedMetadata);
         await this.db.table('blobs').put(media);
       })
     });
+
+    if (storedMetadata.dirty) {
+      this.dirtyIndex = dirtyStoreIndexer.update(this.dirtyIndex, [media]);
+      return;
+    }
+
+    this.dirtyIndex = dirtyStoreIndexer.removeByPk(this.dirtyIndex, [media.id]);
+    await work;
   }
 
   async deleteId(id: string): Promise<void> {
+    this.dirtyIndex = dirtyStoreIndexer.removeByPk(this.dirtyIndex, [id]);
     await this.writeSemaphore.ready(async () => {
       await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
         await this.db.table('blobs').where('id').equals(id).delete();
@@ -181,6 +213,8 @@ export class FileStore {
   }
 
   async deletePath(path: string): Promise<void> {
+    this.dirtyIndex = dirtyStoreIndexer.removeAll(this.dirtyIndex, Indexer.getAllMatching(this.dirtyIndex.byPath, path.split("/")));
+
     await this.writeSemaphore.ready(async () => {
       await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
         await this.db.table('metadata').where('path').between(path, path + "\uFFFE", true, false).delete();
@@ -192,15 +226,17 @@ export class FileStore {
   }
 
   async fetchBlob(id: string): Promise<Maybe<StoredMedia>> {
+    const match = Indexer.getFirstMatching(this.dirtyIndex.byId, [id]);
+    if (match) return Promise.resolve(match);
     return this.db.table('blobs').where('id').equals(id).first().then(fromVoid);
   }
 
   async fetchBlobsByExt(ext: string): Promise<StoredMedia[]> {
-    return this.db.table('blobs').where('ext').equals(ext).toArray();
+    return this.db.table('blobs').where('ext').equals(ext).toArray().then(media => this.replaceFromDirty(media));
   }
 
   async fetchMetadataByExts(exts: string[]): Promise<StoredMetadata[]> {
-    return this.db.table('metadata').where('ext').anyOf(exts).toArray();
+    return this.db.table('metadata').where('ext').anyOf(exts).toArray().then(media => this.replaceFromDirty(media));
   }
 }
 
