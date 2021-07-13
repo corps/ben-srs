@@ -47,23 +47,30 @@ export function* syncFiles(
         onSetPending(pending);
     }
 
+    updatePending(1);
+
     const dirty = yield* runPromise(storage.fetchDirty());
     updatePending(dirty.length);
 
     for (let d of dirty) {
         if (d.deleted) {
             yield backend.deleteFile(d);
-            yield storage.deletePath(d.path);
+            yield storage.deleteId(d.id);
             removeNotesByPath(notesIndex, d.path);
         } else {
             for (let work of backend.uploadFile(d)) {
                 yield work;
             }
+
+            if (!d.rev) {
+              // Remove the local copy, force sync to hand back a copy with updated id.
+              yield storage.deleteId(d.id);
+              removeNotesByPath(notesIndex, d.path);
+            }
         }
 
         updatePending(-1);
     }
-
     let cursor = yield* runPromise(storage.getCursor());
 
     for (let fileList of backend.syncFileList(cursor)) {
@@ -126,5 +133,6 @@ export function* syncFiles(
         updatePending(1);
     }
 
+    updatePending(-1);
     return null;
 }

@@ -7,15 +7,16 @@ import {filterIndexIterator, flattenIndexIterator, Indexer, IndexIterator, mapIn
 import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
 import {useUpdateNote} from "../hooks/useUpdateNote";
 import {studyDetailsForCloze} from "../study";
-import {bindSome, mapSome, some, withDefault} from "../utils/maybe";
+import {bindSome, mapSome, mapSomeAsync, some, withDefault} from "../utils/maybe";
 import {SelectTerm} from "./SelectTerm";
 import {findNoteTree, newNormalizedNote, normalizedNote} from "../notes";
 import {
-  allContentTypes, audioContentTypes, createId, normalizeBlob, StoredMetadata, videoContentTypes, withNamespace
+  allContentTypes, audioContentTypes, createId, getExt, normalizeBlob, StoredMetadata, videoContentTypes, withNamespace
 } from "../services/storage";
 import {useLiveQuery} from "dexie-react-hooks";
 import {SimpleNavLink} from "./SimpleNavLink";
 import {useStoredState} from "../hooks/useStoredState";
+import {useTriggerSync} from "../hooks/useSync";
 
 interface Props {
   onReturn?: () => void,
@@ -33,7 +34,8 @@ export function Search(props: Props) {
 
   const [search, setSearch] = useState("");
   const [mode, setMode] = useState(searchModes[0]);
-  const iterator = useSearchResults(mode, search, onReturn);
+  const [triggerSync, lastSync] = useTriggerSync();
+  const iterator = useSearchResults(mode, search, lastSync, onReturn);
   const [password, setPassword] = useStoredState(mediaEditingStorage, 'password', '');
 
   const uploadFile = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
@@ -41,15 +43,19 @@ export function Search(props: Props) {
     if (!files) return;
     for (let i = 0; i < files.length; ++i) {
       const file = files[i];
-      const [ext] = Object.entries(allContentTypes).find(([ext, mime]) => file.type === mime) || [''];
+      await mapSomeAsync(getExt(file.name), async ext => {
+        const filename = file.name.split('.').slice(0, 1)[0].toLowerCase() + '.' + ext;
 
-      const id = createId();
-      await store.storeBlob(file,
-        {path: `/${id}-${file.name.split('.').slice(0, 1)[0]}.${ext}`, id, rev: "", size: file.size},
-        true
-      );
+        const id = createId();
+        alert(`storing /${id}-${filename}`)
+        await store.storeBlob(file,
+          {path: `/${id}-${filename}`, id, rev: "", size: file.size},
+          true
+        );
+        triggerSync();
+      });
     }
-  }, [store])
+  }, [store, triggerSync])
 
   const fromYoutube = useCallback(async () => {
     const url = prompt("Enter a youtube url");
@@ -60,9 +66,7 @@ export function Search(props: Props) {
 
     try {
       if (response.status === 200) {
-        console.log('response status is good');
         const blob = await response.blob();
-        console.log('got blob');
         const filenameMatch = response.headers.get('Content-Disposition')?.match(/filename="(.*)"/);
         let fileName;
 
@@ -72,19 +76,19 @@ export function Search(props: Props) {
         } else {
           fileName = id + ".mp4";
         }
-        console.log({fileName});
 
         await store.storeBlob(blob,
           {path: `/${fileName}`, id, rev: "", size: blob.size},
           true
         );
+        triggerSync();
         alert('Success!');
       }
     } catch (e) {
       alert('Failed!');
       console.error(e);
     }
-  }, [password, store]);
+  }, [password, store, triggerSync]);
 
   return <SearchList iterator={iterator} onReturn={onReturn}>
     <div className="lh-copy f4 mt3">
@@ -128,7 +132,7 @@ export function Search(props: Props) {
   </SearchList>;
 }
 
-function useSearchResults(mode: string, search: string, onReturn: () => void): IndexIterator<ReactElement> {
+function useSearchResults(mode: string, search: string, lastSync: number, onReturn: () => void): IndexIterator<ReactElement> {
   const {notes, clozeAnswers, clozes, terms} = useNotesIndex();
   const updateNoteAndConfirmEditsFinished = useUpdateNote(true);
   const store = useFileStorage();
@@ -140,10 +144,14 @@ function useSearchResults(mode: string, search: string, onReturn: () => void): I
   const mediaMetadata = useMemo(() =>
     unsortedMediaData.sort((a, b) => b.updatedAt - a.updatedAt),
     [unsortedMediaData])
+  const [triggerSync] = useTriggerSync();
 
-  const deleteFile = useCallback((id: string) => {
-    if (confirm("Delete?")) store.markDeleted(id);
-  }, [store])
+  const deleteFile = useCallback(async (id: string) => {
+    if (confirm("Delete?")) {
+      await store.markDeleted(id);
+      triggerSync();
+    }
+  }, [store, triggerSync])
 
   const downloadFile = useCallback(async (id: string) => {
     try {
@@ -168,6 +176,7 @@ function useSearchResults(mode: string, search: string, onReturn: () => void): I
   }, [clozeAnswers, clozes, selectTermRouting, notes, onReturn, terms])
 
   return useMemo(() => {
+    console.log({lastSync});
     if (mode === "notes") {
       let baseIterator = Indexer.iterator(notes.byEditsComplete);
       if (search) baseIterator = filterIndexIterator(baseIterator, note => note.attributes.content.includes(search))
@@ -221,5 +230,5 @@ function useSearchResults(mode: string, search: string, onReturn: () => void): I
     }
 
     return () => null;
-  }, [clozeAnswers, clozes, deleteFile, downloadFile, mediaMetadata, mode, notes, search, terms, visitNote]);
+  }, [clozeAnswers, clozes, deleteFile, downloadFile, lastSync, mediaMetadata, mode, notes, search, terms, visitNote]);
 }

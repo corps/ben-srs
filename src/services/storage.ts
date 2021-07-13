@@ -171,6 +171,15 @@ export class FileStore {
     });
   }
 
+  async deleteId(id: string): Promise<void> {
+    await this.writeSemaphore.ready(async () => {
+      await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
+        await this.db.table('blobs').where('id').equals(id).delete();
+        await this.db.table('metadata').where('id').equals(id).delete();
+      })
+    });
+  }
+
   async deletePath(path: string): Promise<void> {
     await this.writeSemaphore.ready(async () => {
       await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
@@ -216,7 +225,7 @@ export function readDataUrl(blob: Blob) {
   return new Promise<string>((resolve, reject) => {
     const fr = new FileReader();
     fr.onload = () => resolve(fr.result as string);
-    fr.onerror = reject;
+    fr.onerror = (e) => reject(fr.error);
     fr.readAsDataURL(blob);
   })
 }

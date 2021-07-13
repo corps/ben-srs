@@ -1,33 +1,38 @@
 import {useFileStorage, useNotesIndex, useSession} from "./contexts";
-import {useLiveQuery} from "dexie-react-hooks";
 import {useAsync} from "../cancellable";
 import {syncFiles} from "../services/sync";
-import {Dispatch, useEffect, useMemo, useState} from "react";
+import {Dispatch, useCallback, useEffect, useState} from "react";
 import {Maybe} from "../utils/maybe";
 import {useNoteLoader} from "./useNoteLoader";
+
+export function useTriggerSync(): [Dispatch<void>, number] {
+    const [syncLastUpdate, setSyncLastUpdate] = useState(0);
+
+    const triggerSync = useCallback(() => {
+        setSyncLastUpdate(i => i + 1)
+    }, []);
+
+    return [triggerSync, syncLastUpdate];
+}
 
 export function useSync(onProgress: Dispatch<number>): [Maybe<any>, Maybe<any>] {
     const session = useSession();
     const storage = useFileStorage();
-    const indexes = useNotesIndex();
-    const dirtyRecords = useLiveQuery(async () => storage.fetchDirty(), [], []);
-    const [syncLastUpdate, setSyncLastUpdate] = useState(0);
     const notesIndex = useNotesIndex();
+    const [triggerSync, syncLastUpdate] = useTriggerSync();
 
     const notesLoaded = useNoteLoader();
 
+    // Force a sync every 60 seconds.
     useEffect(() => {
-        console.log('sync triggered...');
-        const lastUpdate = dirtyRecords[dirtyRecords.length - 1]?.updatedAt || 0;
-        if (lastUpdate > syncLastUpdate) {
-            setSyncLastUpdate(i => Math.max(i, lastUpdate));
-        }
-    }, [dirtyRecords, syncLastUpdate]);
+      const h = setInterval(() => triggerSync(), 1000 * 60);
+      return () => clearInterval(h);
+    }, [triggerSync]);
 
     return useAsync(function *() {
         onProgress(0);
         onProgress(1);
         yield notesLoaded;
         yield* syncFiles(session.syncBackend(), storage, onProgress, notesIndex)
-    }, [syncLastUpdate, onProgress], () => onProgress(0));
+    }, [syncLastUpdate, onProgress, session, storage, onProgress, notesIndex, notesLoaded], () => onProgress(0));
 }

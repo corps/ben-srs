@@ -1,5 +1,5 @@
 import React, {Dispatch, useCallback, useEffect, useState} from 'react';
-import {useFileStorage, useNotesIndex, useRoute} from "../hooks/contexts";
+import {useNotesIndex, useRoute} from "../hooks/contexts";
 import {useToggle} from "../hooks/useToggle";
 import {useTime} from "../hooks/useTime";
 import {findNextStudyDetails, findTermInNormalizedNote, StudyDetails} from "../study";
@@ -8,7 +8,6 @@ import {
   ClozeType, findNoteTree, newNormalizedNote, normalizedNote, NoteIndexes
 } from "../notes";
 import {mapSome, mapSomeAsync, Maybe, some, withDefault} from "../utils/maybe";
-import {FileStore, normalizeBlob} from "../services/storage";
 import {playAudio, speak} from "../services/speechAndAudio";
 import {useStudyData} from "../hooks/useStudyData";
 import {FlexContainer, Row, VCentered, VCenteringContainer} from "./layout-utils";
@@ -20,6 +19,7 @@ import {FrontSide} from "./FrontSide";
 import {useUpdateNote} from "../hooks/useUpdateNote";
 import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
 import {SelectTerm} from "./SelectTerm";
+import {useDataUrl} from "../hooks/useDataUrl";
 
 interface Props {
   onReturn?: Dispatch<void>,
@@ -29,7 +29,6 @@ interface Props {
 
 export function Study(props: Props) {
   const notesIndex = useNotesIndex();
-  const storage = useFileStorage();
   const [showBack, setShowBack] = useState(false);
   const toggleShowBack = useToggle(setShowBack);
   const [cardStartedAt, setCardStartedAt] = useState(0);
@@ -55,7 +54,7 @@ export function Study(props: Props) {
   const [studyDetails, setStudyDetails] = useState(prepareNext);
   const startNext = useCallback(() => setStudyDetails(prepareNext()), [setStudyDetails, prepareNext]);
   const answerCard = useAnswerCard(studyDetails, notesIndex, startNext);
-  const readCard = useReadCard(studyDetails, storage);
+  const readCard = useReadCard(studyDetails);
 
   const dueTime = withDefault(mapSome(
     studyDetails,
@@ -125,19 +124,21 @@ export function Study(props: Props) {
   ), null);
 }
 
-function useReadCard(studyDetails: Maybe<StudyDetails>, store: FileStore) {
-  return useCallback(async () => {
-    await mapSomeAsync(studyDetails, async studyDetails => {
+function useReadCard(studyDetails: Maybe<StudyDetails>) {
+  const audioDataUrl = useDataUrl(withDefault(mapSome(studyDetails, d => d.audioFileId), ""));
+  const playAudioPath = useCallback(() => {
+    mapSome(audioDataUrl, playAudio);
+  }, [audioDataUrl])
+
+  return useCallback(() => {
+    mapSome(studyDetails, studyDetails => {
       if (studyDetails.audioFileId) {
-        const media = await store.fetchBlob(studyDetails.audioFileId);
-        await mapSomeAsync(media, async ({blob, path}) => {
-          await playAudio(normalizeBlob(blob), path);
-        });
+        playAudioPath();
       } else {
         speak(studyDetails.cloze.language, studyDetails.spoken);
       }
-    })
-  }, [studyDetails, store]);
+    });
+  }, [studyDetails, playAudioPath]);
 }
 
 function useAnswerCard(studyDetails: Maybe<StudyDetails>, noteIndexes: NoteIndexes, startNext: Dispatch<void>) {
@@ -171,9 +172,7 @@ function useAnswerCard(studyDetails: Maybe<StudyDetails>, noteIndexes: NoteIndex
           updatingCloze.attributes.schedule = schedule;
           updatingCloze.attributes.answers = updatingCloze.attributes.answers.concat([answer]);
 
-          console.log('update');
           await updateNote(some(tree), normalized);
-          console.log('done');
           startNext();
         });
       });

@@ -9,6 +9,8 @@ import {useLiveQuery} from "dexie-react-hooks";
 import {audioContentTypes, normalizeBlob} from "../services/storage";
 import {Indexer} from "../utils/indexable";
 import {playAudio} from "../services/speechAndAudio";
+import {useDataUrl} from "../hooks/useDataUrl";
+import {useTriggerSync} from "../hooks/useSync";
 
 interface Props {
   onReturn?: () => void,
@@ -28,12 +30,14 @@ export function EditNote(props: Props) {
   const [normalized, setNormalized] = useState(() => {
     return withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote), {...newNormalizedNote});
   });
+  const [triggerSync] = useTriggerSync();
   const deleteNote = useCallback(async () => {
     if (confirm("Delete?")) {
       setRoute(() => null);
       await store.markDeleted(noteId);
+      triggerSync();
     }
-  }, [noteId, setRoute, store]);
+  }, [noteId, setRoute, store, triggerSync]);
 
   const audioMetadatas = useUnusedAudioFiles();
   const audioPaths = useMemo(() => audioMetadatas.map(({path}) => path), [audioMetadatas]);
@@ -51,15 +55,10 @@ export function EditNote(props: Props) {
       }
     }))
   }, [audioMetadatas])
-  const playAudioPath = useCallback(async () => {
-    const id = normalized.attributes.audioFileId;
-    if (!id) return;
-
-    const metadata = await store.fetchBlob(id);
-    if (!metadata) return;
-    const {blob, path} = metadata[0];
-    await playAudio(normalizeBlob(blob), path);
-  }, [normalized.attributes.audioFileId, store])
+  const audioDataUrl = useDataUrl(normalized.attributes.audioFileId);
+  const playAudioPath = useCallback(() => {
+    mapSome(audioDataUrl, playAudio);
+  }, [audioDataUrl])
 
   const onApply = useCallback(async () => {
     const baseTree = findNoteTree(notesIndex, noteId);
@@ -149,5 +148,5 @@ function useUnusedAudioFiles() {
   const audioMetadatas = useLiveQuery(async () => store.fetchMetadataByExts(Object.keys(audioContentTypes)), [], []);
   return useMemo(() => audioMetadatas.filter(metadata => !Indexer.getFirstMatching(notes.byAudioFileId,
     [metadata.id]
-  )), [audioMetadatas, notes.byAudioFileId]);
+  ) && metadata.rev && !metadata.deleted), [audioMetadatas, notes.byAudioFileId]);
 }

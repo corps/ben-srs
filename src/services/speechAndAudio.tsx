@@ -25,23 +25,9 @@ export function speak(language: string, text: string) {
 }
 
 let lastAudio: Maybe<HTMLAudioElement> = null;
-export async function playAudio(blob: Blob, path: string) {
-  console.log('playing audio');
+export function playAudio(dataUrl: string) {
   mapSome(lastAudio, lastAudio => lastAudio.pause());
-  const contentType = getMimeFromFileName(path);
-  await mapSomeAsync(contentType, async contentType => {
-    const file = new File([blob], path, { type: contentType });
-
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-
-    await new Promise<void>((resolve, reject) => {
-      reader.onerror = reject;
-      reader.onload = () => resolve();
-    });
-
-    const audio = new Audio(reader.result as any);
-    lastAudio = some(audio);
-    await audio.play();
-  });
+  const audio = new Audio(dataUrl);
+  lastAudio = some(audio);
+  audio.play().catch(e => alert(e));
 }

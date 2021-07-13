@@ -1,5 +1,5 @@
 import React, {ChangeEvent, Dispatch, SetStateAction, useCallback, useState} from 'react';
-import {mapSomeAsync, Maybe, withDefault} from "../utils/maybe";
+import {mapSome, mapSomeAsync, Maybe, withDefault} from "../utils/maybe";
 import {
   ClozeType,
   findNoteTree,
@@ -18,6 +18,7 @@ import {playAudio, speak} from "../services/speechAndAudio";
 import {DictionaryLookup} from "./DictionaryLookup";
 import {medianSchedule} from "../scheduler";
 import {normalizeBlob} from "../services/storage";
+import {useDataUrl} from "../hooks/useDataUrl";
 
 interface Props {
   onReturn?: () => void,
@@ -100,16 +101,18 @@ export function EditTerm(props: Props) {
     })
   }, [setWorkingTerm])
 
-  const testSpeech = useCallback(async () => {
+  const audioDataUrl = useDataUrl(normalized.attributes.audioFileId);
+  const playAudioPath = useCallback(() => {
+    mapSome(audioDataUrl, playAudio);
+  }, [audioDataUrl])
+
+  const testSpeech = useCallback(() => {
     if (normalized.attributes.audioFileId) {
-      const media = await store.fetchBlob(normalized.attributes.audioFileId);
-      await mapSomeAsync(media, async ({blob, path}) => {
-        await playAudio(normalizeBlob(blob), path);
-      });
+      playAudioPath();
     } else {
       speak(normalized.attributes.language, workingTerm.attributes.pronounce || workingTerm.attributes.reference)
     }
-  }, [store, normalized, workingTerm])
+  }, [normalized.attributes.audioFileId, normalized.attributes.language, playAudioPath, workingTerm.attributes.pronounce, workingTerm.attributes.reference])
 
   return <div className="mw6 center">
     <div className="tc">
