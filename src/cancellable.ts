@@ -116,12 +116,12 @@ export class Cancellable {
   }
 }
 
-export function* runAsync<T>(fn: () => Promise<T>): AsyncGenerator<T, T> {
+export function* runAsync<T>(fn: () => Promise<T>): AsyncGenerator<T, any> {
   const result = yield fn();
   return result as T;
 }
 
-export function* runPromise<T>(v: Promise<T>): AsyncGenerator<T, T> {
+export function* runPromise<T>(v: Promise<T>): AsyncGenerator<T, any> {
   const result = yield v;
   return result as T;
 }

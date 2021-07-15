@@ -205,15 +205,15 @@ export function loadDropboxSession(clientId: string) {
   }
 }
 
-export function getDropboxAuthOrLogin(clientId: string, storage: Storage, force = false): Promise<DropboxAuth> {
+export async function getDropboxAuthOrLogin(clientId: string, storage: Storage, force = false): Promise<DropboxAuth> {
   const existingToken = storage.getItem('token');
   const existingExpiresAt = storage.getItem('expires');
 
   if (!force && existingToken && existingExpiresAt) {
     const expiresAt = parseInt(existingExpiresAt, 10);
-    return Promise.resolve(new DropboxAuth({
+    return new DropboxAuth({
       accessToken: existingToken, accessTokenExpiresAt: new Date(expiresAt),
-    }));
+    });
   }
 
   const auth = new DropboxAuth({
@@ -224,39 +224,37 @@ export function getDropboxAuthOrLogin(clientId: string, storage: Storage, force 
   if ((match = window.location.search.match(/code=([^&]+)/))) {
     const code = match[1];
     if (code) {
-      const verifier = storage.getItem('verifier');
-      if (verifier) {
-        auth.setCodeVerifier(verifier);
+      try {
+        const verifier = storage.getItem('verifier');
+        if (verifier) {
+          auth.setCodeVerifier(verifier);
 
-        return auth.getAccessTokenFromCode(window.location.origin + window.location.pathname, code)
-          .then((response) => {
-            const result: DropboxAccessTokenAuthResponse = response.result as any;
-            auth.setAccessToken(result.access_token);
-            auth.setAccessTokenExpiresAt(new Date(new Date().getTime() + result.expires_in * 1000))
+          const response = await auth.getAccessTokenFromCode(window.location.origin + window.location.pathname, code);
+          const result: DropboxAccessTokenAuthResponse = response.result as any;
+          auth.setAccessToken(result.access_token);
+          auth.setAccessTokenExpiresAt(new Date(new Date().getTime() + result.expires_in * 1000))
 
-            storage.setItem('token', result.access_token);
-            storage.setItem('expires', auth.getAccessTokenExpiresAt().getTime() + "");
-            location.href = location.origin + location.pathname;
-            return auth;
-          }, e => {
-            storage.clear();
-            location.href = location.origin + location.pathname;
-            throw e;
-          });
+          storage.setItem('token', result.access_token);
+          storage.setItem('expires', auth.getAccessTokenExpiresAt().getTime() + "");
+          location.href = location.origin + location.pathname;
+          return auth;
+        }
+
+        return Promise.reject('Dropbox authentication failed, code verifier not found in storage!');
+      } catch (e) {
+        storage.clear();
+        location.href = location.origin + location.pathname;
+        throw e;
       }
-
-      return Promise.reject('Dropbox authentication failed, code verifier not found in storage!');
     }
   }
 
-  return auth.getAuthenticationUrl(
-    window.location.href, undefined, 'code', 'offline', undefined, undefined, true)
-    .then(authUrl => {
-      storage.clear();
-      storage.setItem("verifier", auth.getCodeVerifier());
-      window.location.href = authUrl.toString();
-      return null as any;
-    })
+  storage.clear();
+  const authUrl =  auth.getAuthenticationUrl(
+    window.location.href, undefined, 'code', 'offline', undefined, undefined, true);
+  storage.setItem("verifier", auth.getCodeVerifier());
+  window.location.href = authUrl.toString();
+  return null as any;
 }
 
 
