@@ -212,7 +212,9 @@ export async function getDropboxAuthOrLogin(clientId: string, storage: Storage, 
   if (!force && existingToken && existingExpiresAt) {
     const expiresAt = parseInt(existingExpiresAt, 10);
     return new DropboxAuth({
-      accessToken: existingToken, accessTokenExpiresAt: new Date(expiresAt),
+      accessToken: existingToken,
+      accessTokenExpiresAt: new Date(expiresAt),
+      clientId,
     });
   }
 
