@@ -253,7 +253,7 @@ export async function getDropboxAuthOrLogin(clientId: string, storage: Storage, 
   }
 
   storage.clear();
-  const authUrl =  auth.getAuthenticationUrl(
+  const authUrl =  await auth.getAuthenticationUrl(
     window.location.href, undefined, 'code', 'offline', undefined, undefined, true);
   storage.setItem("verifier", auth.getCodeVerifier());
   window.location.href = authUrl.toString();
