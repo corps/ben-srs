@@ -193,12 +193,7 @@ export function loadDropboxSession(clientId: string) {
     if (existingUserName) {
       user = {...user, username: existingUserName };
     } else {
-      const dropbox = new Dropbox({ auth });
-      const account = await dropbox.usersGetCurrentAccount();
-      const username = account.result.email;
-
-      storage.setItem('username', username);
-      user = { ...user, username };
+      return loadDropboxSession(storage, true);
     }
 
     return new DropboxSession(auth, user, storage, () => loadDropboxSession(storage, true));
@@ -238,6 +233,12 @@ export async function getDropboxAuthOrLogin(clientId: string, storage: Storage, 
 
           storage.setItem('token', result.access_token);
           storage.setItem('expires', auth.getAccessTokenExpiresAt().getTime() + "");
+
+          const dropbox = new Dropbox({ auth });
+          const account = await dropbox.usersGetCurrentAccount();
+          const username = account.result.email;
+          storage.setItem('username', username);
+
           location.href = location.origin + location.pathname;
           return auth;
         }
