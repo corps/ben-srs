@@ -76,7 +76,7 @@ export function EditTerm(props: Props) {
 
         const [left, right] = findTermRange(term, attributes.content);
         if (left >= 0 && right >= 0) {
-          attributes.content = attributes.content.slice(0, left) + attributes.content.slice(right);
+          attributes.content = attributes.content.slice(0, left) + term.attributes.reference + attributes.content.slice(right);
         }
 
         break;
