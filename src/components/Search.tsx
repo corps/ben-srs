@@ -10,9 +10,7 @@ import {studyDetailsForCloze} from "../study";
 import {bindSome, mapSome, mapSomeAsync, some, withDefault} from "../utils/maybe";
 import {SelectTerm} from "./SelectTerm";
 import {findNoteTree, newNormalizedNote, normalizedNote} from "../notes";
-import {
-  allContentTypes, audioContentTypes, createId, getExt, normalizeBlob, StoredMetadata, videoContentTypes, withNamespace
-} from "../services/storage";
+import { audioContentTypes, createId, getExt, normalizeBlob, StoredMetadata, videoContentTypes, withNamespace } from "../services/storage";
 import {useLiveQuery} from "dexie-react-hooks";
 import {SimpleNavLink} from "./SimpleNavLink";
 import {useStoredState} from "../hooks/useStoredState";
@@ -141,7 +139,7 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
     []
   );
   const mediaMetadata = useMemo(() =>
-    unsortedMediaData.sort((a, b) => b.updatedAt - a.updatedAt),
+    [...unsortedMediaData].sort((a, b) => b.updatedAt - a.updatedAt),
     [unsortedMediaData])
   const [triggerSync] = useTriggerSync();
 
@@ -175,13 +173,12 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
   }, [clozeAnswers, clozes, selectTermRouting, notes, onReturn, terms])
 
   return useMemo(() => {
-    console.log({lastSync});
     if (mode === "notes") {
       let baseIterator = Indexer.iterator(notes.byEditsComplete);
       if (search) baseIterator = filterIndexIterator(baseIterator, note => note.attributes.content.includes(search))
 
       return mapIndexIterator(baseIterator, note => {
-        return <span onClick={() => visitNote(note.id)}
+        return <span key={note.id} onClick={() => visitNote(note.id)}
                      className={note.attributes.editsComplete ? '' : 'bg-lightest-blue'}>
           {note.attributes.content}
         </span>
@@ -207,7 +204,7 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
       ));
 
       return mapIndexIterator(baseIterator, details => {
-        return <span onClick={() => visitNote(details.cloze.noteId)}>
+        return <span key={details.cloze.noteId + details.cloze.reference} onClick={() => visitNote(details.cloze.noteId)}>
           {details.beforeTerm}<b>{details.beforeCloze}{details.clozed}{details.afterCloze}</b> {details.afterTerm}
         </span>
       })
@@ -230,5 +227,5 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
     }
 
     return () => null;
-  }, [clozeAnswers, clozes, deleteFile, downloadFile, lastSync, mediaMetadata, mode, notes, search, terms, visitNote]);
+  }, [clozeAnswers, clozes, deleteFile, downloadFile, mediaMetadata, mode, notes, search, terms, visitNote]);
 }

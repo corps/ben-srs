@@ -411,6 +411,10 @@ export function updateNotes(indexes: NoteIndexes, ...trees: NoteTree[]) {
     terms.push(...tree.terms);
     clozes.push(...tree.clozes);
     clozeAnswers.push(...tree.clozeAnswers);
+
+    indexes.terms = termsIndexer.removeByPk(indexes.terms, [tree.note.id]);
+    indexes.clozes = clozesIndexer.removeByPk(indexes.clozes, [tree.note.id]);
+    indexes.clozeAnswers = clozeAnswersIndexer.removeByPk(indexes.clozeAnswers, [tree.note.id]);
   }
 
   indexes.notes = notesIndexer.update(indexes.notes, notes);

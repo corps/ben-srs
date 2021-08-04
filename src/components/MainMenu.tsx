@@ -169,7 +169,7 @@ function useOptimizeNextStudy(noteIndexes: NoteIndexes,
   useEffect(
     () => {
       let nextDue = Indexer.iterator(noteIndexes.clozes.byLanguageSpokenAndNextDue,
-        [language, audioStudy, false],
+        [language, audioStudy, true],
         [language, audioStudy, true, Infinity]
       )();
 
