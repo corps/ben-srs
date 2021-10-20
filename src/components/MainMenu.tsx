@@ -1,5 +1,5 @@
 import React, {Dispatch, SetStateAction, useCallback, useEffect, useMemo, useState} from 'react';
-import {useFileStorage, useNotesIndex, useRoute, useSession} from "../hooks/contexts";
+import {useFileStorage, useNotesIndex, useRoute, useSession, useTags} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
 import {endKeyMatchingWithin, Indexer} from "../utils/indexable";
 import {useToggle} from "../hooks/useToggle";
@@ -53,6 +53,20 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
     }, {syncFailed}, () => ({syncFailed}))
   }, [newNoteRouting, syncFailed]);
 
+  const allTags = useMemo(() =>
+    ["", ...notesIndex.tags.byTagOfFirstNoteId[1].map(v => v[0])]
+  , [notesIndex.tags.byTagOfFirstNoteId]);
+
+  const [curTags, setTags] = useTags();
+
+  const updateCurTags = useCallback((newValue: string, i: number) => {
+    if (newValue) {
+      setTags([...curTags.slice(0, i), newValue, ...curTags.slice(i + 1)])
+    } else {
+      setTags([...curTags.slice(0, i), ...curTags.slice(i + 1)])
+    }
+  }, [curTags, setTags])
+
   useOptimizeNextStudy(notesIndex, minutesOfTime(time), language, audioStudy, setLanguage, setAudioStudy);
 
   const studyData = useStudyData(time, language, audioStudy);
@@ -84,6 +98,21 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
             value={language}
             values={languages}
           />
+        </div>
+      </div>
+
+      <div className="f5">
+        タグ:
+        {curTags.map((tag, i) =>
+          <div className="ml2 w4 dib">
+            <SelectSingle key={tag} values={allTags} value={tag}
+              onChange={(newTagValue) => updateCurTags(newTagValue, i)}/>
+          </div>
+        )}
+
+        <div className="ml2 w4 dib">
+          <SelectSingle key="" values={allTags} value=""
+                        onChange={(newTagValue) => setTags([...curTags, newTagValue])}/>
         </div>
       </div>
 
@@ -153,9 +182,6 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
         </CircleButton> : null }
       </div>
     </div>
-
-    <div className="tc f3 fw2 mb1">言葉: {studyData.terms}</div>
-    <div className="tc f3 fw2 mb1">合計: {studyData.clozes}</div>
   </div>
 }
 

@@ -19,7 +19,9 @@ export function Router() {
 
     return <RouteContext.Provider value={setRoute}>
         <div className="fixed w-100" style={{height: "5px"}}>
-            <ProgressBar pendingNum={pending} completed={completed} red/>
+            <div className="fixed w-100" style={{height: "5px"}}>
+                <ProgressBar pendingNum={pending} completed={completed} red/>
+            </div>
         </div>
         {ele}
     </RouteContext.Provider>

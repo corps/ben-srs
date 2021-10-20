@@ -9,6 +9,7 @@ export const newNote = {
     editsComplete: false,
     terms: undefined as void,
     audioFileId: null as string | null | undefined,
+    tags: [] as string[],
   },
 
   id: "",
@@ -111,7 +112,7 @@ export function parseNote(text: string): NormalizedNote {
   let divisorIdx = text.lastIndexOf(divisor);
 
   if (divisorIdx !== -1) {
-    note.attributes = JSON.parse(text.slice(divisorIdx + divisor.length));
+    note.attributes = {...note.attributes, ...JSON.parse(text.slice(divisorIdx + divisor.length))};
     note.attributes.content = text.slice(0, divisorIdx);
   } else {
     note.attributes.content = text;
@@ -150,6 +151,25 @@ export type ClozeAnswersStore = {
   byFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx: Indexed<ClozeAnswer>;
   byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx: Indexed<ClozeAnswer>;
 };
+
+export type NoteByTag = [string, string];
+
+export type NoteByTagStore = {
+  byTagAndNoteId: Indexed<NoteByTag>
+  byNoteIdAndTag: Indexed<NoteByTag>
+  byTagOfFirstNoteId: Indexed<NoteByTag>
+}
+
+export const notesByTagIndexer = new Indexer<NoteByTag, NoteByTagStore>("byTagAndNoteId");
+notesByTagIndexer.setKeyer("byTagAndNoteId", noteByTag => noteByTag);
+notesByTagIndexer.setKeyer("byNoteIdAndTag", noteByTag => [noteByTag[1], noteByTag[0]]);
+notesByTagIndexer.addGroupedIndex(
+  "byTagOfFirstNoteId",
+  noteByTag => [noteByTag[0]],
+  "byTagAndNoteId",
+  noteByTag => [noteByTag[0]],
+  (iter) => iter()
+)
 
 export const notesIndexer = new Indexer<Note, NotesStore>("byPath");
 notesIndexer.setKeyer("byPath", note => note.path.split("/"));
@@ -396,6 +416,7 @@ export const indexesInitialState = {
   terms: termsIndexer.empty(),
   clozes: clozesIndexer.empty(),
   clozeAnswers: clozeAnswersIndexer.empty(),
+  tags: notesByTagIndexer.empty(),
 };
 
 export type NoteIndexes = typeof indexesInitialState;
@@ -405,13 +426,17 @@ export function updateNotes(indexes: NoteIndexes, ...trees: NoteTree[]) {
   const terms: Term[] = [];
   const clozes: Cloze[] = [];
   const clozeAnswers: ClozeAnswer[] = [];
+  const tags: NoteByTag[] = [];
 
   for (let tree of trees) {
     notes.push(tree.note);
     terms.push(...tree.terms);
     clozes.push(...tree.clozes);
     clozeAnswers.push(...tree.clozeAnswers);
+    tags.push(...tree.note.attributes.tags.map(tag => [tag, tree.note.id] as [string, string]));
 
+    indexes.tags = notesByTagIndexer.removeAll(indexes.tags,
+      Indexer.getAllMatching(indexes.tags.byNoteIdAndTag, [tree.note.id]));
     indexes.terms = termsIndexer.removeByPk(indexes.terms, [tree.note.id]);
     indexes.clozes = clozesIndexer.removeByPk(indexes.clozes, [tree.note.id]);
     indexes.clozeAnswers = clozeAnswersIndexer.removeByPk(indexes.clozeAnswers, [tree.note.id]);
@@ -421,6 +446,7 @@ export function updateNotes(indexes: NoteIndexes, ...trees: NoteTree[]) {
   indexes.terms = termsIndexer.update(indexes.terms, terms);
   indexes.clozes = clozesIndexer.update(indexes.clozes, clozes);
   indexes.clozeAnswers = clozeAnswersIndexer.update(indexes.clozeAnswers, clozeAnswers);
+  indexes.tags = notesByTagIndexer.update(indexes.tags, tags);
 }
 
 
@@ -432,6 +458,7 @@ export function removeNotesByPath(indexes: NoteIndexes, path: string) {
 
   indexes.notes = notesIndexer.removeAll(indexes.notes, notes);
   for (let noteId of noteIds) {
+    indexes.tags = notesByTagIndexer.removeAll(indexes.tags, Indexer.getAllMatching(indexes.tags.byNoteIdAndTag, [noteId]))
     indexes.terms = termsIndexer.removeAll(indexes.terms, Indexer.getAllMatching(indexes.terms.byNoteIdReferenceAndMarker, [noteId]));
     indexes.clozes = clozesIndexer.removeAll(indexes.clozes, Indexer.getAllMatching(indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [noteId]));
     indexes.clozeAnswers = clozeAnswersIndexer.removeAll(indexes.clozeAnswers, Indexer.getAllMatching(indexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx, [noteId]));

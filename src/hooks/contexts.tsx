@@ -7,11 +7,16 @@ import {Maybe} from "../utils/maybe";
 export const SessionContext = createContext(defaultSession);
 export const NotesIndexContext = createContext({...indexesInitialState});
 export const FileStorageContext = createContext({} as FileStore);
+export const TagsContext = createContext([[], () => null] as [string[], Dispatch<string[]>]);
 export const RouteContext = createContext((() => []) as Dispatch<(v: Maybe<ReactElement>) => Maybe<ReactElement>>);
 export const TriggerSyncContext = createContext([() => null, 0] as [() => void, number]);
 
 export function useTriggerSync() {
     return useContext(TriggerSyncContext);
+}
+
+export function useTags() {
+    return useContext(TagsContext);
 }
 
 export function useSession() {
