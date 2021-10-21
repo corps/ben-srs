@@ -1,5 +1,5 @@
 import React, {ChangeEvent, useCallback, useMemo, useState} from 'react';
-import {useFileStorage, useNotesIndex, useRoute, useSession, useTriggerSync} from "../hooks/contexts";
+import {useFileStorage, useNotesIndex, useRoute, useSession, useTags, useTriggerSync} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
 import {
   findNoteTree, newNormalizedNote, NormalizedNote, normalizedNote, NoteTree,
@@ -79,6 +79,8 @@ export function EditNote(props: Props) {
       }
     }))
   }, [])
+
+  const {allTags, curTags, setTags, updateCurTags} = useTags(notesIndex);
 
   return <div>
     <div className="tc pt5-ns fw5 mb2">

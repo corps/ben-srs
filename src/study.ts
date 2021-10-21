@@ -6,10 +6,10 @@ import {
   NormalizedNote,
   normalizedNote,
   NormalizedTerm,
-  NoteIndexes
+  NoteIndexes, notesIndexer
 } from "./notes";
-import {applySome, bindSome, mapSome, Maybe, some, toVoid} from "./utils/maybe";
-import {Indexer} from "./utils/indexable";
+import {applySome, bindSome, mapSome, Maybe, some, toVoid, withDefault} from "./utils/maybe";
+import {filterIndexIterator, Indexer} from "./utils/indexable";
 
 export interface StudyDetails {
   cloze: Cloze;
@@ -100,36 +100,45 @@ const allNotDivisibleHeadRegex = new RegExp("^" + allNotDivisibleRegex.source);
 export function findNextStudyDetails(language: string,
                                      fromMinutes: number,
                                      indexes: NoteIndexes,
-                                     spoken: boolean): Maybe<StudyDetails> {
-  return bindSome(findNextStudyCloze(language, fromMinutes, indexes, spoken),
+                                     spoken: boolean,
+                                     tags: string[]): Maybe<StudyDetails> {
+  return bindSome(findNextStudyCloze(language, fromMinutes, indexes, spoken, tags),
           nextCloze => studyDetailsForCloze(nextCloze, indexes));
 }
 
 export function findNextStudyCloze(language: string,
                                    fromMinutes: number,
                                    indexes: NoteIndexes,
-                                   spoken: boolean): Maybe<Cloze> {
+                                   spoken: boolean,
+                                   tags: string[]): Maybe<Cloze> {
   let nextCloze = Indexer.reverseIter(
     indexes.clozes.byLanguageSpokenNewAndNextDue,
     [language, spoken, true, true, fromMinutes],
     [language, spoken, true, true, null]
   )();
+
   nextCloze =
     nextCloze ||
-    Indexer.reverseIter(
+    filterIndexIterator(Indexer.reverseIter(
       indexes.clozes.byLanguageSpokenNewAndNextDue,
       [language, spoken, false, true, fromMinutes],
       [language, spoken, false, true, null]
-    )();
+    ), matchesTags)();
   nextCloze =
     nextCloze ||
-    Indexer.iterator(
+    filterIndexIterator(Indexer.iterator(
       indexes.clozes.byLanguageSpokenAndNextDue,
       [language, spoken, false, fromMinutes],
       [language, spoken, Infinity, Infinity]
-    )();
+    ), matchesTags)();
 
   return nextCloze;
+
+  function matchesTags(cloze: Cloze) {
+    return withDefault(mapSome(Indexer.getFirstMatching(indexes.notes.byId, [cloze.noteId]), note =>
+      tags.every(required => note.attributes.tags.includes(required))
+    ), false);
+  }
 }
 
 export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<StudyDetails> {
