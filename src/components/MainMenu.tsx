@@ -1,4 +1,4 @@
-import React, {Dispatch, SetStateAction, useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {useFileStorage, useNotesIndex, useRoute, useSession} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
 import {endKeyMatchingWithin, Indexer} from "../utils/indexable";
@@ -6,15 +6,14 @@ import {useToggle} from "../hooks/useToggle";
 import {useTime} from "../hooks/useTime";
 import {useStudyData} from "../hooks/useStudyData";
 import {CircleButton} from "./CircleButton";
-import {minutesOfTime} from "../utils/time";
-import {NoteIndexes} from "../notes";
-import {mapSome, some, withDefault} from "../utils/maybe";
+import {some} from "../utils/maybe";
 import {Study} from "./Study";
 import {useUpdateNote} from "../hooks/useUpdateNote";
 import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
 import {EditNote} from "./EditNote";
 import {createId} from "../services/storage";
 import {Search} from "./Search";
+import {TagsSelector, useAllTags} from "./TagsSelector";
 
 export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const session = useSession();
@@ -35,11 +34,18 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   }, [notesIndex.notes.byLanguage]);
 
   const [language, setLanguage] = useState(() => languages[0]);
+  const allTags = useAllTags(language, true);
+
+  const [tag, setTag] = useState(() => language);
+
   useEffect(() => {
     if (!languages.includes(language)) {
       setLanguage(languages[0]);
     }
-  }, [languages, language]);
+    if (!allTags.includes(tag)) {
+      setTag(allTags[0] || language);
+    }
+  }, [languages, language, allTags, tag]);
 
   const [audioStudy, setAudioStudy] = useState(false);
   const toggleAudioStudy = useToggle(setAudioStudy);
@@ -53,9 +59,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
     }, {syncFailed}, () => ({syncFailed}))
   }, [newNoteRouting, syncFailed]);
 
-  useOptimizeNextStudy(notesIndex, minutesOfTime(time), language, audioStudy, setLanguage, setAudioStudy);
-
-  const studyData = useStudyData(time, language, audioStudy);
+  const studyData = useStudyData(time, tag, audioStudy);
 
   const doLogout = useCallback(async () => {
     setLoggingOut(true);
@@ -87,6 +91,8 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
         </div>
       </div>
 
+      <TagsSelector value={[tag]} language={language} onChange={(vs) => setTag(vs[0])} singular/>
+
       <div className="f5">
         音声:
         <div className="ml2 w4 dib tl">
@@ -110,7 +116,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
     <div className="tc">
       <div className="mv2">
         <CircleButton
-          onClick={() => setRoute(() => some(<Study audioStudy={audioStudy} language={language}/>))}
+          onClick={() => setRoute(() => some(<Study audioStudy={audioStudy} language={tag}/>))}
           red
           className="mh2 pointer dim">
           <span className="fw6">訓</span>
@@ -157,44 +163,4 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
     <div className="tc f3 fw2 mb1">言葉: {studyData.terms}</div>
     <div className="tc f3 fw2 mb1">合計: {studyData.clozes}</div>
   </div>
-}
-
-function useOptimizeNextStudy(noteIndexes: NoteIndexes,
-  minutesNow: number,
-  language: string,
-  audioStudy: boolean,
-  setLanguage: Dispatch<SetStateAction<string>>,
-  setAudioStudy: Dispatch<SetStateAction<boolean>>,
-) {
-  useEffect(
-    () => {
-      let nextDue = Indexer.iterator(noteIndexes.clozes.byLanguageSpokenAndNextDue,
-        [language, audioStudy, true],
-        [language, audioStudy, true, Infinity]
-      )();
-
-      const curLanguageHasDue = withDefault(mapSome(nextDue,
-        nextDue => nextDue.attributes.schedule.nextDueMinutes <= minutesNow
-      ), false);
-      if (curLanguageHasDue) return;
-
-      nextDue = Indexer.reverseIter(noteIndexes.clozes.byNextDue, [true, minutesNow], [true, null])();
-      nextDue = nextDue || Indexer.iterator(noteIndexes.clozes.byNextDue)();
-
-      mapSome(nextDue, nextDue => {
-        const spoken = nextDue.attributes.type == "listen" || nextDue.attributes.type == "speak";
-        setLanguage(nextDue.language);
-        setAudioStudy(spoken);
-      });
-    },
-    [
-      minutesNow,
-      language,
-      audioStudy,
-      setLanguage,
-      setAudioStudy,
-      noteIndexes.clozes.byLanguageSpokenAndNextDue,
-      noteIndexes.clozes.byNextDue
-    ]
-  );
 }

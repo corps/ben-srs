@@ -110,26 +110,26 @@ export function findNextStudyCloze(language: string,
                                    indexes: NoteIndexes,
                                    spoken: boolean): Maybe<Cloze> {
   let nextCloze = Indexer.reverseIter(
-    indexes.clozes.byLanguageSpokenNewAndNextDue,
+    indexes.taggedClozes.byTagSpokenNewAndNextDue,
     [language, spoken, true, true, fromMinutes],
     [language, spoken, true, true, null]
   )();
   nextCloze =
     nextCloze ||
     Indexer.reverseIter(
-      indexes.clozes.byLanguageSpokenNewAndNextDue,
+      indexes.taggedClozes.byTagSpokenNewAndNextDue,
       [language, spoken, false, true, fromMinutes],
       [language, spoken, false, true, null]
     )();
   nextCloze =
     nextCloze ||
     Indexer.iterator(
-      indexes.clozes.byLanguageSpokenAndNextDue,
+      indexes.taggedClozes.byTagSpokenAndNextDue,
       [language, spoken, false, fromMinutes],
       [language, spoken, Infinity, Infinity]
     )();
 
-  return nextCloze;
+  return mapSome(nextCloze, ({inner}) => inner);
 }
 
 export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<StudyDetails> {

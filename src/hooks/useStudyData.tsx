@@ -29,30 +29,30 @@ export function useStudyData(
 
         let startOfCurDay = minutesOfTime(startOfDay(now));
 
-        let range = Indexer.getRangeFrom(notesIndex.terms.byLanguage, languageStartKey,
+        let range = Indexer.getRangeFrom(notesIndex.taggedTerms.byTag, languageStartKey,
             [language, Infinity]);
         result.terms = range.endIdx - range.startIdx;
 
-        range = Indexer.getRangeFrom(notesIndex.clozes.byLanguageSpokenAndNextDue, studyStartKey,
+        range = Indexer.getRangeFrom(notesIndex.taggedClozes.byTagSpokenAndNextDue, studyStartKey,
             [language, audioStudy, true, Infinity]);
         result.clozes = range.endIdx - range.startIdx;
 
-        range = Indexer.getRangeFrom(notesIndex.clozeAnswers.byLanguageAndAnswered,
+        range = Indexer.getRangeFrom(notesIndex.taggedClozeAnswers.byTagAndAnswered,
             [language, startOfCurDay], [language, Infinity]);
         result.studied = range.endIdx - range.startIdx;
 
-        range = Indexer.getRangeFrom(notesIndex.clozes.byLanguageSpokenAndNextDue,
+        range = Indexer.getRangeFrom(notesIndex.taggedClozes.byTagSpokenAndNextDue,
             [language, audioStudy, true], [language, audioStudy, true, minutesNow + 1]);
         result.due = range.endIdx - range.startIdx;
 
-        range = Indexer.getRangeFrom(notesIndex.clozes.byLanguageSpokenAndNextDue,
+        range = Indexer.getRangeFrom(notesIndex.taggedClozes.byTagSpokenAndNextDue,
             [language, audioStudy, true], [language, audioStudy, true, 1]);
         result.new = range.endIdx - range.startIdx;
 
-        range = Indexer.getRangeFrom(notesIndex.clozes.byLanguageSpokenAndNextDue,
+        range = Indexer.getRangeFrom(notesIndex.taggedClozes.byTagSpokenAndNextDue,
           [language, audioStudy, false], [language, audioStudy, false, Infinity]);
         result.delayed = range.endIdx - range.startIdx;
 
         return result;
-    }, [minutesNow, language, audioStudy, notesIndex.clozes, notesIndex.terms, notesIndex.clozeAnswers, now]);
+    }, [language, audioStudy, now, notesIndex.taggedTerms.byTag, notesIndex.taggedClozes.byTagSpokenAndNextDue, notesIndex.taggedClozeAnswers.byTagAndAnswered, minutesNow]);
 }

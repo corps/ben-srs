@@ -1,15 +1,16 @@
 import React, {ChangeEvent, useCallback, useMemo, useState} from 'react';
-import {useFileStorage, useNotesIndex, useRoute, useSession, useTriggerSync} from "../hooks/contexts";
+import {useFileStorage, useNotesIndex, useRoute, useTriggerSync} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
 import {
   findNoteTree, newNormalizedNote, NormalizedNote, normalizedNote, NoteTree,
 } from "../notes";
 import {mapSome, Maybe, withDefault} from "../utils/maybe";
 import {useLiveQuery} from "dexie-react-hooks";
-import {audioContentTypes, normalizeBlob} from "../services/storage";
+import {audioContentTypes} from "../services/storage";
 import {Indexer} from "../utils/indexable";
 import {playAudio} from "../services/speechAndAudio";
 import {useDataUrl} from "../hooks/useDataUrl";
+import {TagsSelector} from "./TagsSelector";
 
 interface Props {
   onReturn?: () => void,
@@ -80,6 +81,14 @@ export function EditNote(props: Props) {
     }))
   }, [])
 
+  const setNoteTags = useCallback((tags: string[]) => {
+    setNormalized(note => ({
+      ...note, attributes: {
+        ...note.attributes, tags
+      }
+    }))
+  }, [])
+
   return <div>
     <div className="tc pt5-ns fw5 mb2">
       <div className="f5">
@@ -113,6 +122,8 @@ export function EditNote(props: Props) {
           </button>
         </div>
       </div>
+
+      <TagsSelector value={normalized.attributes.tags} language={normalized.attributes.language} onChange={setNoteTags}/>
     </div>
 
     <div className="mw6 center">
