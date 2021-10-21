@@ -1,5 +1,5 @@
 import React, {Dispatch, useCallback, useEffect, useState} from 'react';
-import {useNotesIndex, useRoute, useTags} from "../hooks/contexts";
+import {useNotesIndex, useRoute} from "../hooks/contexts";
 import {useToggle} from "../hooks/useToggle";
 import {useTime} from "../hooks/useTime";
 import {findNextStudyDetails, findTermInNormalizedNote, StudyDetails} from "../study";
@@ -44,14 +44,12 @@ export function Study(props: Props) {
     selectTermRouting({noteId, normalized}, {onReturn, language, audioStudy}, () => ({onReturn, language, audioStudy}))
   }, [audioStudy, language, notesIndex, onReturn, selectTermRouting])
 
-  const {curTags} = useTags(notesIndex);
-
   const prepareNext = useCallback(() => {
     setCardStartedAt(Date.now());
     setShowBack(false);
 
-    return findNextStudyDetails(language, minutesOfTime(time), notesIndex, audioStudy, curTags);
-  }, [language, time, notesIndex, audioStudy, curTags]);
+    return findNextStudyDetails(language, minutesOfTime(time), notesIndex, audioStudy);
+  }, [language, time, notesIndex, audioStudy]);
   const studyData = useStudyData(time, language, audioStudy);
   const [studyDetails, setStudyDetails] = useState(prepareNext);
   const startNext = useCallback(() => setStudyDetails(prepareNext()), [setStudyDetails, prepareNext]);
@@ -91,6 +89,7 @@ export function Study(props: Props) {
             </span>
 
               <span className="mh2">経過</span>
+              {studyData.studied}/{studyData.studied + studyData.due}
               <span className="mh2">{describeDuration(time - cardStartedAt)}</span>
 
               <SimpleNavLink

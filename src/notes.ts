@@ -133,41 +133,55 @@ export type NotesStore = {
   byEditsComplete: Indexed<Note>;
 };
 
+export type Tagged<T> = {inner: T, tag: string};
+function tag<T>(inner: T, tag: string): Tagged<T> {
+  return {inner, tag}
+}
+
 export type TermsStore = {
   byNoteIdReferenceAndMarker: Indexed<Term>;
-  byLanguage: Indexed<Term>;
 };
+
+export type TermsTagStore = {
+  byNoteIdReferenceMarkerAndTag: Indexed<Tagged<Term>>;
+  byTag: Indexed<Tagged<Term>>
+}
 
 export type ClozesStore = {
   byNoteIdReferenceMarkerAndClozeIdx: Indexed<Cloze>;
-  byLanguageSpokenAndNextDue: Indexed<Cloze>;
-  byLanguageSpokenNewAndNextDue: Indexed<Cloze>;
   byNextDue: Indexed<Cloze>;
 };
 
+export type ClozesTagStore = {
+  byNoteIdReferenceMarkerClozeIdxAndTag: Indexed<Tagged<Cloze>>;
+  byTagSpokenAndNextDue: Indexed<Tagged<Cloze>>;
+  byTagSpokenNewAndNextDue: Indexed<Tagged<Cloze>>;
+}
+
 export type ClozeAnswersStore = {
   byNoteIdReferenceMarkerClozeIdxAndAnswerIdx: Indexed<ClozeAnswer>;
-  byLanguageAndAnswered: Indexed<ClozeAnswer>;
-  byFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx: Indexed<ClozeAnswer>;
   byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx: Indexed<ClozeAnswer>;
 };
 
-export type NoteByTag = [string, string];
-
-export type NoteByTagStore = {
-  byTagAndNoteId: Indexed<NoteByTag>
-  byNoteIdAndTag: Indexed<NoteByTag>
-  byTagOfFirstNoteId: Indexed<NoteByTag>
+export type ClozeAnswerTagStore = {
+  byNoteIdReferenceMarkerClozeIdxAnswerIdxAndTag: Indexed<Tagged<ClozeAnswer>>;
+  byTagAndAnswered: Indexed<Tagged<ClozeAnswer>>;
 }
 
-export const notesByTagIndexer = new Indexer<NoteByTag, NoteByTagStore>("byTagAndNoteId");
-notesByTagIndexer.setKeyer("byTagAndNoteId", noteByTag => noteByTag);
-notesByTagIndexer.setKeyer("byNoteIdAndTag", noteByTag => [noteByTag[1], noteByTag[0]]);
-notesByTagIndexer.addGroupedIndex(
-  "byTagOfFirstNoteId",
-  noteByTag => [noteByTag[0]],
-  "byTagAndNoteId",
-  noteByTag => [noteByTag[0]],
+export type NotesTagStore = {
+  byLanguageTagAndNoteId: Indexed<Tagged<Note>>
+  byNoteId: Indexed<Tagged<Note>>
+  byLangAndTagOfFirstNoteId: Indexed<Tagged<Note>>
+}
+
+export const notesTagIndexer = new Indexer<Tagged<Note>, NotesTagStore>("byLanguageTagAndNoteId");
+notesTagIndexer.setKeyer("byLanguageTagAndNoteId", ({tag, inner: {attributes: {language}, id}}) => [language, tag, id]);
+notesTagIndexer.setKeyer("byNoteId", ({inner: {id}}) => [id]);
+notesTagIndexer.addGroupedIndex(
+  "byLangAndTagOfFirstNoteId",
+  ({tag, inner: {attributes: {language}}}) => [language, tag],
+  "byLanguageTagAndNoteId",
+  ({tag, inner: {attributes: {language}}}) => [language, tag],
   (iter) => iter()
 )
 
@@ -184,7 +198,11 @@ termsIndexer.setKeyer("byNoteIdReferenceAndMarker", term => [
   term.attributes.reference,
   term.attributes.marker,
 ]);
-termsIndexer.setKeyer("byLanguage", term => [term.language]);
+
+export const termsTagIndexer = new Indexer<Tagged<Term>, TermsTagStore>("byNoteIdReferenceMarkerAndTag");
+termsTagIndexer.setKeyer("byNoteIdReferenceMarkerAndTag", ({inner, tag}) => [...termsIndexer.pkKeyer(inner), tag])
+termsTagIndexer.setKeyer("byTag", ({inner, tag}) => [tag])
+
 
 export const clozesIndexer = new Indexer<Cloze, ClozesStore>(
     "byNoteIdReferenceMarkerAndClozeIdx"
@@ -195,25 +213,27 @@ clozesIndexer.setKeyer("byNoteIdReferenceMarkerAndClozeIdx", cloze => [
   cloze.marker,
   cloze.clozeIdx,
 ]);
-clozesIndexer.setKeyer("byLanguageSpokenAndNextDue", cloze => [
-  cloze.language,
-  cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
-  !cloze.attributes.schedule.delayIntervalMinutes,
-  cloze.attributes.schedule.nextDueMinutes,
-]);
-clozesIndexer.setKeyer("byLanguageSpokenNewAndNextDue", cloze => [
-  cloze.language,
-  cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
-  cloze.attributes.schedule.isNew,
-  !cloze.attributes.schedule.delayIntervalMinutes,
-  cloze.attributes.schedule.nextDueMinutes,
-]);
 
 clozesIndexer.setKeyer("byNextDue", cloze => [
   !cloze.attributes.schedule.delayIntervalMinutes,
   cloze.attributes.schedule.nextDueMinutes,
 ]);
 
+export const clozesTagIndexer = new Indexer<Tagged<Cloze>, ClozesTagStore>("byNoteIdReferenceMarkerClozeIdxAndTag");
+clozesTagIndexer.setKeyer("byNoteIdReferenceMarkerClozeIdxAndTag", ({inner, tag}) => [...clozesIndexer.pkKeyer(inner), tag])
+clozesTagIndexer.setKeyer("byTagSpokenAndNextDue", ({inner: cloze, tag}) => [
+  tag,
+  cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
+  !cloze.attributes.schedule.delayIntervalMinutes,
+  cloze.attributes.schedule.nextDueMinutes,
+]);
+clozesTagIndexer.setKeyer("byTagSpokenNewAndNextDue", ({inner: cloze, tag}) => [
+  tag,
+  cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
+  cloze.attributes.schedule.isNew,
+  !cloze.attributes.schedule.delayIntervalMinutes,
+  cloze.attributes.schedule.nextDueMinutes,
+]);
 
 export const clozeAnswersIndexer = new Indexer<ClozeAnswer, ClozeAnswersStore>(
     "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx"
@@ -228,17 +248,13 @@ clozeAnswersIndexer.setKeyer(
       answer.answerIdx > 0 ? 1 : 0,
     ]
 );
-clozeAnswersIndexer.setKeyer("byLanguageAndAnswered", answer => [
-  answer.language,
+
+export const clozeAnswersTagIndexer = new Indexer<Tagged<ClozeAnswer>, ClozeAnswerTagStore>("byNoteIdReferenceMarkerClozeIdxAnswerIdxAndTag")
+clozeAnswersTagIndexer.setKeyer("byNoteIdReferenceMarkerClozeIdxAnswerIdxAndTag", ({inner, tag}) => [...clozeAnswersIndexer.pkKeyer(inner), tag])
+clozeAnswersTagIndexer.setKeyer("byTagAndAnswered", ({inner: answer, tag}) => [
+  tag,
   answer.answer[0],
 ]);
-clozeAnswersIndexer.addGroupedIndex(
-    "byFirstAnsweredOfNoteIdReferenceMarkerAndClozeIdx",
-    answer => [answer.answer[0]],
-    "byNoteIdReferenceMarkerClozeIdxAndAnswerIdx",
-    answer => [answer.noteId, answer.reference, answer.marker, answer.clozeIdx],
-    (iter, reverseIter) => iter()
-);
 
 clozeAnswersIndexer.addGroupedIndex(
     "byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx",
@@ -416,7 +432,11 @@ export const indexesInitialState = {
   terms: termsIndexer.empty(),
   clozes: clozesIndexer.empty(),
   clozeAnswers: clozeAnswersIndexer.empty(),
-  tags: notesByTagIndexer.empty(),
+
+  taggedNotes: notesTagIndexer.empty(),
+  taggedTerms: termsTagIndexer.empty(),
+  taggedClozes: clozesTagIndexer.empty(),
+  taggedClozeAnswers: clozeAnswersTagIndexer.empty(),
 };
 
 export type NoteIndexes = typeof indexesInitialState;
@@ -426,17 +446,33 @@ export function updateNotes(indexes: NoteIndexes, ...trees: NoteTree[]) {
   const terms: Term[] = [];
   const clozes: Cloze[] = [];
   const clozeAnswers: ClozeAnswer[] = [];
-  const tags: NoteByTag[] = [];
+
+  const taggedNotes: Tagged<Note>[] = [];
+  const taggedTerms: Tagged<Term>[] = [];
+  const taggedClozes: Tagged<Cloze>[] = [];
+  const taggedClozeAnswer: Tagged<ClozeAnswer>[] = [];
 
   for (let tree of trees) {
     notes.push(tree.note);
     terms.push(...tree.terms);
     clozes.push(...tree.clozes);
     clozeAnswers.push(...tree.clozeAnswers);
-    tags.push(...tree.note.attributes.tags.map(tag => [tag, tree.note.id] as [string, string]));
 
-    indexes.tags = notesByTagIndexer.removeAll(indexes.tags,
-      Indexer.getAllMatching(indexes.tags.byNoteIdAndTag, [tree.note.id]));
+    [tree.note.attributes.language, ...tree.note.attributes.tags].forEach(tagging => {
+      taggedNotes.push(tag(tree.note, tagging));
+      taggedTerms.push(...tree.terms.map(term => tag(term, tagging)));
+      taggedClozes.push(...tree.clozes.map(cloze => tag(cloze, tagging)));
+      taggedClozeAnswer.push(...tree.clozeAnswers.map(answer => tag(answer, tagging)));
+    })
+
+    indexes.taggedNotes = notesTagIndexer.removeAll(indexes.taggedNotes,
+      Indexer.getAllMatching(indexes.taggedNotes.byNoteId, [tree.note.id]));
+    indexes.taggedTerms = termsTagIndexer.removeAll(indexes.taggedTerms,
+      Indexer.getAllMatching(indexes.taggedTerms.byNoteIdReferenceMarkerAndTag, [tree.note.id]));
+    indexes.taggedClozes = clozesTagIndexer.removeAll(indexes.taggedClozes,
+      Indexer.getAllMatching(indexes.taggedClozes.byNoteIdReferenceMarkerClozeIdxAndTag, [tree.note.id]));
+    indexes.taggedClozeAnswers = clozeAnswersTagIndexer.removeAll(indexes.taggedClozeAnswers,
+      Indexer.getAllMatching(indexes.taggedClozeAnswers.byNoteIdReferenceMarkerClozeIdxAnswerIdxAndTag, [tree.note.id]));
     indexes.terms = termsIndexer.removeByPk(indexes.terms, [tree.note.id]);
     indexes.clozes = clozesIndexer.removeByPk(indexes.clozes, [tree.note.id]);
     indexes.clozeAnswers = clozeAnswersIndexer.removeByPk(indexes.clozeAnswers, [tree.note.id]);
@@ -446,7 +482,10 @@ export function updateNotes(indexes: NoteIndexes, ...trees: NoteTree[]) {
   indexes.terms = termsIndexer.update(indexes.terms, terms);
   indexes.clozes = clozesIndexer.update(indexes.clozes, clozes);
   indexes.clozeAnswers = clozeAnswersIndexer.update(indexes.clozeAnswers, clozeAnswers);
-  indexes.tags = notesByTagIndexer.update(indexes.tags, tags);
+
+  indexes.taggedNotes = notesTagIndexer.update(indexes.taggedNotes, taggedNotes);
+  indexes.taggedClozes = clozesTagIndexer.update(indexes.taggedClozes, taggedClozes);
+  indexes.taggedTerms = termsTagIndexer.update(indexes.taggedTerms, taggedTerms);
 }
 
 
@@ -458,7 +497,15 @@ export function removeNotesByPath(indexes: NoteIndexes, path: string) {
 
   indexes.notes = notesIndexer.removeAll(indexes.notes, notes);
   for (let noteId of noteIds) {
-    indexes.tags = notesByTagIndexer.removeAll(indexes.tags, Indexer.getAllMatching(indexes.tags.byNoteIdAndTag, [noteId]))
+    indexes.taggedNotes = notesTagIndexer.removeAll(indexes.taggedNotes,
+      Indexer.getAllMatching(indexes.taggedNotes.byNoteId, [noteId]));
+    indexes.taggedTerms = termsTagIndexer.removeAll(indexes.taggedTerms,
+      Indexer.getAllMatching(indexes.taggedTerms.byNoteIdReferenceMarkerAndTag, [noteId]));
+    indexes.taggedClozes = clozesTagIndexer.removeAll(indexes.taggedClozes,
+      Indexer.getAllMatching(indexes.taggedClozes.byNoteIdReferenceMarkerClozeIdxAndTag, [noteId]));
+    indexes.taggedClozeAnswers = clozeAnswersTagIndexer.removeAll(indexes.taggedClozeAnswers,
+      Indexer.getAllMatching(indexes.taggedClozeAnswers.byNoteIdReferenceMarkerClozeIdxAnswerIdxAndTag, [noteId]));
+
     indexes.terms = termsIndexer.removeAll(indexes.terms, Indexer.getAllMatching(indexes.terms.byNoteIdReferenceAndMarker, [noteId]));
     indexes.clozes = clozesIndexer.removeAll(indexes.clozes, Indexer.getAllMatching(indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx, [noteId]));
     indexes.clozeAnswers = clozeAnswersIndexer.removeAll(indexes.clozeAnswers, Indexer.getAllMatching(indexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx, [noteId]));

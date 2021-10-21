@@ -130,7 +130,8 @@ export function Search(props: Props) {
 }
 
 function useSearchResults(mode: string, search: string, lastSync: number, onReturn: () => void): IndexIterator<ReactElement> {
-  const {notes, clozeAnswers, clozes, terms} = useNotesIndex();
+  const notesIndex = useNotesIndex();
+  const {notes, clozeAnswers, clozes, terms} = notesIndex;
   const updateNoteAndConfirmEditsFinished = useUpdateNote(true);
   const store = useFileStorage();
 
@@ -166,16 +167,16 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
 
   const selectTermRouting = useWorkflowRouting(SelectTerm, Search, updateNoteAndConfirmEditsFinished);
   const visitNote = useCallback((noteId: string) => {
-    const normalized = withDefault(mapSome(findNoteTree({notes, clozeAnswers, clozes, terms}, noteId), normalizedNote),
+    const normalized = withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote),
       {...newNormalizedNote}
     );
     selectTermRouting({noteId, normalized}, {onReturn}, () => ({onReturn}))
-  }, [clozeAnswers, clozes, selectTermRouting, notes, onReturn, terms])
+  }, [notesIndex, selectTermRouting, onReturn])
 
   return useMemo(() => {
     if (mode === "notes") {
       let baseIterator = Indexer.iterator(notes.byEditsComplete);
-      if (search) baseIterator = filterIndexIterator(baseIterator, note => note.attributes.content.includes(search))
+      if (search) baseIterator = filterIndexIterator(baseIterator, note => note.attributes.content.includes(search) || note.attributes.tags.includes(search))
 
       return mapIndexIterator(baseIterator, note => {
         return <span key={note.id} onClick={() => visitNote(note.id)}
@@ -199,7 +200,7 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
             ), false)) return null;
           }
 
-          return bindSome(cloze, cloze => studyDetailsForCloze(cloze, {notes, clozes, clozeAnswers, terms}))
+          return bindSome(cloze, cloze => studyDetailsForCloze(cloze, notesIndex))
         }
       ));
 
@@ -227,5 +228,5 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
     }
 
     return () => null;
-  }, [clozeAnswers, clozes, deleteFile, downloadFile, mediaMetadata, mode, notes, search, terms, visitNote]);
+  }, [clozeAnswers.byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx, clozes.byNoteIdReferenceMarkerAndClozeIdx, deleteFile, downloadFile, mediaMetadata, mode, notes.byEditsComplete, notesIndex, search, terms.byNoteIdReferenceAndMarker, visitNote]);
 }

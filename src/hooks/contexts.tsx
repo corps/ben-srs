@@ -15,24 +15,6 @@ export function useTriggerSync() {
     return useContext(TriggerSyncContext);
 }
 
-export function useTags(notesIndex: NoteIndexes) {
-    const [curTags, setTags] = useContext(TagsContext);
-    const allTags = useMemo(() =>
-        ["", ...notesIndex.tags.byTagOfFirstNoteId[1].map(v => v[0])]
-      , [notesIndex.tags.byTagOfFirstNoteId]);
-
-
-    const updateCurTags = useCallback((newValue: string, i: number) => {
-        if (newValue) {
-            setTags([...curTags.slice(0, i), newValue, ...curTags.slice(i + 1)])
-        } else {
-            setTags([...curTags.slice(0, i), ...curTags.slice(i + 1)])
-        }
-    }, [curTags, setTags])
-
-    return {curTags, setTags, allTags, updateCurTags};
-}
-
 export function useSession() {
     return useContext(SessionContext);
 }

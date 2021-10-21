@@ -78,6 +78,10 @@ export class Indexer<V, I extends IndexStore<V>> {
     ) {
     }
 
+    get pkKeyer(): Keyer<V> {
+        return this.indexKeyers[this.mainIndexName as string];
+    }
+
     setKeyer(attr: keyof I, keyer: Keyer<V>) {
         this.indexKeyers[attr as string] = keyer;
     }
