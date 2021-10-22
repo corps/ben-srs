@@ -38,7 +38,7 @@ export function TagsSelector({value, language, onChange, singular}: PropsWithChi
 
   return <div className="f5">
     タグ:
-    {allTags.map((tag, i) => <div className="ml2 w4 dib">
+    {value.map((tag, i) => <div className="ml2 w4 dib">
       <SelectSingle
         onChange={tag => updateCurTags(tag, i)}
         value={value}
