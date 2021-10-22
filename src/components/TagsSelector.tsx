@@ -49,7 +49,7 @@ export function TagsSelector({value, language, onChange, singular}: PropsWithChi
     {!singular ? <div className="ml2 w4 dib">
       <SelectSingle
         onChange={tag => updateCurTags(tag, allTags.length)}
-        value={value}
+        value={""}
         values={allTags}
       />
     </div> : null}
