@@ -22,20 +22,20 @@ RUN chown $UID /app
 
 USER app
 WORKDIR /app
-COPY --chown=$UID:$GID package.json /app/
-COPY --chown=$UID:$GID package-lock.json /app/
+COPY --chown=app:app package.json /app/
+COPY --chown=app:app package-lock.json /app/
 RUN ls -la
 RUN npm install
-COPY --chown=$UID:$GID src /app/src
-COPY --chown=$UID:$GID babel.config.js /app/
-COPY --chown=$UID:$GID webpack.config.js /app/
+COPY --chown=app:app src /app/src
+COPY --chown=app:app babel.config.js /app/
+COPY --chown=app:app webpack.config.js /app/
 
 ENV PATH=/app/node_modules/.bin:$PATH
 ENV BABEL_DISABLE_CACHE=1
 ENV NODE_ENV=production
 RUN webpack
 
-COPY --chown=$UID:$GID tsconfig.json /app/
+COPY --chown=app:app tsconfig.json /app/
 
-COPY --chown=$UID:$GID cgi /app/cgi
-COPY --chown=$UID:$GID server.sh /app/
+COPY --chown=app:app cgi /app/cgi
+COPY --chown=app:app server.sh /app/
