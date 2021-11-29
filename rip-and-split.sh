@@ -24,6 +24,10 @@ mp4file="$(ls *.mp4)"
 ! [[ -e "${mp4file%.mp4}.mp3" ]] && $ffmpeg -i "$mp4file" "${mp4file%.mp4}.mp3"
 mp3file="$(ls *.mp3)"
 
+if [[ "$2" == "-a" ]]; then
+  exit 0
+fi
+
 true ${SD_PARAMS:="-25dB:d=0.7"};
 true ${MIN_FRAGMENT_DURATION:="1"};
 export MIN_FRAGMENT_DURATION
