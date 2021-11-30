@@ -68,6 +68,25 @@ export function flattenIndexIterator<A>(iterator: IndexIterator<Maybe<A>>): Inde
     }
 }
 
+export function chainIndexIterators<A>(...iterators: IndexIterator<A>[]) {
+    let i = 0;
+
+    return () => {
+        while (i < iterators.length) {
+            const iterator = iterators[i];
+
+            const next = iterator();
+            if (next) {
+                return next;
+            }
+
+            ++i;
+        }
+
+        return null;
+    }
+}
+
 export class Indexer<V, I extends IndexStore<V>> {
     constructor(
         private mainIndexName: keyof I,

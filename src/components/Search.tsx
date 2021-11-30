@@ -3,20 +3,30 @@ import {saveAs} from "file-saver"
 import {useFileStorage, useNotesIndex, useRoute, useTriggerSync} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
 import {SearchList} from "./SearchList";
-import {filterIndexIterator, flattenIndexIterator, Indexer, IndexIterator, mapIndexIterator} from "../utils/indexable";
+import {
+  chainIndexIterators,
+  filterIndexIterator,
+  flattenIndexIterator,
+  Indexer,
+  IndexIterator,
+  mapIndexIterator
+} from "../utils/indexable";
 import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
 import {useUpdateNote} from "../hooks/useUpdateNote";
 import {studyDetailsForCloze} from "../study";
 import {bindSome, mapSome, mapSomeAsync, some, withDefault} from "../utils/maybe";
 import {SelectTerm} from "./SelectTerm";
-import {findNoteTree, newNormalizedNote, normalizedNote} from "../notes";
+import {findNoteTree, newNormalizedNote, normalizedNote, Term} from "../notes";
 import { audioContentTypes, createId, getExt, normalizeBlob, StoredMetadata, videoContentTypes, withNamespace } from "../services/storage";
 import {useLiveQuery} from "dexie-react-hooks";
 import {SimpleNavLink} from "./SimpleNavLink";
 import {useStoredState} from "../hooks/useStoredState";
+import {EditTerm} from "./EditTerm";
 
 interface Props {
   onReturn?: () => void,
+  defaultSearch?: string,
+  defaultMode?: string,
 }
 
 export const mediaEditingStorage = withNamespace(localStorage, 'mediaEditing');
@@ -27,10 +37,10 @@ export function Search(props: Props) {
   const setRoute = useRoute();
   const store = useFileStorage();
 
-  const {onReturn = () => setRoute(() => null)} = props;
+  const {onReturn = () => setRoute(() => null), defaultSearch = "", defaultMode = searchModes[0]} = props;
 
-  const [search, setSearch] = useState("");
-  const [mode, setMode] = useState(searchModes[0]);
+  const [search, setSearch] = useState(defaultSearch);
+  const [mode, setMode] = useState(defaultMode);
   const [triggerSync, lastSync] = useTriggerSync();
   const iterator = useSearchResults(mode, search, lastSync, onReturn);
   const [password, setPassword] = useStoredState(mediaEditingStorage, 'password', '');
@@ -165,13 +175,23 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
     }
   }, [store]);
 
-  const selectTermRouting = useWorkflowRouting(SelectTerm, Search, updateNoteAndConfirmEditsFinished);
+  const selectTermRouting = useWorkflowRouting(SelectTerm, ({onReturn}: Props) => <Search onReturn={onReturn} defaultSearch={search} defaultMode={mode}/>, updateNoteAndConfirmEditsFinished);
+  const editTermRouting = useWorkflowRouting(EditTerm, ({onReturn}: Props) => <Search onReturn={onReturn} defaultSearch={search} defaultMode={mode}/>, updateNoteAndConfirmEditsFinished);
+
   const visitNote = useCallback((noteId: string) => {
     const normalized = withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote),
       {...newNormalizedNote}
     );
     selectTermRouting({noteId, normalized}, {onReturn}, () => ({onReturn}))
   }, [notesIndex, selectTermRouting, onReturn])
+
+  const visitTerm = useCallback((noteId: string, reference: string, marker: string) => {
+    const normalized = withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote),
+      {...newNormalizedNote}
+    );
+    editTermRouting({noteId, reference, marker, normalized}, {onReturn}, () => ({onReturn}))
+  }, [notesIndex, editTermRouting, onReturn])
+
 
   return useMemo(() => {
     if (mode === "notes") {
@@ -185,28 +205,30 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
         </span>
       })
     } else if (mode === "terms") {
-      const baseIterator = flattenIndexIterator(mapIndexIterator(Indexer.reverseIter(clozeAnswers.byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx),
-        clozeAnswer => {
-          const {noteId, marker, reference, clozeIdx} = clozeAnswer;
-          const cloze = Indexer.getFirstMatching(clozes.byNoteIdReferenceMarkerAndClozeIdx,
-            [noteId, reference, marker, clozeIdx]
-          );
+      function filteredTermIter(predicate: (t: Term) => boolean) {
+        return flattenIndexIterator(mapIndexIterator(Indexer.reverseIter(clozeAnswers.byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx),
+          clozeAnswer => {
+            const {noteId, marker, reference, clozeIdx} = clozeAnswer;
+            const cloze = Indexer.getFirstMatching(clozes.byNoteIdReferenceMarkerAndClozeIdx,
+              [noteId, reference, marker, clozeIdx]
+            );
 
-          if (search) {
-            const term = Indexer.getFirstMatching(terms.byNoteIdReferenceAndMarker, [noteId, reference, marker]);
-            if (!withDefault(mapSome(term,
-              term => term.attributes.reference.includes(search) || term.attributes.hint.includes(search) || term.attributes.definition.includes(
-                search)
-            ), false)) return null;
+            if (search) {
+              const term = Indexer.getFirstMatching(terms.byNoteIdReferenceAndMarker, [noteId, reference, marker]);
+              if (!withDefault(mapSome(term, predicate), false)) return null;
+            }
+
+            return bindSome(cloze, cloze => studyDetailsForCloze(cloze, notesIndex))
           }
+        ))
+      }
 
-          return bindSome(cloze, cloze => studyDetailsForCloze(cloze, notesIndex))
-        }
-      ));
+      const baseIterator = filteredTermIter(
+            term => term.attributes.reference.indexOf(search) === 0);
 
-      return mapIndexIterator(baseIterator, details => {
-        return <span key={details.cloze.noteId + details.cloze.reference} onClick={() => visitNote(details.cloze.noteId)}>
-          {details.beforeTerm}<b>{details.beforeCloze}{details.clozed}{details.afterCloze}</b> {details.afterTerm}
+      return mapIndexIterator(baseIterator, ({beforeTerm, beforeCloze, clozed, afterCloze, afterTerm, cloze}) => {
+        return <span key={cloze.noteId + cloze.reference + cloze.marker} onClick={() => visitTerm(cloze.noteId, cloze.reference, cloze.marker)}>
+          {beforeTerm.slice(Math.max(beforeTerm.length - 12, 0))}<b>{beforeCloze}{clozed}{afterCloze}</b> {afterTerm}
         </span>
       })
     } else if (mode === "media") {

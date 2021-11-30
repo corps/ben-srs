@@ -9,6 +9,7 @@ import {bisect} from "../utils/indexable";
 import {CharacterCell} from "./CharacterCell";
 import {EditTerm} from "./EditTerm";
 import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
+import {SentenceAnalyzer} from "./SentenceAnalyzer";
 
 interface Props {
   onReturn?: () => void,
@@ -109,6 +110,10 @@ export function SelectTerm(props: Props) {
           {char}
         </CharacterCell>
       })}
+    </div>
+
+    <div className="tc">
+      <SentenceAnalyzer language={normalized.attributes.language} sentence={content}/>
     </div>
   </div>;
 }

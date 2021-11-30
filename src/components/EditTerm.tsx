@@ -1,4 +1,4 @@
-import React, {ChangeEvent, Dispatch, SetStateAction, useCallback, useState} from 'react';
+import React, {ChangeEvent, Dispatch, SetStateAction, useCallback, useMemo, useState} from 'react';
 import {mapSome, Maybe, withDefault} from "../utils/maybe";
 import {
   ClozeType,
@@ -11,13 +11,20 @@ import {
   NoteTree
 } from "../notes";
 import {useNotesIndex, useRoute} from "../hooks/contexts";
-import {findTermInNormalizedNote, findTermRange, updateTermInNormalizedNote} from "../study";
+import {
+  findNextStudyClozeWithinTerm, findTermInNormalizedNote, findTermRange, updateTermInNormalizedNote
+} from "../study";
 import {SimpleNavLink} from "./SimpleNavLink";
 import {useToggle} from "../hooks/useToggle";
 import {playAudio, speak} from "../services/speechAndAudio";
 import {DictionaryLookup} from "./DictionaryLookup";
 import {medianSchedule} from "../scheduler";
 import {useDataUrl} from "../hooks/useDataUrl";
+import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
+import {Search} from "./Search";
+import {minutesOfTime} from "../utils/time";
+import {useTime} from "../hooks/useTime";
+import {Study} from "./Study";
 
 interface Props {
   onReturn?: () => void,
@@ -39,12 +46,33 @@ export function EditTerm(props: Props) {
   const notesIndex = useNotesIndex();
 
   const {onReturn = () => setRoute(() => null), normalized, reference, marker, noteId} = props;
+  const routeSearch = useWorkflowRouting(Search, EditTerm);
+  const routeStudy = useWorkflowRouting(Study, EditTerm);
+
+  const searchTerm = useCallback(() => {
+    routeSearch({defaultSearch: reference, defaultMode: 'terms'}, props, () => props,)
+  }, [props, reference, routeSearch]);
+
+  const studyTerm = useCallback(() => {
+    routeStudy({noteId, marker, reference, language: normalized.attributes.language, audioStudy: false},
+      props,
+      () => props
+    )
+  }, [marker, normalized.attributes.language, noteId, props, reference, routeStudy])
 
   const [workingTerm, setWorkingTerm] = useState(() => {
     return withDefault(findTermInNormalizedNote(normalized, reference, marker),
       {...newNormalizedTerm, attributes: {...newNormalizedTerm.attributes, marker: marker, reference: reference}}
     );
   })
+
+  const time = useTime(1);
+  const hasStudy = useMemo(() => !!findNextStudyClozeWithinTerm(noteId,
+    reference,
+    marker,
+    notesIndex,
+    minutesOfTime(time)
+  ), [marker, noteId, notesIndex, reference, time])
 
   const [recognize, toggleRecognize] = useTypeToggle(workingTerm, "recognize");
   const [produce, toggleProduce] = useTypeToggle(workingTerm, "produce");
@@ -56,16 +84,16 @@ export function EditTerm(props: Props) {
 
   const onApply = useCallback(async () => {
     const tree = findNoteTree(notesIndex, noteId);
-    await props.onApply(
-      tree,
-      updateTermInNormalizedNote(
-        normalized,
+    await props.onApply(tree,
+      updateTermInNormalizedNote(normalized,
         applyClozes(workingTerm, produce, pronounce, recognize, listen, flash, clozeSplit)
       )
     );
   }, [notesIndex, noteId, props, normalized, workingTerm, produce, pronounce, recognize, listen, flash, clozeSplit]);
 
   const onDelete = useCallback(async () => {
+    if (!confirm('Delete?')) return;
+
     const updated = {...normalized};
     const attributes = updated.attributes = {...updated.attributes};
     for (let i = 0; i < attributes.terms.length; ++i) {
@@ -76,7 +104,8 @@ export function EditTerm(props: Props) {
 
         const [left, right] = findTermRange(term, attributes.content);
         if (left >= 0 && right >= 0) {
-          attributes.content = attributes.content.slice(0, left) + term.attributes.reference + attributes.content.slice(right);
+          attributes.content =
+            attributes.content.slice(0, left) + term.attributes.reference + attributes.content.slice(right);
         }
 
         break;
@@ -116,7 +145,13 @@ export function EditTerm(props: Props) {
     } else {
       speak(normalized.attributes.language, workingTerm.attributes.pronounce || workingTerm.attributes.reference)
     }
-  }, [normalized.attributes.audioFileId, normalized.attributes.language, playAudioPath, workingTerm.attributes.pronounce, workingTerm.attributes.reference])
+  }, [
+    normalized.attributes.audioFileId,
+    normalized.attributes.language,
+    playAudioPath,
+    workingTerm.attributes.pronounce,
+    workingTerm.attributes.reference
+  ])
 
   return <div className="mw6 center">
     <div className="tc">
@@ -129,6 +164,14 @@ export function EditTerm(props: Props) {
       </SimpleNavLink>
 
       <SimpleNavLink onClick={onDelete}>削除</SimpleNavLink>
+
+      <SimpleNavLink onClick={searchTerm}>
+        検索
+      </SimpleNavLink>
+
+      {hasStudy ? <SimpleNavLink onClick={studyTerm}>
+        訓練開始
+      </SimpleNavLink> : null}
     </div>
 
     <div className="lh-copy f4">
@@ -146,7 +189,7 @@ export function EditTerm(props: Props) {
       </div>
 
       <div>
-        { flash ? "質問" : "定義" }:
+        {flash ? "質問" : "定義"}:
         <div className="w-100">
           <textarea
             onChange={onChangeDefinition}
@@ -204,31 +247,31 @@ export function EditTerm(props: Props) {
       </div>
 
       {listen || pronounce ? (<div>
-          <span>発音上書き</span>
-          <button
-            className="ml3 br2"
-            onClick={testSpeech}>
-            テスト
-          </button>
-          <div className="w-100">
-            <input type="text"
-                   onChange={onChangePronunciation}
-                   value={workingTerm.attributes.pronounce}
-                   className="w-100"
-            />
-          </div>
-        </div>) : null}
+        <span>発音上書き</span>
+        <button
+          className="ml3 br2"
+          onClick={testSpeech}>
+          テスト
+        </button>
+        <div className="w-100">
+          <input type="text"
+                 onChange={onChangePronunciation}
+                 value={workingTerm.attributes.pronounce}
+                 className="w-100"
+          />
+        </div>
+      </div>) : null}
 
       {produce ? (<div>
-          言葉分割
-          <div className="w-100">
-            <input type="text"
-                   onChange={(e) => setClozeSplit(e.target.value)}
-                   value={clozeSplit}
-                   className="w-100"
-            />
-          </div>
-        </div>) : null}
+        言葉分割
+        <div className="w-100">
+          <input type="text"
+                 onChange={(e) => setClozeSplit(e.target.value)}
+                 value={clozeSplit}
+                 className="w-100"
+          />
+        </div>
+      </div>) : null}
 
       <div>
         辞書を検索

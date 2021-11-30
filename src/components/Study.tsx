@@ -2,12 +2,17 @@ import React, {Dispatch, useCallback, useEffect, useState} from 'react';
 import {useNotesIndex, useRoute} from "../hooks/contexts";
 import {useToggle} from "../hooks/useToggle";
 import {useTime} from "../hooks/useTime";
-import {findNextStudyDetails, findTermInNormalizedNote, StudyDetails} from "../study";
+import {
+  findNextStudyClozeWithinTerm,
+  findNextStudyDetails,
+  findTermInNormalizedNote,
+  StudyDetails, studyDetailsForCloze
+} from "../study";
 import {describeDuration, minutesOfTime, timeOfMinutes} from "../utils/time";
 import {
   ClozeType, findNoteTree, newNormalizedNote, normalizedNote, NoteIndexes
 } from "../notes";
-import {mapSome, mapSomeAsync, Maybe, some, withDefault} from "../utils/maybe";
+import {bindSome, mapSome, mapSomeAsync, Maybe, some, withDefault} from "../utils/maybe";
 import {playAudio, speak} from "../services/speechAndAudio";
 import {useStudyData} from "../hooks/useStudyData";
 import {FlexContainer, Row, VCentered, VCenteringContainer} from "./layout-utils";
@@ -25,6 +30,9 @@ interface Props {
   onReturn?: Dispatch<void>,
   language: string,
   audioStudy: boolean,
+  noteId?: string,
+  reference?: string,
+  marker?: string,
 }
 
 export function Study(props: Props) {
@@ -35,7 +43,7 @@ export function Study(props: Props) {
   const setRoute = useRoute();
   const time = useTime(1);
 
-  const {language, audioStudy, onReturn = () => setRoute(() => null)} = props;
+  const {noteId, reference, marker, language, audioStudy, onReturn = () => setRoute(() => null)} = props;
 
   const updateNoteAndConfirm = useUpdateNote(true);
   const selectTermRouting = useWorkflowRouting(SelectTerm, Study, updateNoteAndConfirm);
@@ -48,8 +56,18 @@ export function Study(props: Props) {
     setCardStartedAt(Date.now());
     setShowBack(false);
 
+    if (noteId && reference && marker) {
+      const next = findNextStudyClozeWithinTerm(noteId, reference, marker, notesIndex, minutesOfTime(time));
+      if (next) {
+        return bindSome(next, next => studyDetailsForCloze(next, notesIndex));
+      }
+
+      onReturn();
+      return null;
+    }
+
     return findNextStudyDetails(language, minutesOfTime(time), notesIndex, audioStudy);
-  }, [language, time, notesIndex, audioStudy]);
+  }, [noteId, reference, marker, language, time, notesIndex, audioStudy, onReturn]);
   const studyData = useStudyData(time, language, audioStudy);
   const [studyDetails, setStudyDetails] = useState(prepareNext);
   const startNext = useCallback(() => setStudyDetails(prepareNext()), [setStudyDetails, prepareNext]);

@@ -105,6 +105,24 @@ export function findNextStudyDetails(language: string,
           nextCloze => studyDetailsForCloze(nextCloze, indexes));
 }
 
+export function findNextStudyClozeWithinTerm(
+  noteId: string,
+  reference: string,
+  marker: string,
+  indexes: NoteIndexes,
+  fromMinutes: number,
+): Maybe<Cloze> {
+  return Indexer.reverseIter(
+    indexes.clozes.byNoteIdReferenceMarkerAndNextDue,
+    [noteId, reference, marker, fromMinutes],
+    [noteId, reference, marker, null],
+  )() || Indexer.iterator(
+    indexes.clozes.byNoteIdReferenceMarkerAndNextDue,
+    [noteId, reference, marker, fromMinutes],
+    [noteId, reference, marker, Infinity]
+  )();
+}
+
 export function findNextStudyCloze(language: string,
                                    fromMinutes: number,
                                    indexes: NoteIndexes,

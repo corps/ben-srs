@@ -149,7 +149,7 @@ export type TermsTagStore = {
 
 export type ClozesStore = {
   byNoteIdReferenceMarkerAndClozeIdx: Indexed<Cloze>;
-  byNextDue: Indexed<Cloze>;
+  byNoteIdReferenceMarkerAndNextDue: Indexed<Cloze>;
 };
 
 export type ClozesTagStore = {
@@ -214,8 +214,10 @@ clozesIndexer.setKeyer("byNoteIdReferenceMarkerAndClozeIdx", cloze => [
   cloze.clozeIdx,
 ]);
 
-clozesIndexer.setKeyer("byNextDue", cloze => [
-  !cloze.attributes.schedule.delayIntervalMinutes,
+clozesIndexer.setKeyer("byNoteIdReferenceMarkerAndNextDue", cloze => [
+  cloze.noteId,
+  cloze.reference,
+  cloze.marker,
   cloze.attributes.schedule.nextDueMinutes,
 ]);
 

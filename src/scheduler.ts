@@ -20,7 +20,8 @@ export function configuredScheduler(random = () => Math.random()) {
     const randomFactor = random() * VARIANCE + (1.0 - VARIANCE / 2);
 
     const currentInterval = Math.max(baseInterval, minimalIntervalOf(wasNew));
-    const earlyAnswerMultiplier = Math.min(1.0, answeredInterval / currentInterval);
+    let earlyAnswerMultiplier = Math.min(1.0, answeredInterval / currentInterval);
+    earlyAnswerMultiplier = 1 - Math.sin(Math.PI / 2 * (1 - earlyAnswerMultiplier))
 
     const effectiveFactor = baseFactor + (bonusFactor * earlyAnswerMultiplier * randomFactor);
     const nextInterval = Math.max(currentInterval * effectiveFactor, minimalIntervalOf(willRemainNew));
