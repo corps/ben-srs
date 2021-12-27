@@ -1,6 +1,4 @@
 FROM node:16
-ARG UID=1002
-ARG GID=100
 RUN echo version 1
 RUN apt-get update
 RUN apt-get install -y wget unzip
@@ -9,12 +7,12 @@ RUN wget https://github.com/joewalnes/websocketd/releases/download/v0.4.1/websoc
 RUN unzip websocketd*
 RUN mv websocketd /bin/
 
-RUN groupadd -g $GID app  || true
-RUN useradd -ms /bin/bash -u $UID -g $GID app
+RUN groupadd -g 100 app  || true
+RUN useradd -ms /bin/bash -u 1002 -g 100 app
 
 RUN mkdir -p /app
-RUN chgrp $GID /app
-RUN chown $UID /app
+RUN chgrp 100 /app
+RUN chown 1002 /app
 
 USER app
 WORKDIR /app
