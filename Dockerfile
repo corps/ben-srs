@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 ARG UID=1000
 ARG GID=100
 RUN echo version 1
