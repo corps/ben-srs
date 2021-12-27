@@ -43,7 +43,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
       setLanguage(languages[0]);
     }
     if (!allTags.includes(tag)) {
-      setTag(allTags[0] || language);
+      setTag(language);
     }
   }, [languages, language, allTags, tag]);
 

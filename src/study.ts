@@ -6,12 +6,13 @@ import {
   NormalizedNote,
   normalizedNote,
   NormalizedTerm,
-  NoteIndexes
+  NoteIndexes, NoteTree
 } from "./notes";
 import {applySome, bindSome, mapSome, Maybe, some, toVoid} from "./utils/maybe";
 import {Indexer} from "./utils/indexable";
 
 export interface StudyDetails {
+  noteTree: NoteTree;
   cloze: Cloze;
   content: string;
   spoken: string;
@@ -172,6 +173,7 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
     clozeSplits = clozeSplits.slice(0, 2 * (cloze.clozeIdx + 1));
 
     return some({
+      noteTree,
       cloze,
       definition: term.attributes.definition || note.attributes.content,
       content: content,

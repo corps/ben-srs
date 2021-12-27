@@ -156,6 +156,7 @@ export type ClozesTagStore = {
   byNoteIdReferenceMarkerClozeIdxAndTag: Indexed<Tagged<Cloze>>;
   byTagSpokenAndNextDue: Indexed<Tagged<Cloze>>;
   byTagSpokenNewAndNextDue: Indexed<Tagged<Cloze>>;
+  byTagSpokenReferenceAndNextDue: Indexed<Tagged<Cloze>>;
 }
 
 export type ClozeAnswersStore = {
@@ -221,6 +222,13 @@ clozesIndexer.setKeyer("byNoteIdReferenceMarkerAndNextDue", cloze => [
   cloze.attributes.schedule.nextDueMinutes,
 ]);
 
+clozesIndexer.setKeyer("byNoteIdReferenceMarkerAndNextDue", cloze => [
+  cloze.noteId,
+  cloze.reference,
+  cloze.marker,
+  cloze.attributes.schedule.nextDueMinutes,
+]);
+
 export const clozesTagIndexer = new Indexer<Tagged<Cloze>, ClozesTagStore>("byNoteIdReferenceMarkerClozeIdxAndTag");
 clozesTagIndexer.setKeyer("byNoteIdReferenceMarkerClozeIdxAndTag", ({inner, tag}) => [...clozesIndexer.pkKeyer(inner), tag])
 clozesTagIndexer.setKeyer("byTagSpokenAndNextDue", ({inner: cloze, tag}) => [
@@ -234,6 +242,12 @@ clozesTagIndexer.setKeyer("byTagSpokenNewAndNextDue", ({inner: cloze, tag}) => [
   cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
   cloze.attributes.schedule.isNew,
   !cloze.attributes.schedule.delayIntervalMinutes,
+  cloze.attributes.schedule.nextDueMinutes,
+]);
+clozesTagIndexer.setKeyer("byTagSpokenReferenceAndNextDue", ({inner: cloze, tag}) => [
+  tag,
+  cloze.attributes.type == "listen" || cloze.attributes.type == "speak",
+  cloze.reference,
   cloze.attributes.schedule.nextDueMinutes,
 ]);
 

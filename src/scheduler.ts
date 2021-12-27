@@ -80,6 +80,11 @@ export function isDelayDetails(answer: AnswerDetails): answer is DelayDetails {
   return answer[0] === "d";
 }
 
+export function isWrongAnswer(ad: AnswerDetails) {
+  if (isDelayDetails(ad)) return true;
+  return ad[1] <= 1.0;
+}
+
 export function scheduledBy(schedule: Schedule, answer: Answer): Schedule {
   let details = answer[1];
   if (isDelayDetails(details)) {

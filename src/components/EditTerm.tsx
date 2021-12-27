@@ -66,7 +66,7 @@ export function EditTerm(props: Props) {
     );
   })
 
-  const time = useTime(1);
+  const time = useTime();
   const hasStudy = useMemo(() => !!findNextStudyClozeWithinTerm(noteId,
     reference,
     marker,

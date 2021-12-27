@@ -1,4 +1,4 @@
-import React, {Dispatch, useCallback, useEffect, useState} from 'react';
+import React, {Dispatch, useCallback, useEffect, useMemo, useState} from 'react';
 import {useNotesIndex, useRoute} from "../hooks/contexts";
 import {useToggle} from "../hooks/useToggle";
 import {useTime} from "../hooks/useTime";
@@ -10,14 +10,14 @@ import {
 } from "../study";
 import {describeDuration, minutesOfTime, timeOfMinutes} from "../utils/time";
 import {
-  ClozeType, findNoteTree, newNormalizedNote, normalizedNote, NoteIndexes
+  Cloze, ClozeAnswer, ClozeType, findNoteTree, newNormalizedNote, normalizedNote, NoteIndexes, Tagged
 } from "../notes";
 import {bindSome, mapSome, mapSomeAsync, Maybe, some, withDefault} from "../utils/maybe";
 import {playAudio, speak} from "../services/speechAndAudio";
 import {useStudyData} from "../hooks/useStudyData";
 import {FlexContainer, Row, VCentered, VCenteringContainer} from "./layout-utils";
 import {SimpleNavLink} from "./SimpleNavLink";
-import {Answer, scheduledBy} from "../scheduler";
+import {Answer, isWrongAnswer, scheduledBy} from "../scheduler";
 import {useKeypresses} from "../hooks/useKeypress";
 import {BackSide} from "./BackSide";
 import {FrontSide} from "./FrontSide";
@@ -25,6 +25,7 @@ import {useUpdateNote} from "../hooks/useUpdateNote";
 import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
 import {SelectTerm} from "./SelectTerm";
 import {useDataUrl} from "../hooks/useDataUrl";
+import {chainIndexIterators, Indexer, IndexIterator} from "../utils/indexable";
 
 interface Props {
   onReturn?: Dispatch<void>,
@@ -38,10 +39,12 @@ interface Props {
 export function Study(props: Props) {
   const notesIndex = useNotesIndex();
   const [showBack, setShowBack] = useState(false);
+  const [showRelated, setShowRelated] = useState(false);
   const toggleShowBack = useToggle(setShowBack);
   const [cardStartedAt, setCardStartedAt] = useState(0);
   const setRoute = useRoute();
-  const time = useTime(1);
+  const time = useTime(1000);
+  const nowMinutes = minutesOfTime(time);
 
   const {noteId, reference, marker, language, audioStudy, onReturn = () => setRoute(() => null)} = props;
 
@@ -51,13 +54,16 @@ export function Study(props: Props) {
     const normalized = withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote), {...newNormalizedNote});
     selectTermRouting({noteId, normalized}, {onReturn, language, audioStudy}, () => ({onReturn, language, audioStudy}))
   }, [audioStudy, language, notesIndex, onReturn, selectTermRouting])
+  const [answeredRelated, setAnsweredRelated] = useState([] as unknown[]);
 
   const prepareNext = useCallback(() => {
     setCardStartedAt(Date.now());
     setShowBack(false);
+    setShowRelated(false);
+    setAnsweredRelated([]);
 
     if (noteId && reference && marker) {
-      const next = findNextStudyClozeWithinTerm(noteId, reference, marker, notesIndex, minutesOfTime(time));
+      const next = findNextStudyClozeWithinTerm(noteId, reference, marker, notesIndex, nowMinutes);
       if (next) {
         return bindSome(next, next => studyDetailsForCloze(next, notesIndex));
       }
@@ -66,13 +72,72 @@ export function Study(props: Props) {
       return null;
     }
 
-    return findNextStudyDetails(language, minutesOfTime(time), notesIndex, audioStudy);
-  }, [noteId, reference, marker, language, time, notesIndex, audioStudy, onReturn]);
+    return findNextStudyDetails(language, nowMinutes, notesIndex, audioStudy);
+  }, [noteId, reference, marker, language, nowMinutes, notesIndex, audioStudy, onReturn]);
   const studyData = useStudyData(time, language, audioStudy);
   const [studyDetails, setStudyDetails] = useState(prepareNext);
   const startNext = useCallback(() => setStudyDetails(prepareNext()), [setStudyDetails, prepareNext]);
-  const answerCard = useAnswerCard(studyDetails, notesIndex, startNext);
+  const answerCloze = useAnswerCloze(notesIndex);
   const readCard = useReadCard(studyDetails);
+
+  const allRelated = useMemo(() => {
+    return withDefault(mapSome(studyDetails, studyDetails => {
+      const resultsWithScore: [number, StudyDetails][] = [];
+
+      studyDetails.noteTree.terms.forEach(term => {
+        const thisRef = term.attributes.reference;
+        const iter = Indexer.reverseIter(
+          notesIndex.taggedClozes.byTagSpokenReferenceAndNextDue,
+          [language, false, thisRef, nowMinutes],
+          [language, false, thisRef.slice(0, 1), null],
+        );
+
+        let nextRelated: Maybe<Tagged<Cloze>>;
+        while (nextRelated = iter()) {
+          mapSome(nextRelated, nextRelated => {
+            // If it's on the same note, it is not 'related'.
+            if (nextRelated.inner.noteId == studyDetails.noteTree.note.id) return;
+            if (nextRelated.inner.attributes.type == "produce") return;
+            if (nextRelated.inner.attributes.type == "flash") return;
+            const maybeRelated = studyDetailsForCloze(nextRelated.inner, notesIndex);
+            const nextRef = nextRelated.inner.reference;
+
+            let i = 0;
+            for (; i < nextRef.length && i < thisRef.length; ++i) {
+              if (nextRef[i] !== thisRef[i]) break;
+            }
+
+            let score = thisRef.length - i;
+            score -= term.attributes.reference === studyDetails.cloze.reference ? 0.5 : 0;
+
+            mapSome(maybeRelated, r => resultsWithScore.push([score, r]));
+          });
+        }
+      });
+
+      resultsWithScore.sort(([a], [b]) => a - b);
+
+      return resultsWithScore.map(([_, a]) => a);
+    }), [])
+  }, [language, notesIndex, studyDetails, nowMinutes])
+
+  const answerFront = useCallback(async (answer: Answer) => {
+    await answerCloze(studyDetails, answer);
+    if (allRelated.length === 0) {
+      startNext();
+    } else {
+      setShowRelated(true);
+    }
+  }, [allRelated.length, answerCloze, startNext, studyDetails]);
+
+  const answerRelated = useCallback(async (sd: StudyDetails, answer: Answer) => {
+    await answerCloze(some(sd), answer);
+    setAnsweredRelated(answered => [...answered, sd]);
+  }, [answerCloze])
+
+  const unAnsweredRelated = useMemo(
+    () => allRelated.filter(v => !answeredRelated.includes(v)),
+    [allRelated, answeredRelated]);
 
   const dueTime = withDefault(mapSome(
     studyDetails,
@@ -85,11 +150,11 @@ export function Study(props: Props) {
 
   useKeypresses((key: string) => {
     if (key === " " || key === "f") toggleShowBack();
-    if (key === "a") mapSome(studyDetails, studyDetails => answerCard(answerOk(time, cardStartedAt, studyDetails)));
-    if (key === "s") mapSome(studyDetails, studyDetails => answerCard(answerMiss(time)));
-    if (key === "d") mapSome(studyDetails, studyDetails => answerCard(answerSkip(time)));
+    if (key === "a") mapSome(studyDetails, studyDetails => answerFront(answerOk(time, cardStartedAt, studyDetails)));
+    if (key === "s") mapSome(studyDetails, studyDetails => answerFront(answerMiss(time)));
+    if (key === "d") mapSome(studyDetails, studyDetails => answerFront(answerSkip(time)));
     if (key === "j") mapSome(studyDetails, studyDetails => readCard());
-  }, [toggleShowBack, time, cardStartedAt, studyDetails, answerCard]);
+  }, [toggleShowBack, time, cardStartedAt, studyDetails, answerCloze]);
 
   useEffect(() => {
     if (!studyDetails) onReturn();
@@ -131,8 +196,9 @@ export function Study(props: Props) {
           <VCenteringContainer>
             <VCentered>
               {showBack ?
-                <BackSide editNote={editNote} studyDetails={studyDetails} answerCard={answerCard} readCard={readCard}
-                          now={time} studyStarted={cardStartedAt}/> :
+                <BackSide editNote={editNote} studyDetails={studyDetails} answerMain={answerFront}
+                          answerRelated={answerRelated} readCard={readCard} unAnsweredRelated={unAnsweredRelated}
+                          startNext={startNext} showRelated={showRelated} now={time} studyStarted={cardStartedAt}/> :
                 <FrontSide readCard={readCard} studyDetails={studyDetails}/>}
             </VCentered>
           </VCenteringContainer>
@@ -159,15 +225,33 @@ function useReadCard(studyDetails: Maybe<StudyDetails>) {
   }, [studyDetails, playAudioPath]);
 }
 
-function useAnswerCard(studyDetails: Maybe<StudyDetails>, noteIndexes: NoteIndexes, startNext: Dispatch<void>) {
+function useAnswerCloze(noteIndexes: NoteIndexes) {
   const updateNote = useUpdateNote();
 
-  return useCallback(async (answer: Answer) => {
+  return useCallback(async (studyDetails: Maybe<StudyDetails>, answer: Answer) => {
     await mapSomeAsync(studyDetails, async studyDetails => {
       const cloze = studyDetails.cloze;
-      const schedule = scheduledBy(cloze.attributes.schedule, answer);
       await mapSomeAsync(findNoteTree(noteIndexes, cloze.noteId), async tree => {
         let normalized = normalizedNote(tree);
+
+        const answers = Indexer.getAllMatching(noteIndexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx, [
+          normalized.id,
+          cloze.reference,
+          cloze.marker,
+          cloze.clozeIdx,
+        ])
+
+        if (isWrongAnswer(answer[1])) {
+          const wrongStreakLength = answers.reduce((acc: number, next: ClozeAnswer) => isWrongAnswer(next.answer[1]) ?
+            acc + 1 :
+            0, 0);
+
+          if (wrongStreakLength >= 2) {
+            answer[1] = ["d", 0.6, 2.0];
+          }
+        }
+
+        const schedule = scheduledBy(cloze.attributes.schedule, answer);
         await mapSomeAsync(findTermInNormalizedNote(normalized, cloze.reference, cloze.marker), async term => {
           if (cloze.clozeIdx > term.attributes.clozes.length) return;
 
@@ -191,11 +275,10 @@ function useAnswerCard(studyDetails: Maybe<StudyDetails>, noteIndexes: NoteIndex
           updatingCloze.attributes.answers = updatingCloze.attributes.answers.concat([answer]);
 
           await updateNote(some(tree), normalized);
-          startNext();
         });
       });
     })
-  }, [studyDetails, noteIndexes, startNext, updateNote]);
+  }, [noteIndexes, updateNote]);
 }
 
 export function answerOk(now: number, studyStarted: number, studyDetails: StudyDetails): Answer {
