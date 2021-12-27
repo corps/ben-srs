@@ -1,5 +1,5 @@
 FROM node:16
-ARG UID=1000
+ARG UID=1002
 ARG GID=100
 RUN echo version 1
 RUN apt-get update
