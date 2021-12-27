@@ -10,7 +10,7 @@ RUN unzip websocketd*
 RUN mv websocketd /bin/
 
 RUN groupadd -g $GID app  || true
-RUN useradd -ms /bin/bash -u $UID -g $GID app || true
+RUN useradd -ms /bin/bash -u $UID -g $GID app
 
 RUN mkdir -p /app
 RUN chgrp $GID /app
