@@ -1,9 +1,9 @@
-FROM ubuntu:20.04
+FROM node:16
 ARG UID=1000
 ARG GID=100
 RUN echo version 1
 RUN apt-get update
-RUN apt-get install -y wget unzip nodejs npm jq curl
+RUN apt-get install -y wget unzip
 RUN npm install npm@latest -g
 RUN wget https://github.com/joewalnes/websocketd/releases/download/v0.4.1/websocketd-0.4.1-linux_amd64.zip
 RUN unzip websocketd*
