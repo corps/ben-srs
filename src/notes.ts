@@ -502,6 +502,7 @@ export function updateNotes(indexes: NoteIndexes, ...trees: NoteTree[]) {
   indexes.taggedNotes = notesTagIndexer.update(indexes.taggedNotes, taggedNotes);
   indexes.taggedClozes = clozesTagIndexer.update(indexes.taggedClozes, taggedClozes);
   indexes.taggedTerms = termsTagIndexer.update(indexes.taggedTerms, taggedTerms);
+  indexes.taggedClozeAnswers = clozeAnswersTagIndexer.update(indexes.taggedClozeAnswers, taggedClozeAnswer);
 }
 
 

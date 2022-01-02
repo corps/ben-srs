@@ -4,13 +4,14 @@ import {Answer} from "../scheduler";
 import {answerMiss, answerOk, answerSkip, Study} from "./Study";
 import {minutesOfTime} from "../utils/time";
 import {FrontSide} from "./FrontSide";
+import {Term} from "../notes";
 
 interface Props {
   studyDetails: StudyDetails,
   readCard: () => void,
   answerMain: (answer: Answer) => void,
   answerRelated: (c: StudyDetails, answer: Answer) => void,
-  unAnsweredRelated: StudyDetails[],
+  unAnsweredRelated: [StudyDetails, Term][],
   startNext: () => void,
   showRelated: boolean,
   now: number,
@@ -78,8 +79,8 @@ function relatedMiss(now: number): Answer {
   return [minutesOfTime(now), ["f", 0.6]];
 }
 
-function RelatedCard(props: {studyDetails: StudyDetails, answerRelated: Props['answerRelated'], now: Props['now']}) {
-  const {studyDetails, answerRelated, now} = props;
+function RelatedCard(props: {studyDetails: StudyDetails, answerRelated: Props['answerRelated'], now: Props['now'], term: Term}) {
+  const {studyDetails, answerRelated, now, term} = props;
 
   return <div className="f5 mt5 overflow-y-auto" style={{maxHeight: 65}}>
     <button className="mh1 pa1 br2"
@@ -97,6 +98,9 @@ function RelatedCard(props: {studyDetails: StudyDetails, answerRelated: Props['a
       間違えた！
     </button>
     <span className="br2 pa1 bg-light-yellow fw9">
+      {term.attributes.reference}
+    </span> -
+    <span className="br2 pa1 bg-light-green fw9">
       {studyDetails.beforeCloze}{studyDetails.clozed}{studyDetails.afterCloze}
     </span> -
     <span>
@@ -114,8 +118,8 @@ function RelatedBackSide({answerRelated, startNext, unAnsweredRelated, now}: Pro
       </button>
     </div>
 
-    {unAnsweredRelated.map((studyDetails, i) => <div className="ma2">
-      <RelatedCard key={""+i} studyDetails={studyDetails} answerRelated={answerRelated} now={now}/>
+    {unAnsweredRelated.map(([studyDetails, term], i) => <div className="ma2">
+      <RelatedCard key={""+i} studyDetails={studyDetails} term={term} answerRelated={answerRelated} now={now}/>
     </div>)}
   </div>
 }

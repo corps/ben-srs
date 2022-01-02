@@ -10,7 +10,7 @@ import {
 } from "../study";
 import {describeDuration, minutesOfTime, timeOfMinutes} from "../utils/time";
 import {
-  Cloze, ClozeAnswer, ClozeType, findNoteTree, newNormalizedNote, normalizedNote, NoteIndexes, Tagged
+  Cloze, ClozeAnswer, ClozeType, findNoteTree, newNormalizedNote, normalizedNote, NoteIndexes, Tagged, Term
 } from "../notes";
 import {bindSome, mapSome, mapSomeAsync, Maybe, some, withDefault} from "../utils/maybe";
 import {playAudio, speak} from "../services/speechAndAudio";
@@ -80,9 +80,9 @@ export function Study(props: Props) {
   const answerCloze = useAnswerCloze(notesIndex);
   const readCard = useReadCard(studyDetails);
 
-  const allRelated = useMemo(() => {
+  const allRelatedWithSource = useMemo(() => {
     return withDefault(mapSome(studyDetails, studyDetails => {
-      const resultsWithScore: [number, StudyDetails][] = [];
+      const resultsWithScore: [number, [StudyDetails, Term]][] = [];
 
       studyDetails.noteTree.terms.forEach(term => {
         const thisRef = term.attributes.reference;
@@ -93,14 +93,22 @@ export function Study(props: Props) {
         );
 
         let nextRelated: Maybe<Tagged<Cloze>>;
+        let lastScore = 0;
+        let curScoreResults: [number, [StudyDetails, Term]][] = [];
+
         while (nextRelated = iter()) {
           mapSome(nextRelated, nextRelated => {
+            const nextTerm = nextRelated.inner;
             // If it's on the same note, it is not 'related'.
-            if (nextRelated.inner.noteId == studyDetails.noteTree.note.id) return;
-            if (nextRelated.inner.attributes.type == "produce") return;
-            if (nextRelated.inner.attributes.type == "flash") return;
-            const maybeRelated = studyDetailsForCloze(nextRelated.inner, notesIndex);
-            const nextRef = nextRelated.inner.reference;
+            if (nextTerm.noteId == studyDetails.noteTree.note.id) return;
+            if (nextTerm.attributes.type == "produce") return;
+            if (nextTerm.attributes.type == "flash") return;
+            const maybeRelated = studyDetailsForCloze(nextTerm, notesIndex);
+            const nextRef = nextTerm.reference;
+
+            if (nextRef !== thisRef && thisRef.length === 1) {
+              return;
+            }
 
             let i = 0;
             for (; i < nextRef.length && i < thisRef.length; ++i) {
@@ -108,10 +116,22 @@ export function Study(props: Props) {
             }
 
             let score = thisRef.length - i;
-            score -= term.attributes.reference === studyDetails.cloze.reference ? 0.5 : 0;
+            if (score !== lastScore) {
+              if (curScoreResults.length < 3) {
+                resultsWithScore.push(...curScoreResults);
+                curScoreResults = [];
+              }
+            }
 
-            mapSome(maybeRelated, r => resultsWithScore.push([score, r]));
+            score -= term.attributes.reference === studyDetails.cloze.reference ? 0.5 : 0;
+            if (nextRef.length > thisRef.length) score += (nextRef.length - thisRef.length) * 0.5;
+
+            mapSome(maybeRelated, r => curScoreResults.push([score, [r, term]]));
           });
+        }
+
+        if (curScoreResults.length < 3) {
+          resultsWithScore.push(...curScoreResults);
         }
       });
 
@@ -120,6 +140,11 @@ export function Study(props: Props) {
       return resultsWithScore.map(([_, a]) => a);
     }), [])
   }, [language, notesIndex, studyDetails, nowMinutes])
+
+  const allRelated = useMemo(
+    () => allRelatedWithSource.map(([a]) => a),
+    [allRelatedWithSource]
+  );
 
   const answerFront = useCallback(async (answer: Answer) => {
     await answerCloze(studyDetails, answer);
@@ -136,8 +161,8 @@ export function Study(props: Props) {
   }, [answerCloze])
 
   const unAnsweredRelated = useMemo(
-    () => allRelated.filter(v => !answeredRelated.includes(v)),
-    [allRelated, answeredRelated]);
+    () => allRelatedWithSource.filter(([v]) => !answeredRelated.includes(v)),
+    [allRelatedWithSource, answeredRelated]);
 
   const dueTime = withDefault(mapSome(
     studyDetails,
