@@ -117,6 +117,7 @@ export function Study(props: Props) {
 
             let score = thisRef.length - i;
             if (score !== lastScore) {
+              lastScore = score;
               if (curScoreResults.length < 3) {
                 resultsWithScore.push(...curScoreResults);
                 curScoreResults = [];
