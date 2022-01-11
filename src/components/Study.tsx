@@ -149,10 +149,12 @@ export function Study(props: Props) {
 
   const answerFront = useCallback(async (answer: Answer) => {
     await answerCloze(studyDetails, answer);
-    if (allRelated.length === 0) {
+    if (allRelated.length === 0 || withDefault(mapSome(studyDetails,
+        sd => !['produce', 'recognize'].includes(sd.cloze.attributes.type)), false)) {
       startNext();
     } else {
       setShowRelated(true);
+      setShowBack(true);
     }
   }, [allRelated.length, answerCloze, startNext, studyDetails]);
 
