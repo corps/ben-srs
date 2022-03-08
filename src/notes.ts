@@ -4,7 +4,7 @@ import {endKeyMatchingWithin, Indexed, Indexer} from "./utils/indexable";
 
 export const newNote = {
   attributes: {
-    content: "This would be new note",
+    content: "",
     language: "",
     editsComplete: false,
     terms: undefined as void,
@@ -42,6 +42,7 @@ export const newTerm = {
     definition: "",
     hint: "",
     clozes: undefined as void,
+    related: [] as string[],
   }
 };
 
@@ -114,6 +115,8 @@ export function parseNote(text: string): NormalizedNote {
   if (divisorIdx !== -1) {
     note.attributes = {...note.attributes, ...JSON.parse(text.slice(divisorIdx + divisor.length))};
     note.attributes.content = text.slice(0, divisorIdx);
+    // Default out term attributes
+    note.attributes.terms = note.attributes.terms.map(t => ({...t, attributes: {...newNormalizedTerm.attributes, ...t.attributes}}))
   } else {
     note.attributes.content = text;
   }

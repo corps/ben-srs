@@ -14,7 +14,7 @@ import {useNotesIndex, useRoute} from "../hooks/contexts";
 import {
   findNextStudyClozeWithinTerm, findTermInNormalizedNote, findTermRange, updateTermInNormalizedNote
 } from "../study";
-import {SimpleNavLink} from "./SimpleNavLink";
+import {SimpleNavLink, WorkflowLinks} from "./SimpleNavLink";
 import {useToggle} from "../hooks/useToggle";
 import {playAudio, speak} from "../services/speechAndAudio";
 import {DictionaryLookup} from "./DictionaryLookup";
@@ -25,6 +25,7 @@ import {Search} from "./Search";
 import {minutesOfTime} from "../utils/time";
 import {useTime} from "../hooks/useTime";
 import {Study} from "./Study";
+import {useWithKeybinding} from "../hooks/useWithKeybinding";
 
 interface Props {
   onReturn?: () => void,
@@ -52,6 +53,8 @@ export function EditTerm(props: Props) {
   const searchTerm = useCallback(() => {
     routeSearch({defaultSearch: reference, defaultMode: 'terms'}, props, () => props,)
   }, [props, reference, routeSearch]);
+
+  const [SearchWrapper] = useWithKeybinding('/', searchTerm);
 
   const studyTerm = useCallback(() => {
     routeStudy({noteId, marker, reference, language: normalized.attributes.language, audioStudy: false},
@@ -153,24 +156,30 @@ export function EditTerm(props: Props) {
     workingTerm.attributes.reference
   ])
 
+  const [DeleteWrapper] = useWithKeybinding('Delete', onDelete);
+  const [StudyWrapper] = useWithKeybinding('.', useCallback(() => hasStudy ? studyTerm() : null, [hasStudy, studyTerm]))
+  const [SpeakWrapper] = useWithKeybinding('j', testSpeech);
+
   return <div className="mw6 center">
     <div className="tc">
-      <SimpleNavLink onClick={onApply}>
-        コミット
-      </SimpleNavLink>
+      <WorkflowLinks onReturn={onReturn} onApply={onApply}/>
 
-      <SimpleNavLink onClick={onReturn}>
-        戻る
+      <SimpleNavLink onClick={onDelete}>
+        <DeleteWrapper>
+          削除
+        </DeleteWrapper>
       </SimpleNavLink>
-
-      <SimpleNavLink onClick={onDelete}>削除</SimpleNavLink>
 
       <SimpleNavLink onClick={searchTerm}>
-        検索
+        <SearchWrapper>
+          検索
+        </SearchWrapper>
       </SimpleNavLink>
 
       {hasStudy ? <SimpleNavLink onClick={studyTerm}>
-        訓練開始
+        <StudyWrapper>
+          訓練開始
+        </StudyWrapper>
       </SimpleNavLink> : null}
     </div>
 
@@ -251,7 +260,9 @@ export function EditTerm(props: Props) {
         <button
           className="ml3 br2"
           onClick={testSpeech}>
-          テスト
+          <SpeakWrapper>
+            テスト
+          </SpeakWrapper>
         </button>
         <div className="w-100">
           <input type="text"

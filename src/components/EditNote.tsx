@@ -1,4 +1,4 @@
-import React, {ChangeEvent, useCallback, useMemo, useState} from 'react';
+import React, {ChangeEvent, useCallback, useEffect, useMemo, useState} from 'react';
 import {useFileStorage, useNotesIndex, useRoute, useTriggerSync} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
 import {
@@ -11,10 +11,13 @@ import {Indexer} from "../utils/indexable";
 import {playAudio} from "../services/speechAndAudio";
 import {useDataUrl} from "../hooks/useDataUrl";
 import {TagsSelector} from "./TagsSelector";
+import {WorkflowLinks} from "./SimpleNavLink";
+import {useWithKeybinding} from "../hooks/useWithKeybinding";
 
 interface Props {
   onReturn?: () => void,
   onApply: (tree: Maybe<NoteTree>, updated: NormalizedNote) => Promise<void>,
+  newNoteContent?: string,
   noteId: string,
 }
 
@@ -25,10 +28,10 @@ export function EditNote(props: Props) {
   const setRoute = useRoute();
   const store = useFileStorage();
 
-  const {onReturn = () => setRoute(() => null), noteId} = props;
+  const {onReturn = () => setRoute(() => null), noteId, newNoteContent} = props;
 
   const [normalized, setNormalized] = useState(() => {
-    return withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote), {...newNormalizedNote});
+    return withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote), {...newNormalizedNote, attributes: {...newNormalizedNote.attributes, content: newNoteContent || ''}});
   });
   const [triggerSync] = useTriggerSync();
   const deleteNote = useCallback(async () => {
@@ -59,6 +62,9 @@ export function EditNote(props: Props) {
   const playAudioPath = useCallback(() => {
     mapSome(audioDataUrl, playAudio);
   }, [audioDataUrl])
+
+  const [PlayWrapper] = useWithKeybinding('j', playAudioPath)
+  const [DeleteWrapper] = useWithKeybinding('Delete', deleteNote);
 
   const onApply = useCallback(async () => {
     const baseTree = findNoteTree(notesIndex, noteId);
@@ -112,13 +118,17 @@ export function EditNote(props: Props) {
 
         <div className="ml2 dib">
           <button onClick={playAudioPath}>
-            テスト
+            <PlayWrapper>
+              テスト
+            </PlayWrapper>
           </button>
         </div>
 
         <div className="ml2 dib">
           <button onClick={deleteNote}>
-            削除
+            <DeleteWrapper>
+              削除
+            </DeleteWrapper>
           </button>
         </div>
       </div>
@@ -137,16 +147,7 @@ export function EditNote(props: Props) {
       </div>
 
       <div className="tr">
-        <button
-          className="mh1 pa2 br2"
-          onClick={onApply}
-          disabled={!normalized.attributes.content || !normalized.attributes.language}>
-          適用
-        </button>
-
-        <button className="mh1 pa2 br2" onClick={onReturn}>
-          キャンセル
-        </button>
+        <WorkflowLinks onApply={onApply} onReturn={onReturn} applyDisabled={!normalized.attributes.content || !normalized.attributes.language}/>
       </div>
     </div>
   </div>

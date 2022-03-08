@@ -26,8 +26,8 @@ export function DictionaryLookup({language, word}: DictionaryLookupProps) {
         </a>
         <a target="_blank"
            className="hover-light-blue blue mh1"
-           href={`https://www.google.co.jp/?q=${word}とは`}>
-          Google
+           href={`https://www.reddit.com/r/Cantonese/search/?restrict_sr=1&sr_nsfw=&q=${word}`}>
+          r/Cantonese
         </a>
       </div>;
 

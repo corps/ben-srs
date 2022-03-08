@@ -199,10 +199,10 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
       if (search) baseIterator = filterIndexIterator(baseIterator, note => note.attributes.content.includes(search) || note.attributes.tags.includes(search))
 
       return mapIndexIterator(baseIterator, note => {
-        return <span key={note.id} onClick={() => visitNote(note.id)}
-                     className={note.attributes.editsComplete ? '' : 'bg-lightest-blue'}>
+        return <a href="javascript:void(0)" tabIndex={0} key={note.id} onClick={() => visitNote(note.id)}
+                     className={`no-underline color-inherit ${note.attributes.editsComplete ? '' : 'bg-lightest-blue'}`}>
           {note.attributes.content}
-        </span>
+        </a>
       })
     } else if (mode === "terms") {
       function filteredTermIter(predicate: (t: Term) => boolean) {
@@ -227,9 +227,9 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
             term => term.attributes.reference.indexOf(search) === 0);
 
       return mapIndexIterator(baseIterator, ({beforeTerm, beforeCloze, clozed, afterCloze, afterTerm, cloze}) => {
-        return <span key={cloze.noteId + cloze.reference + cloze.marker} onClick={() => visitTerm(cloze.noteId, cloze.reference, cloze.marker)}>
+        return <a href="javascript:void(0)" className="no-underline color-inherit" tabIndex={0} key={cloze.noteId + cloze.reference + cloze.marker} onClick={() => visitTerm(cloze.noteId, cloze.reference, cloze.marker)}>
           {beforeTerm.slice(Math.max(beforeTerm.length - 12, 0))}<b>{beforeCloze}{clozed}{afterCloze}</b> {afterTerm}
-        </span>
+        </a>
       })
     } else if (mode === "media") {
       let i = 0;
@@ -245,10 +245,10 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
 
       return mapIndexIterator(baseIter, md => <span key={md.path}>
         <SimpleNavLink onClick={() => deleteFile(md.id)}>Delete</SimpleNavLink>
-        <span onClick={() => downloadFile(md.id)}> - {md.path}</span>
+        <a href="javascript:void(0)" className="no-underline color-inherit" tabIndex={0} onClick={() => downloadFile(md.id)}> - {md.path}</a>
       </span>)
     }
 
     return () => null;
-  }, [clozeAnswers.byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx, clozes.byNoteIdReferenceMarkerAndClozeIdx, deleteFile, downloadFile, mediaMetadata, mode, notes.byEditsComplete, notesIndex, search, terms.byNoteIdReferenceAndMarker, visitNote]);
+  }, [clozeAnswers.byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx, clozes.byNoteIdReferenceMarkerAndClozeIdx, deleteFile, downloadFile, mediaMetadata, mode, notes.byEditsComplete, notesIndex, search, terms.byNoteIdReferenceAndMarker, visitNote, visitTerm]);
 }

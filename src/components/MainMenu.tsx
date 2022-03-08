@@ -56,7 +56,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const visitNewNote = useCallback(() => {
     newNoteRouting({
       noteId: createId(),
-    }, {syncFailed}, () => ({syncFailed}))
+    }, {syncFailed}, undefined)
   }, [newNoteRouting, syncFailed]);
 
   const studyData = useStudyData(time, tag, audioStudy);

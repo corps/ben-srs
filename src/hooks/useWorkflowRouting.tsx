@@ -20,9 +20,9 @@ export function useWorkflowRouting<P extends {}, Apply extends any[], SourceProp
 
   const routingParams = useCallback((
     props: SourceProps,
-    updated: (...args: Apply) => SourceProps,
+    updated: (...args: Apply) => SourceProps = () => props,
   ): WorkflowParams<Apply> => {
-    return {
+    const result = {
       async onApply(...args: Apply): Promise<void> {
         try {
           // Swap the route immediately, allow the apply function to resolve in the background.
@@ -37,12 +37,21 @@ export function useWorkflowRouting<P extends {}, Apply extends any[], SourceProp
           <Source {...props}/>
         ))
       }
-    }
+    };
+
+    // result.onApply.description =  applyString;
+    // result.onReturn.toString = () => returnString;
+
+    return result;
   }, [Source, apply, setRoute])
 
-  return useCallback((destProps: Omit<P, "onApply" | "onReturn">, sourceProps: SourceProps, updated: (...args: Apply) => SourceProps) => {
+  return useCallback((
+    destProps: Omit<P, "onApply" | "onReturn">, sourceProps: SourceProps,
+    updated: (...args: Apply) => SourceProps = () => sourceProps,
+    ) => {
     setRoute(() => some(
       <Destination {...{...(destProps as P), ...routingParams(sourceProps, updated)}} />
     ))
-  }, [Destination, routingParams, setRoute]);
+  }
+  , [Destination, routingParams, setRoute]);
 }

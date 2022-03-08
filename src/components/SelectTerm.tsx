@@ -4,12 +4,13 @@ import {findNoteTree, NormalizedNote, NormalizedTerm, NoteTree} from "../notes";
 import {useNotesIndex, useRoute} from "../hooks/contexts";
 import {addNewTerm, findTermRange} from "../study";
 import {EditNote} from "./EditNote";
-import {SimpleNavLink} from "./SimpleNavLink";
+import {SimpleNavLink, WorkflowLinks} from "./SimpleNavLink";
 import {bisect} from "../utils/indexable";
 import {CharacterCell} from "./CharacterCell";
 import {EditTerm} from "./EditTerm";
 import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
 import {SentenceAnalyzer} from "./SentenceAnalyzer";
+import {useWithKeybinding} from "../hooks/useWithKeybinding";
 
 interface Props {
   onReturn?: () => void,
@@ -82,19 +83,17 @@ export function SelectTerm(props: Props) {
     )
   }, [normalized, noteId, props, routeEditTerms])
 
+  const [EditWrapper] = useWithKeybinding('e', editContent);
+
   return <div className="mt2">
     <div className="tc">
       <SimpleNavLink onClick={editContent}>
-        編集
+        <EditWrapper>
+          内容編集
+        </EditWrapper>
       </SimpleNavLink>
 
-      <SimpleNavLink onClick={onApply}>
-        コミット
-      </SimpleNavLink>
-
-      <SimpleNavLink onClick={onReturn}>
-        戻る
-      </SimpleNavLink>
+      <WorkflowLinks onReturn={onReturn} onApply={onApply}/>
     </div>
 
 

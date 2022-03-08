@@ -4,18 +4,38 @@ import {MainMenu} from "./MainMenu";
 import {ProgressBar} from "./ProgressBar";
 import {useProgress} from "../hooks/useProgress";
 import {useSync} from "../hooks/useSync";
-import {Maybe, withDefault} from "../utils/maybe";
+import {Maybe, some, withDefault} from "../utils/maybe";
+import {useQuery} from "../hooks/useQuery";
+import {Search} from "./Search";
+import {EditNote} from "./EditNote";
+import {useUpdateNote} from "../hooks/useUpdateNote";
+import {createId} from "../services/storage";
+import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
 
 export function Router() {
     const [route, setRoute] = useState(null as Maybe<ReactElement>);
     const {pending, completed, onProgress} = useProgress();
     const [_, syncError] = useSync(onProgress);
+    const syncFailed = !!syncError;
 
     useEffect(() => {
         syncError && console.error(syncError);
     }, [syncError]);
 
-    const ele = withDefault(route, <MainMenu syncFailed={!!syncError}/>);
+    const ele = withDefault(route, <MainMenu syncFailed={syncFailed}/>);
+    const query = useQuery();
+
+    const updateNote = useUpdateNote();
+    const newNoteRouting = useWorkflowRouting(EditNote, MainMenu, updateNote);
+    const searchRouting = useWorkflowRouting(Search, MainMenu);
+
+    useState(() => {
+        if (query.s) {
+            searchRouting({ defaultSearch: query.s }, ({syncFailed}));
+        } else if (query.c) {
+            newNoteRouting({ noteId: createId(), newNoteContent: query.c }, ({syncFailed}))
+        }
+    });
 
     return <RouteContext.Provider value={setRoute}>
         <div className="fixed w-100" style={{height: "5px"}}>

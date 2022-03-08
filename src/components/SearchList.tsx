@@ -1,7 +1,8 @@
-import React, {PropsWithChildren, ReactElement} from 'react';
+import React, {PropsWithChildren, ReactElement, useCallback} from 'react';
 import {IndexIterator} from "../utils/indexable";
 import {usePagination} from "../hooks/usePagination";
-import {SimpleNavLink} from "./SimpleNavLink";
+import {SimpleNavLink, WorkflowLinks} from "./SimpleNavLink";
+import {useWithKeybinding} from "../hooks/useWithKeybinding";
 
 interface Props {
   iterator: IndexIterator<ReactElement>,
@@ -12,17 +13,23 @@ interface Props {
 export function SearchList({iterator, perPage = 15, children, onReturn}: PropsWithChildren<Props>) {
   const {nextPage, data, prevPage, hasMore, page} = usePagination(iterator, perPage);
 
+  const [NextWrapper] = useWithKeybinding('ArrowRight', useCallback(() => {
+    if (hasMore) nextPage();
+  }, [hasMore, nextPage]))
+
+  const [PrevWrapper] = useWithKeybinding('ArrowLeft', useCallback(() => {
+    if (page > 0) prevPage();
+  }, [page, prevPage]))
+
   return <div className="mw6 center">
     <div className="tc">
-      <SimpleNavLink onClick={onReturn}>
-        戻る
-      </SimpleNavLink>
+      <WorkflowLinks onReturn={onReturn}/>
       {page > 0 && <SimpleNavLink onClick={prevPage}>
-        前
+        <PrevWrapper>前</PrevWrapper>
       </SimpleNavLink>}
       {hasMore &&
       <SimpleNavLink onClick={nextPage}>
-        次
+        <NextWrapper>次</NextWrapper>
       </SimpleNavLink>}
     </div>
 

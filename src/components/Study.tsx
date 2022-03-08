@@ -16,7 +16,7 @@ import {bindSome, mapSome, mapSomeAsync, Maybe, some, withDefault} from "../util
 import {playAudio, speak} from "../services/speechAndAudio";
 import {useStudyData} from "../hooks/useStudyData";
 import {FlexContainer, Row, VCentered, VCenteringContainer} from "./layout-utils";
-import {SimpleNavLink} from "./SimpleNavLink";
+import {SimpleNavLink, WorkflowLinks} from "./SimpleNavLink";
 import {Answer, isWrongAnswer, scheduledBy} from "../scheduler";
 import {useKeypresses} from "../hooks/useKeypress";
 import {BackSide} from "./BackSide";
@@ -25,7 +25,7 @@ import {useUpdateNote} from "../hooks/useUpdateNote";
 import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
 import {SelectTerm} from "./SelectTerm";
 import {useDataUrl} from "../hooks/useDataUrl";
-import {chainIndexIterators, Indexer, IndexIterator} from "../utils/indexable";
+import {Indexer} from "../utils/indexable";
 
 interface Props {
   onReturn?: Dispatch<void>,
@@ -195,19 +195,11 @@ export function Study(props: Props) {
         <VCenteringContainer>
           <VCentered className="tc">
             <div>
-            <span className="dn dib-l">
-              <span className="pv1 ph2 br2 bg-gray white">f</span>
-            </span>
-
               <span className="mh2">経過</span>
               {studyData.studied}/{studyData.studied + studyData.due}
               <span className="mh2">{describeDuration(time - cardStartedAt)}</span>
 
-              <SimpleNavLink
-                onClick={onReturn}
-                className="mh2">
-                戻る
-              </SimpleNavLink>
+              <WorkflowLinks onReturn={onReturn} />
             </div>
 
             <div>
