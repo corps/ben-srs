@@ -1,5 +1,5 @@
 import {
-  Cloze,
+  Cloze, ClozeAnswer,
   ClozeType,
   findNoteTree,
   newNormalizedTerm,
@@ -7,7 +7,8 @@ import {
   normalizedNote,
   NormalizedTerm,
   NoteIndexes,
-  NoteTree, Term
+  NoteTree,
+  Term
 } from "./notes";
 import {applySome, bindSome, mapSome, Maybe, some, toVoid} from "./utils/maybe";
 import {Indexer} from "./utils/indexable";
@@ -27,6 +28,7 @@ export interface StudyDetails {
   type: ClozeType;
   audioFileId: string | undefined | null;
   related: string[],
+  lastAnswer: Maybe<ClozeAnswer>,
 }
 
 export interface TermId {
@@ -167,6 +169,11 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
     indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx,
     [cloze.noteId, cloze.reference, cloze.marker]
   );
+  const lastAnswer = Indexer.reverseIter(
+    indexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx,
+    [cloze.noteId, cloze.reference, cloze.marker, cloze.clozeIdx]
+  )();
+
   const noteTree = toVoid(findNoteTree(indexes, cloze.noteId));
 
   if (term && note && noteTree) {
@@ -205,6 +212,7 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
       type: cloze.attributes.type,
       audioFileId: note.attributes.audioFileId,
       related,
+      lastAnswer,
     });
   }
 
@@ -214,7 +222,7 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
 function findRelatedTermMarkers(terms: Term[], origContent: string): string[] {
   return terms.filter(t => findTermRange(t, origContent)[0] !== -1).map(t => {
     if (t.attributes.related == null) {
-      return [t.attributes.marker];
+      return [t.attributes.reference];
     }
 
     return t.attributes.related;

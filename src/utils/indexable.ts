@@ -46,8 +46,35 @@ export type IndexIterator<V> = () => Maybe<V>
 export type GroupReducer<V> = (iter: IndexIterator<V>, reverseIter: IndexIterator<V>) => Maybe<V>
 export type Reducers<V> = {[k: string]: GroupReducer<V>};
 
+export function asIterator<A>(iterable: Iterable<A>): IndexIterator<A> {
+    const iter = iterable[Symbol.iterator]()
+    return () => {
+        const next = iter.next();
+        if (next.done) {
+            return null;
+        }
+
+        return some(next.value);
+    }
+}
+
 export function mapIndexIterator<A, B>(iterator: IndexIterator<A>, f: (a: A) => B): IndexIterator<B> {
     return () => mapSome(iterator(), f);
+}
+
+export function flatMapIndexIterator<A, B>(iterator: IndexIterator<A>, f: (a: A) => IndexIterator<B>): IndexIterator<B> {
+    let cur: Maybe<IndexIterator<B>> = null;
+    return () => {
+        if (!cur) {
+            cur = mapSome(iterator(), f);
+        }
+
+        if (cur) {
+            return cur[0]();
+        }
+
+        return null;
+    }
 }
 
 export function filterIndexIterator<A>(iterator: IndexIterator<A>, f: (a: A) => boolean): IndexIterator<A> {

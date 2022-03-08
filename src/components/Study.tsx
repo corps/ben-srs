@@ -27,6 +27,7 @@ import {SelectTerm} from "./SelectTerm";
 import {useDataUrl} from "../hooks/useDataUrl";
 import {Indexer} from "../utils/indexable";
 import {RelatedStudy} from "./RelatedStudy";
+import {HideIf} from "./HideIf";
 
 interface Props {
   onReturn?: Dispatch<void>,
@@ -135,10 +136,16 @@ export function Study(props: Props) {
              onClick={(e) => e.target instanceof HTMLButtonElement ? null : toggleShowBack()}>
           <VCenteringContainer>
             <VCentered>
-              {showBack ?
+              <div>
+
+              </div>
+              <HideIf hidden={!showBack}>
                 <BackSide editNote={editNote} studyDetails={studyDetails} answerFront={answerFront}
                           readCard={readCard} startNext={startNext} now={time} studyStarted={cardStartedAt}/> :
-                <FrontSide readCard={readCard} studyDetails={studyDetails}/>}
+              </HideIf>
+              <HideIf hidden={showBack}>
+                <FrontSide readCard={readCard} studyDetails={studyDetails}/>
+              </HideIf>
             </VCentered>
           </VCenteringContainer>
         </div>

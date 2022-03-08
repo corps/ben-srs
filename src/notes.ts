@@ -141,6 +141,7 @@ function tag<T>(inner: T, tag: string): Tagged<T> {
 
 export type TermsStore = {
   byNoteIdReferenceAndMarker: Indexed<Term>;
+  byReference: Indexed<Term>;
 };
 
 export type TermsTagStore = {
@@ -200,6 +201,11 @@ termsIndexer.setKeyer("byNoteIdReferenceAndMarker", term => [
   term.attributes.reference,
   term.attributes.marker,
 ]);
+
+termsIndexer.setKeyer("byReference", term => [
+  term.attributes.reference,
+]);
+
 
 export const termsTagIndexer = new Indexer<Tagged<Term>, TermsTagStore>("byNoteIdReferenceMarkerAndTag");
 termsTagIndexer.setKeyer("byNoteIdReferenceMarkerAndTag", ({inner, tag}) => [...termsIndexer.pkKeyer(inner), tag])
