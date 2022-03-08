@@ -6,7 +6,8 @@ import {
   NormalizedNote,
   normalizedNote,
   NormalizedTerm,
-  NoteIndexes, NoteTree
+  NoteIndexes,
+  NoteTree, Term
 } from "./notes";
 import {applySome, bindSome, mapSome, Maybe, some, toVoid} from "./utils/maybe";
 import {Indexer} from "./utils/indexable";
@@ -25,6 +26,7 @@ export interface StudyDetails {
   definition: string;
   type: ClozeType;
   audioFileId: string | undefined | null;
+  related: string[],
 }
 
 export interface TermId {
@@ -156,6 +158,10 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
     indexes.terms.byNoteIdReferenceAndMarker,
     [cloze.noteId, cloze.reference, cloze.marker]
   ));
+  const terms = Indexer.getAllMatching(
+    indexes.terms.byNoteIdReferenceAndMarker,
+    [cloze.noteId]
+  );
   const note = toVoid(Indexer.getFirstMatching(indexes.notes.byId, [cloze.noteId]));
   const clozes = Indexer.getAllMatching(
     indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx,
@@ -165,12 +171,16 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
 
   if (term && note && noteTree) {
     let normalized = normalizedNote(noteTree);
-    let content = getTermFragment(normalized, term, fullTermMarker(term));
+    const termRanges = terms.map(t => findTermRange(t, normalized.attributes.content));
+    let [content, contentLeft, contentRight] = getTermFragment(normalized, term, termRanges, fullTermMarker(term));
+    const origContent = normalized.attributes.content.slice(contentLeft, contentRight)
     let termRange = findTermRange(term, content);
     let reference = term.attributes.reference;
     let clozeSplits = splitByClozes(clozes, reference);
 
     clozeSplits = clozeSplits.slice(0, 2 * (cloze.clozeIdx + 1));
+
+    const related = findRelatedTermMarkers(terms, origContent);
 
     return some({
       noteTree,
@@ -194,10 +204,21 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
       hint: term.attributes.hint,
       type: cloze.attributes.type,
       audioFileId: note.attributes.audioFileId,
+      related,
     });
   }
 
   return null;
+}
+
+function findRelatedTermMarkers(terms: Term[], origContent: string): string[] {
+  return terms.filter(t => findTermRange(t, origContent)[0] !== -1).map(t => {
+    if (t.attributes.related == null) {
+      return [t.attributes.marker];
+    }
+
+    return t.attributes.related;
+  }).reduce((acc, n) => [...acc, ...n], [])
 }
 
 export function findTermRange(term: TermId, text: string): [number, number] {
@@ -246,16 +267,21 @@ export function findNextUniqueMarker(content: string): string {
 
 export function findContentRange(term: TermId,
                                  content: string,
-                                 grabCharsMax = 50): [number, number] {
+                                 grabCharsMax = 50, termRanges: [number, number][]): [number, number] {
   let [termStart, termEnd] = findTermRange(term, content);
   if (termStart === -1) return [-1, -1];
 
   let leftSide = content.slice(0, termStart);
   let leftSideGrab = Math.min(grabCharsMax, leftSide.length);
-
   let partialLeftSide = leftSide.slice(leftSide.length - leftSideGrab);
   let unusedLeft = leftSide.slice(0, leftSide.length - partialLeftSide.length);
   let leftSideIdx = unusedLeft.match(allNotDivisibleTailRegex)?.index || 0;
+
+  termRanges.forEach(([l, r]) => {
+    if (leftSideIdx >= l && leftSideIdx <= r) {
+      leftSideIdx = l;
+    }
+  })
 
   let rightSide = content.slice(termEnd);
   let unusedRight = rightSide.slice(grabCharsMax);
@@ -266,6 +292,12 @@ export function findContentRange(term: TermId,
       (unusedRight.match(allNotDivisibleHeadRegex) || [""])[0].length,
     content.length
   );
+
+  termRanges.forEach(([l, r]) => {
+    if (rightSideIdx >= l && rightSideIdx <= r) {
+      rightSideIdx = r;
+    }
+  })
 
   return [leftSideIdx, rightSideIdx];
 }
@@ -295,9 +327,20 @@ export function addNewTerm(note: NormalizedNote, left: number, right: number): N
 
 export function getTermFragment(note: NormalizedNote,
                                 term: TermId,
+                                termRanges: [number, number][],
                                 termOverride = term.attributes.reference,
-                                grabCharsMax = 50) {
+                                grabCharsMax = 50): [string, number, number] {
   let content = note.attributes.content;
+  let contentRange = findContentRange(
+    term,
+    content,
+    grabCharsMax,
+    termRanges,
+  );
+  if (contentRange[0] === -1) return ["", -1, -1];
+
+  content = content.slice(contentRange[0], contentRange[1]);
+
   for (let noteTerm of note.attributes.terms) {
     if (
       noteTerm.attributes.reference === term.attributes.reference &&
@@ -313,18 +356,10 @@ export function getTermFragment(note: NormalizedNote,
       content.slice(range[1]);
   }
 
-  let contentRange = findContentRange(
-    term,
-    content,
-    grabCharsMax
-  );
-  if (contentRange[0] === -1) return "";
-  content = content.slice(contentRange[0], contentRange[1]);
-
   let range = findTermRange(term, content);
-  if (range[0] === -1) return "";
+  if (range[0] === -1) return ["", -1, -1];
 
-  return content.slice(0, range[0]) + termOverride + content.slice(range[1]);
+  return [content.slice(0, range[0]) + termOverride + content.slice(range[1]), ...contentRange];
 }
 
 export function findTermInNormalizedNote(note: NormalizedNote,

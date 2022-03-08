@@ -19,6 +19,7 @@ interface Props {
   onApply: (tree: Maybe<NoteTree>, updated: NormalizedNote) => Promise<void>,
   newNoteContent?: string,
   noteId: string,
+  note?: NormalizedNote,
 }
 
 const allLanguages = ['Japanese', 'Cantonese', 'English', 'Todos'];
@@ -28,11 +29,19 @@ export function EditNote(props: Props) {
   const setRoute = useRoute();
   const store = useFileStorage();
 
-  const {onReturn = () => setRoute(() => null), noteId, newNoteContent} = props;
+  const {onReturn = () => setRoute(() => null), noteId, newNoteContent, note} = props;
 
   const [normalized, setNormalized] = useState(() => {
-    return withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote), {...newNormalizedNote, attributes: {...newNormalizedNote.attributes, content: newNoteContent || ''}});
+    if (note) {
+      return note;
+    } else {
+      return withDefault(
+        mapSome(
+          findNoteTree(notesIndex, noteId || ''), normalizedNote),
+        {...newNormalizedNote, attributes: {...newNormalizedNote.attributes, content: newNoteContent || ''}});
+    }
   });
+
   const [triggerSync] = useTriggerSync();
   const deleteNote = useCallback(async () => {
     if (confirm("Delete?")) {

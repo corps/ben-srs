@@ -34,9 +34,10 @@ export function SelectTerm(props: Props) {
 
   const editContent = useCallback(() => {
     routeEdits({
-      noteId
+      noteId,
+      note: normalized,
     }, props, (baseTree, normalized) => ({...props, normalized}));
-  }, [noteId, props, routeEdits]);
+  }, [normalized, noteId, props, routeEdits]);
 
   const onApply = useCallback(async () => {
     await props.onApply(findNoteTree(notesIndex, noteId), normalized);

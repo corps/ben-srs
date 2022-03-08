@@ -13,15 +13,18 @@ import {
 } from "../utils/indexable";
 import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
 import {useUpdateNote} from "../hooks/useUpdateNote";
-import {studyDetailsForCloze} from "../study";
+import {StudyDetails, studyDetailsForCloze} from "../study";
 import {bindSome, mapSome, mapSomeAsync, some, withDefault} from "../utils/maybe";
 import {SelectTerm} from "./SelectTerm";
-import {findNoteTree, newNormalizedNote, normalizedNote, Term} from "../notes";
+import {findNoteTree, newNormalizedNote, normalizedNote, Note, Term} from "../notes";
 import { audioContentTypes, createId, getExt, normalizeBlob, StoredMetadata, videoContentTypes, withNamespace } from "../services/storage";
 import {useLiveQuery} from "dexie-react-hooks";
 import {SimpleNavLink} from "./SimpleNavLink";
 import {useStoredState} from "../hooks/useStoredState";
 import {EditTerm} from "./EditTerm";
+import {NoteSearchResult} from "./NoteSearchResult";
+import {TermSearchResult} from "./TermSearchResult";
+import {MediaSearchResult} from "./MediaSearchResult";
 
 interface Props {
   onReturn?: () => void,
@@ -139,29 +142,82 @@ export function Search(props: Props) {
   </SearchList>;
 }
 
-function useSearchResults(mode: string, search: string, lastSync: number, onReturn: () => void): IndexIterator<ReactElement> {
+function useNoteSearch(search: string): IndexIterator<Note> {
   const notesIndex = useNotesIndex();
-  const {notes, clozeAnswers, clozes, terms} = notesIndex;
-  const updateNoteAndConfirmEditsFinished = useUpdateNote(true);
+  const {notes} = notesIndex;
+  let iter = Indexer.iterator(notes.byEditsComplete);
+  if (search) iter = filterIndexIterator(iter, note => note.attributes.content.includes(search) || note.attributes.tags.includes(search))
+  return iter;
+}
+
+function useTermSearch(search: string): IndexIterator<StudyDetails> {
+  const notesIndex = useNotesIndex();
+  const {clozeAnswers, clozes, terms} = notesIndex;
+
+  return useMemo(() => {
+    function filteredTermIter(predicate: (t: Term) => boolean) {
+      return flattenIndexIterator(mapIndexIterator(Indexer.reverseIter(clozeAnswers.byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx),
+        clozeAnswer => {
+          const {noteId, marker, reference, clozeIdx} = clozeAnswer;
+          const cloze = Indexer.getFirstMatching(clozes.byNoteIdReferenceMarkerAndClozeIdx,
+            [noteId, reference, marker, clozeIdx]
+          );
+
+          if (search) {
+            const term = Indexer.getFirstMatching(terms.byNoteIdReferenceAndMarker, [noteId, reference, marker]);
+            if (!withDefault(mapSome(term, predicate), false)) return null;
+          }
+
+          return bindSome(cloze, cloze => studyDetailsForCloze(cloze, notesIndex))
+        }
+      ))
+    }
+
+    return filteredTermIter(term => term.attributes.reference.indexOf(search) === 0);
+  }, [clozeAnswers.byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx, clozes.byNoteIdReferenceMarkerAndClozeIdx, notesIndex, search, terms.byNoteIdReferenceAndMarker])
+}
+
+function useMediaSearch(search: string): IndexIterator<StoredMetadata> {
   const store = useFileStorage();
+  let i = 0;
 
   const unsortedMediaData = useLiveQuery(() => store.fetchMetadataByExts(Object.keys({...audioContentTypes, ...videoContentTypes})),
     [],
     []
   );
   const mediaMetadata = useMemo(() =>
-    [...unsortedMediaData].sort((a, b) => b.updatedAt - a.updatedAt),
+      [...unsortedMediaData].sort((a, b) => b.updatedAt - a.updatedAt),
     [unsortedMediaData])
+
+  return useMemo(() => {
+    let iter: IndexIterator<StoredMetadata> = () => {
+      if (i >= mediaMetadata.length) return null;
+      return some(mediaMetadata[i++]);
+    }
+
+    iter = filterIndexIterator(iter, md => !md.deleted && !!md.rev);
+    if (search) {
+      iter = filterIndexIterator(iter, md => md.path.includes(search));
+    }
+
+    return iter;
+  }, [i, mediaMetadata, search])
+}
+
+function useSearchResults(mode: string, search: string, lastSync: number, onReturn: () => void): IndexIterator<ReactElement> {
+  const notesIndex = useNotesIndex();
+  const updateNoteAndConfirmEditsFinished = useUpdateNote(true);
+  const store = useFileStorage();
   const [triggerSync] = useTriggerSync();
 
-  const deleteFile = useCallback(async (id: string) => {
+  const deleteFile = useCallback(async ({id}: StoredMetadata) => {
     if (confirm("Delete?")) {
       await store.markDeleted(id);
       triggerSync();
     }
   }, [store, triggerSync])
 
-  const downloadFile = useCallback(async (id: string) => {
+  const downloadFile = useCallback(async ({id}: StoredMetadata) => {
     try {
       const stored = await store.fetchBlob(id);
       if (!stored) return;
@@ -178,77 +234,38 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
   const selectTermRouting = useWorkflowRouting(SelectTerm, ({onReturn}: Props) => <Search onReturn={onReturn} defaultSearch={search} defaultMode={mode}/>, updateNoteAndConfirmEditsFinished);
   const editTermRouting = useWorkflowRouting(EditTerm, ({onReturn}: Props) => <Search onReturn={onReturn} defaultSearch={search} defaultMode={mode}/>, updateNoteAndConfirmEditsFinished);
 
-  const visitNote = useCallback((noteId: string) => {
-    const normalized = withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote),
+  const visitNote = useCallback((note: Note) => {
+    const normalized = withDefault(mapSome(findNoteTree(notesIndex, note.id), normalizedNote),
       {...newNormalizedNote}
     );
-    selectTermRouting({noteId, normalized}, {onReturn}, () => ({onReturn}))
+    selectTermRouting({noteId: note.id, normalized}, {onReturn}, () => ({onReturn}))
   }, [notesIndex, selectTermRouting, onReturn])
 
-  const visitTerm = useCallback((noteId: string, reference: string, marker: string) => {
-    const normalized = withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote),
+  const visitTerm = useCallback((sd: StudyDetails) => {
+    const normalized = withDefault(mapSome(findNoteTree(notesIndex, sd.cloze.noteId), normalizedNote),
       {...newNormalizedNote}
     );
+    const {noteId, reference, marker} = sd.cloze;
     editTermRouting({noteId, reference, marker, normalized}, {onReturn}, () => ({onReturn}))
   }, [notesIndex, editTermRouting, onReturn])
 
+  const notesIter = useNoteSearch(search);
+  const termsIter = useTermSearch(search);
+  const mediaIter = useMediaSearch(search);
 
   return useMemo(() => {
     if (mode === "notes") {
-      let baseIterator = Indexer.iterator(notes.byEditsComplete);
-      if (search) baseIterator = filterIndexIterator(baseIterator, note => note.attributes.content.includes(search) || note.attributes.tags.includes(search))
-
-      return mapIndexIterator(baseIterator, note => {
-        return <a href="javascript:void(0)" tabIndex={0} key={note.id} onClick={() => visitNote(note.id)}
-                     className={`no-underline color-inherit ${note.attributes.editsComplete ? '' : 'bg-lightest-blue'}`}>
-          {note.attributes.content}
-        </a>
+      return mapIndexIterator(notesIter, note => {
+        return <NoteSearchResult note={note} selectRow={visitNote}/>
       })
     } else if (mode === "terms") {
-      function filteredTermIter(predicate: (t: Term) => boolean) {
-        return flattenIndexIterator(mapIndexIterator(Indexer.reverseIter(clozeAnswers.byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx),
-          clozeAnswer => {
-            const {noteId, marker, reference, clozeIdx} = clozeAnswer;
-            const cloze = Indexer.getFirstMatching(clozes.byNoteIdReferenceMarkerAndClozeIdx,
-              [noteId, reference, marker, clozeIdx]
-            );
-
-            if (search) {
-              const term = Indexer.getFirstMatching(terms.byNoteIdReferenceAndMarker, [noteId, reference, marker]);
-              if (!withDefault(mapSome(term, predicate), false)) return null;
-            }
-
-            return bindSome(cloze, cloze => studyDetailsForCloze(cloze, notesIndex))
-          }
-        ))
-      }
-
-      const baseIterator = filteredTermIter(
-            term => term.attributes.reference.indexOf(search) === 0);
-
-      return mapIndexIterator(baseIterator, ({beforeTerm, beforeCloze, clozed, afterCloze, afterTerm, cloze}) => {
-        return <a href="javascript:void(0)" className="no-underline color-inherit" tabIndex={0} key={cloze.noteId + cloze.reference + cloze.marker} onClick={() => visitTerm(cloze.noteId, cloze.reference, cloze.marker)}>
-          {beforeTerm.slice(Math.max(beforeTerm.length - 12, 0))}<b>{beforeCloze}{clozed}{afterCloze}</b> {afterTerm}
-        </a>
+      return mapIndexIterator(termsIter, sd => {
+        return <TermSearchResult studyDetails={sd} selectRow={visitTerm}/>
       })
     } else if (mode === "media") {
-      let i = 0;
-      let baseIter: IndexIterator<StoredMetadata> = () => {
-        if (i >= mediaMetadata.length) return null;
-        return some(mediaMetadata[i++]);
-      }
-
-      baseIter = filterIndexIterator(baseIter, md => !md.deleted && !!md.rev);
-      if (search) {
-        baseIter = filterIndexIterator(baseIter, md => md.path.includes(search));
-      }
-
-      return mapIndexIterator(baseIter, md => <span key={md.path}>
-        <SimpleNavLink onClick={() => deleteFile(md.id)}>Delete</SimpleNavLink>
-        <a href="javascript:void(0)" className="no-underline color-inherit" tabIndex={0} onClick={() => downloadFile(md.id)}> - {md.path}</a>
-      </span>)
+      return mapIndexIterator(mediaIter, md => <MediaSearchResult md={md} selectRow={downloadFile} deleteFile={deleteFile}/>)
     }
 
     return () => null;
-  }, [clozeAnswers.byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx, clozes.byNoteIdReferenceMarkerAndClozeIdx, deleteFile, downloadFile, mediaMetadata, mode, notes.byEditsComplete, notesIndex, search, terms.byNoteIdReferenceAndMarker, visitNote, visitTerm]);
+  }, [deleteFile, downloadFile, mediaIter, mode, notesIter, termsIter, visitNote, visitTerm]);
 }
