@@ -1,4 +1,4 @@
-import React, {ChangeEvent, Dispatch, SetStateAction, useCallback, useMemo, useState} from 'react';
+import React, {ChangeEvent, Dispatch, SetStateAction, useCallback, useEffect, useMemo, useState} from 'react';
 import {mapSome, Maybe, withDefault} from "../utils/maybe";
 import {
   ClozeType,
@@ -12,7 +12,7 @@ import {
 } from "../notes";
 import {useNotesIndex, useRoute} from "../hooks/contexts";
 import {
-  findNextStudyClozeWithinTerm, findTermInNormalizedNote, findTermRange, updateTermInNormalizedNote
+  findNextStudyClozeWithinTerm, findTermInNormalizedNote, findTermRange, StudyDetails, updateTermInNormalizedNote
 } from "../study";
 import {SimpleNavLink, WorkflowLinks} from "./SimpleNavLink";
 import {useToggle} from "../hooks/useToggle";
@@ -47,22 +47,6 @@ export function EditTerm(props: Props) {
   const notesIndex = useNotesIndex();
 
   const {onReturn = () => setRoute(() => null), normalized, reference, marker, noteId} = props;
-  const routeSearch = useWorkflowRouting(Search, EditTerm);
-  const routeStudy = useWorkflowRouting(Study, EditTerm);
-
-  const searchTerm = useCallback(() => {
-    routeSearch({defaultSearch: reference, defaultMode: 'terms'}, props, () => props,)
-  }, [props, reference, routeSearch]);
-
-  const [SearchWrapper] = useWithKeybinding('/', searchTerm);
-
-  const studyTerm = useCallback(() => {
-    routeStudy({noteId, marker, reference, language: normalized.attributes.language, audioStudy: false},
-      props,
-      () => props
-    )
-  }, [marker, normalized.attributes.language, noteId, props, reference, routeStudy])
-
   const [workingTerm, setWorkingTerm] = useState(() => {
     return withDefault(findTermInNormalizedNote(normalized, reference, marker),
       {...newNormalizedTerm, attributes: {...newNormalizedTerm.attributes, marker: marker, reference: reference}}
@@ -84,15 +68,26 @@ export function EditTerm(props: Props) {
   const [flash, toggleFlash] = useTypeToggle(workingTerm, "flash");
   const [clozeSplit, setClozeSplit] = useState(() => workingTerm.attributes.clozes.filter(c => c.attributes.type === "produce")
     .map(c => c.attributes.clozed).join(",") || workingTerm.attributes.reference);
+  const [related, setRelated] = useState(() => (workingTerm.attributes.related || [workingTerm.attributes.reference]).join(
+    ','));
 
   const onApply = useCallback(async () => {
     const tree = findNoteTree(notesIndex, noteId);
-    await props.onApply(tree,
-      updateTermInNormalizedNote(normalized,
-        applyClozes(workingTerm, produce, pronounce, recognize, listen, flash, clozeSplit)
-      )
-    );
-  }, [notesIndex, noteId, props, normalized, workingTerm, produce, pronounce, recognize, listen, flash, clozeSplit]);
+    await props.onApply(tree, updateTermInNormalizedNote(normalized, workingTerm));
+  }, [notesIndex, noteId, props, normalized, workingTerm]);
+
+  useEffect(() => {
+    setWorkingTerm(workingTerm => applyClozes(
+      workingTerm,
+      produce,
+      pronounce,
+      recognize,
+      listen,
+      flash,
+      clozeSplit,
+      related
+    ));
+  }, [clozeSplit, flash, listen, produce, pronounce, recognize, related])
 
   const onDelete = useCallback(async () => {
     if (!confirm('Delete?')) return;
@@ -155,6 +150,31 @@ export function EditTerm(props: Props) {
     workingTerm.attributes.pronounce,
     workingTerm.attributes.reference
   ])
+
+  const routeSearch = useWorkflowRouting(Search, EditTerm);
+  const routeStudy = useWorkflowRouting(Study, EditTerm);
+  const searchTerm = useCallback(() => {
+    routeSearch(
+      {defaultSearch: reference, defaultMode: 'terms'},
+      {...props, normalized: updateTermInNormalizedNote(props.normalized, workingTerm)},
+      (linkTo: StudyDetails) => ({
+        ...props, normalized: updateTermInNormalizedNote(props.normalized, {
+          ...workingTerm, attributes: {
+            ...workingTerm.attributes, related: [...related.split(','), linkTo.cloze.reference],
+          }
+        })
+      })
+    )
+  }, [props, reference, related, routeSearch, workingTerm]);
+
+  const [SearchWrapper] = useWithKeybinding('?', searchTerm);
+
+  const studyTerm = useCallback(() => {
+    routeStudy({noteId, marker, reference, language: normalized.attributes.language, audioStudy: false},
+      props,
+      () => props
+    )
+  }, [marker, normalized.attributes.language, noteId, props, reference, routeStudy])
 
   const [DeleteWrapper] = useWithKeybinding('Delete', onDelete);
   const [StudyWrapper] = useWithKeybinding('.', useCallback(() => hasStudy ? studyTerm() : null, [hasStudy, studyTerm]))
@@ -285,7 +305,25 @@ export function EditTerm(props: Props) {
       </div>) : null}
 
       <div>
+        関連
+        <div className="w-100">
+          <input type="text"
+                 onChange={(e) => setRelated(e.target.value)}
+                 value={related}
+                 className="w-100"
+          />
+        </div>
+      </div>
+
+      <div>
         辞書を検索
+        <div className="w-100">
+          <input type="text"
+                 onChange={(e) => setClozeSplit(e.target.value)}
+                 value={clozeSplit}
+                 className="w-100"
+          />
+        </div>
       </div>
 
       <div className="tc">
@@ -304,9 +342,11 @@ export function applyClozes(workingTerm: NormalizedTerm,
   recognize: boolean,
   listen: boolean,
   flash: boolean,
-  clozeSplits: string
+  clozeSplits: string,
+  related: string,
 ): NormalizedTerm {
   const attributes = {...workingTerm.attributes};
+  attributes.related = related.split(',');
 
   const oldClozes = attributes.clozes;
   const produceSplits = produce ? clozeSplits.split(",") : [];

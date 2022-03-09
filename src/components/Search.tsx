@@ -4,7 +4,6 @@ import {useFileStorage, useNotesIndex, useRoute, useTriggerSync} from "../hooks/
 import {SelectSingle} from "./SelectSingle";
 import {SearchList} from "./SearchList";
 import {
-  chainIndexIterators,
   filterIndexIterator,
   flattenIndexIterator,
   Indexer,
@@ -19,7 +18,6 @@ import {SelectTerm} from "./SelectTerm";
 import {findNoteTree, newNormalizedNote, normalizedNote, Note, Term} from "../notes";
 import { audioContentTypes, createId, getExt, normalizeBlob, StoredMetadata, videoContentTypes, withNamespace } from "../services/storage";
 import {useLiveQuery} from "dexie-react-hooks";
-import {SimpleNavLink} from "./SimpleNavLink";
 import {useStoredState} from "../hooks/useStoredState";
 import {EditTerm} from "./EditTerm";
 import {NoteSearchResult} from "./NoteSearchResult";
@@ -30,6 +28,7 @@ interface Props {
   onReturn?: () => void,
   defaultSearch?: string,
   defaultMode?: string,
+  onApply?: (studyDetails: StudyDetails) => Promise<void>,
 }
 
 export const mediaEditingStorage = withNamespace(localStorage, 'mediaEditing');
@@ -40,12 +39,14 @@ export function Search(props: Props) {
   const setRoute = useRoute();
   const store = useFileStorage();
 
-  const {onReturn = () => setRoute(() => null), defaultSearch = "", defaultMode = searchModes[0]} = props;
+  const defaultOnReturn = useCallback(() => setRoute(() => null), [setRoute]);
+
+  const {onReturn = defaultOnReturn, defaultSearch = "", defaultMode = searchModes[0]} = props;
 
   const [search, setSearch] = useState(defaultSearch);
   const [mode, setMode] = useState(defaultMode);
   const [triggerSync, lastSync] = useTriggerSync();
-  const iterator = useSearchResults(mode, search, lastSync, onReturn);
+  const iterator = useSearchResults(mode, search, lastSync, onReturn, props.onApply);
   const [password, setPassword] = useStoredState(mediaEditingStorage, 'password', '');
 
   const uploadFile = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
@@ -204,7 +205,7 @@ function useMediaSearch(search: string): IndexIterator<StoredMetadata> {
   }, [i, mediaMetadata, search])
 }
 
-function useSearchResults(mode: string, search: string, lastSync: number, onReturn: () => void): IndexIterator<ReactElement> {
+function useSearchResults(mode: string, search: string, lastSync: number, onReturn: () => void, onApply: ((studyDetails: StudyDetails) => Promise<void>) | undefined): IndexIterator<ReactElement> {
   const notesIndex = useNotesIndex();
   const updateNoteAndConfirmEditsFinished = useUpdateNote(true);
   const store = useFileStorage();
@@ -260,12 +261,12 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
       })
     } else if (mode === "terms") {
       return mapIndexIterator(termsIter, sd => {
-        return <TermSearchResult studyDetails={sd} selectRow={visitTerm}/>
+        return <TermSearchResult studyDetails={sd} selectRow={onApply || visitTerm}/>
       })
     } else if (mode === "media") {
       return mapIndexIterator(mediaIter, md => <MediaSearchResult md={md} selectRow={downloadFile} deleteFile={deleteFile}/>)
     }
 
     return () => null;
-  }, [deleteFile, downloadFile, mediaIter, mode, notesIter, termsIter, visitNote, visitTerm]);
+  }, [deleteFile, downloadFile, mediaIter, mode, notesIter, onApply, termsIter, visitNote, visitTerm]);
 }

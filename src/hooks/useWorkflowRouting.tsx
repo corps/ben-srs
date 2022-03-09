@@ -48,7 +48,7 @@ export function useWorkflowRouting<P extends {}, Apply extends any[], SourceProp
   return useCallback((
     destProps: Omit<P, "onApply" | "onReturn">, sourceProps: SourceProps,
     updated: (...args: Apply) => SourceProps = () => sourceProps,
-    ) => {
+  ) => {
     setRoute(() => some(
       <Destination {...{...(destProps as P), ...routingParams(sourceProps, updated)}} />
     ))

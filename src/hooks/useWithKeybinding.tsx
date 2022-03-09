@@ -4,7 +4,6 @@ import {FC, PropsWithChildren, useCallback, useMemo} from "react";
 
 export function useWithKeybinding(key: string, cb: ((wasKey?: boolean) => void) | null | undefined) {
   const keypressCb = useCallback((k: string) => {
-    console.log({k, key})
     if (k === key && cb) {
       cb(true)
     }

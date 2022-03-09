@@ -85,8 +85,8 @@ export function Study(props: Props) {
     setShowBack(false);
 
     mapSome(studyDetails, studyDetails => {
-      if (studyDetails.related) {
-        relatedStudyRouting({ studyDetails }, props);
+      if (studyDetails.related.length > 0) {
+        relatedStudyRouting(studyDetails.cloze, props);
       }
     })
   }, [answerCloze, props, relatedStudyRouting, studyDetails]);

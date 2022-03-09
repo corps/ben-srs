@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {PropsWithChildren} from 'react';
 import {StudyDetails} from "../study";
 
 interface Props {
@@ -6,11 +6,12 @@ interface Props {
   selectRow: (studyDetails: StudyDetails) => void,
 }
 
-export function TermSearchResult({studyDetails, selectRow}: Props) {
+export function TermSearchResult({studyDetails, selectRow, children}: PropsWithChildren<Props>) {
   const {beforeTerm, cloze, clozed, afterTerm, afterCloze, beforeCloze} = studyDetails;
   return <a href="javascript:void(0)" className="no-underline color-inherit" tabIndex={0}
             key={cloze.noteId + cloze.reference + cloze.marker}
             onClick={() => selectRow(studyDetails)}>
     {beforeTerm.slice(Math.max(beforeTerm.length - 12, 0))}<b>{beforeCloze}{clozed}{afterCloze}</b> {afterTerm}
+    {children}
   </a>
 }

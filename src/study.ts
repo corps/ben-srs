@@ -1,7 +1,9 @@
 import {
-  Cloze, ClozeAnswer,
+  Cloze,
+  ClozeAnswer,
   ClozeType,
-  findNoteTree,
+  defaultNoteTree,
+  findNoteTree, newCloze,
   newNormalizedTerm,
   NormalizedNote,
   normalizedNote,
@@ -27,8 +29,26 @@ export interface StudyDetails {
   definition: string;
   type: ClozeType;
   audioFileId: string | undefined | null;
-  related: string[],
+  related: [Term, string[]][],
   lastAnswer: Maybe<ClozeAnswer>,
+}
+
+export const defaultStudyDetails: StudyDetails = {
+  noteTree: defaultNoteTree,
+  cloze: newCloze,
+  content: "",
+  spoken: "",
+  beforeCloze: "",
+  beforeTerm: "",
+  clozed: "",
+  afterCloze: "",
+  afterTerm: "",
+  hint: "",
+  definition: "",
+  type: "produce",
+  audioFileId: null,
+  related: [],
+  lastAnswer: null
 }
 
 export interface TermId {
@@ -219,14 +239,11 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
   return null;
 }
 
-function findRelatedTermMarkers(terms: Term[], origContent: string): string[] {
+function findRelatedTermMarkers(terms: Term[], origContent: string): [Term, string[]][] {
   return terms.filter(t => findTermRange(t, origContent)[0] !== -1).map(t => {
-    if (t.attributes.related == null) {
-      return [t.attributes.reference];
-    }
-
-    return t.attributes.related;
-  }).reduce((acc, n) => [...acc, ...n], [])
+    let related = t.attributes.related || [t.attributes.reference];
+    return [t, related] as [Term, string[]];
+  }).filter(([t, related]) => related.length > 0)
 }
 
 export function findTermRange(term: TermId, text: string): [number, number] {
