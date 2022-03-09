@@ -52,10 +52,10 @@ export function Study(props: Props) {
   const updateNoteAndConfirm = useUpdateNote(true);
   const selectTermRouting = useWorkflowRouting(SelectTerm, Study, updateNoteAndConfirm);
   const relatedStudyRouting = useWorkflowRouting(RelatedStudy, Study);
-  const editNote = useCallback((noteId: string) => {
-    const normalized = withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote), {...newNormalizedNote});
-    selectTermRouting({noteId, normalized}, props)
-  }, [audioStudy, language, marker, notesIndex, onReturn, reference, selectTermRouting])
+  const editNote = useCallback((editNoteId: string) => {
+    const normalized = withDefault(mapSome(findNoteTree(notesIndex, editNoteId), normalizedNote), {...newNormalizedNote});
+    selectTermRouting({noteId: editNoteId, normalized}, {noteId, reference, marker, language, audioStudy, onReturn})
+  }, [audioStudy, language, marker, noteId, notesIndex, onReturn, reference, selectTermRouting])
 
   const prepareNext = useCallback(() => {
     setCardStartedAt(Date.now());
