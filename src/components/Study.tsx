@@ -54,7 +54,7 @@ export function Study(props: Props) {
   const relatedStudyRouting = useWorkflowRouting(RelatedStudy, Study);
   const editNote = useCallback((noteId: string) => {
     const normalized = withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote), {...newNormalizedNote});
-    selectTermRouting({noteId, normalized}, {onReturn, language, audioStudy, noteId, reference, marker})
+    selectTermRouting({noteId, normalized}, props)
   }, [audioStudy, language, marker, notesIndex, onReturn, reference, selectTermRouting])
 
   const prepareNext = useCallback(() => {

@@ -317,13 +317,6 @@ export function EditTerm(props: Props) {
 
       <div>
         辞書を検索
-        <div className="w-100">
-          <input type="text"
-                 onChange={(e) => setClozeSplit(e.target.value)}
-                 value={clozeSplit}
-                 className="w-100"
-          />
-        </div>
       </div>
 
       <div className="tc">
