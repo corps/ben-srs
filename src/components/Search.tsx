@@ -4,11 +4,7 @@ import {useFileStorage, useNotesIndex, useRoute, useTriggerSync} from "../hooks/
 import {SelectSingle} from "./SelectSingle";
 import {SearchList} from "./SearchList";
 import {
-  filterIndexIterator,
-  flattenIndexIterator,
-  Indexer,
-  IndexIterator,
-  mapIndexIterator
+  asIterator, filterIndexIterator, flattenIndexIterator, Indexer, IndexIterator, mapIndexIterator
 } from "../utils/indexable";
 import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
 import {useUpdateNote} from "../hooks/useUpdateNote";
@@ -156,6 +152,7 @@ function useTermSearch(search: string): IndexIterator<StudyDetails> {
   const {clozeAnswers, clozes, terms} = notesIndex;
 
   return useMemo(() => {
+    console.log('useTermSearch')
     function filteredTermIter(predicate: (t: Term) => boolean) {
       return flattenIndexIterator(mapIndexIterator(Indexer.reverseIter(clozeAnswers.byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx),
         clozeAnswer => {
@@ -254,19 +251,32 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
   const termsIter = useTermSearch(search);
   const mediaIter = useMediaSearch(search);
 
-  return useMemo(() => {
-    if (mode === "notes") {
-      return mapIndexIterator(notesIter, note => {
-        return <NoteSearchResult note={note} selectRow={visitNote}/>
-      })
-    } else if (mode === "terms") {
-      return mapIndexIterator(termsIter, sd => {
-        return <TermSearchResult studyDetails={sd} selectRow={onApply || visitTerm}/>
-      })
-    } else if (mode === "media") {
-      return mapIndexIterator(mediaIter, md => <MediaSearchResult md={md} selectRow={downloadFile} deleteFile={deleteFile}/>)
-    }
+  const renderedNotes = useMemo(() => {
+    return mapIndexIterator(notesIter, note => {
+      return <NoteSearchResult note={note} selectRow={visitNote}/>
+    })
+    // eslint-disable-next-line
+  }, [notesIter])
 
-    return () => null;
-  }, [deleteFile, downloadFile, mediaIter, mode, notesIter, onApply, termsIter, visitNote, visitTerm]);
+  const renderedTerms = useMemo(() => {
+    return mapIndexIterator(termsIter, sd => {
+      return <TermSearchResult studyDetails={sd} selectRow={onApply || visitTerm}/>
+    })
+    // eslint-disable-next-line
+  }, [termsIter])
+
+  const renderedMedia = useMemo(() => {
+    return mapIndexIterator(mediaIter, md => <MediaSearchResult md={md} selectRow={downloadFile} deleteFile={deleteFile}/>)
+    // eslint-disable-next-line
+  }, [mediaIter])
+
+  if (mode === "notes") {
+    return renderedNotes
+  } else if (mode === "terms") {
+    return renderedTerms
+  } else if (mode === "media") {
+    return renderedMedia
+  }
+
+  return asIterator([] as any[]);
 }

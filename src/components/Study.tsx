@@ -10,7 +10,7 @@ import {
 } from "../study";
 import {describeDuration, minutesOfTime, timeOfMinutes} from "../utils/time";
 import {
-  Cloze, ClozeAnswer, ClozeType, findNoteTree, newNormalizedNote, normalizedNote, NoteIndexes, Tagged, Term
+  ClozeAnswer, ClozeType, findNoteTree, newNormalizedNote, normalizedNote, NoteIndexes, Tagged, Term
 } from "../notes";
 import {bindSome, mapSome, mapSomeAsync, Maybe, some, withDefault} from "../utils/maybe";
 import {playAudio, speak} from "../services/speechAndAudio";
@@ -62,7 +62,14 @@ export function Study(props: Props) {
     setShowBack(false);
 
     if (noteId && reference && marker) {
-      const next = findNextStudyClozeWithinTerm(noteId, reference, marker, notesIndex, nowMinutes);
+      const next = bindSome(findNextStudyClozeWithinTerm(noteId, reference, marker, notesIndex, nowMinutes), next => {
+        if (next.attributes.schedule.lastAnsweredMinutes > nowMinutes - 60 * 12) {
+          return null;
+        }
+
+        return some(next);
+      })
+
       if (next) {
         return bindSome(next, next => studyDetailsForCloze(next, notesIndex));
       }
@@ -121,6 +128,9 @@ export function Study(props: Props) {
               <span className="mh2">{describeDuration(time - cardStartedAt)}</span>
 
               <WorkflowLinks onReturn={onReturn} />
+              { noteId ? <span className="mh1 pa2 br2">
+                (- {reference})
+              </span> : null }
             </div>
 
             <div>

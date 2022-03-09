@@ -30,7 +30,6 @@ export interface StudyDetails {
   type: ClozeType;
   audioFileId: string | undefined | null;
   related: [Term, string[]][],
-  lastAnswer: Maybe<ClozeAnswer>,
 }
 
 export const defaultStudyDetails: StudyDetails = {
@@ -48,7 +47,6 @@ export const defaultStudyDetails: StudyDetails = {
   type: "produce",
   audioFileId: null,
   related: [],
-  lastAnswer: null
 }
 
 export interface TermId {
@@ -189,10 +187,6 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
     indexes.clozes.byNoteIdReferenceMarkerAndClozeIdx,
     [cloze.noteId, cloze.reference, cloze.marker]
   );
-  const lastAnswer = Indexer.reverseIter(
-    indexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx,
-    [cloze.noteId, cloze.reference, cloze.marker, cloze.clozeIdx]
-  )();
 
   const noteTree = toVoid(findNoteTree(indexes, cloze.noteId));
 
@@ -232,7 +226,6 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
       type: cloze.attributes.type,
       audioFileId: note.attributes.audioFileId,
       related,
-      lastAnswer,
     });
   }
 
