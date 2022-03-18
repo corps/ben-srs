@@ -46,6 +46,20 @@ export type IndexIterator<V> = () => Maybe<V>
 export type GroupReducer<V> = (iter: IndexIterator<V>, reverseIter: IndexIterator<V>) => Maybe<V>
 export type Reducers<V> = {[k: string]: GroupReducer<V>};
 
+export function debugIterator<A>(label: string, iterable: IndexIterator<A>): IndexIterator<A> {
+    const data: A[] = [];
+    while (true) {
+        const next = iterable();
+        if (next) {
+            data.push(next[0])
+        } else {
+            break;
+        }
+    }
+    console.log({[label]: data});
+    return asIterator(data);
+}
+
 export function asIterator<A>(iterable: Iterable<A>): IndexIterator<A> {
     const iter = iterable[Symbol.iterator]()
     return () => {
