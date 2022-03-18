@@ -79,12 +79,15 @@ export function mapIndexIterator<A, B>(iterator: IndexIterator<A>, f: (a: A) => 
 export function flatMapIndexIterator<A, B>(iterator: IndexIterator<A>, f: (a: A) => IndexIterator<B>): IndexIterator<B> {
     let cur: Maybe<IndexIterator<B>> = null;
     return () => {
-        if (!cur) {
-            cur = mapSome(iterator(), f);
-        }
+        while (true) {
+            if (!cur) {
+                cur = mapSome(iterator(), f);
+                if (!cur) break;
+            }
 
-        if (cur) {
-            return cur[0]();
+            const next = cur[0]();
+            if (next) return next;
+            else cur = null;
         }
 
         return null;

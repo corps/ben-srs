@@ -64,23 +64,24 @@ export function RelatedStudy(props: Props) {
   }, [clozeIdx, marker, noteId, onReturn, reference, selectTermRouting]);
 
   const iterator = useMemo(() => {
-    const allRelated: IndexIterator<string> = debugIterator('allRelated', flatMapIndexIterator(asIterator(studyDetails.related),
+    console.log({studyRelated: studyDetails.related})
+    const allRelated: IndexIterator<string> = flatMapIndexIterator(asIterator(studyDetails.related),
       ([t, related]) => asIterator(related)
-    ));
-    const sds: IndexIterator<StudyDetails> = debugIterator('sds', filterIndexIterator(flattenIndexIterator(flatMapIndexIterator(allRelated,
+    );
+    const sds: IndexIterator<StudyDetails> = filterIndexIterator(flattenIndexIterator(flatMapIndexIterator(allRelated,
       related => {
-        const termsIter: IndexIterator<Term> = debugIterator('termsIterator', Indexer.iterator(terms.byReference,
+        const termsIter: IndexIterator<Term> = Indexer.iterator(terms.byReference,
           [related],
           [related + String.fromCodePoint(0x10ffff)]
-        ));
-        const clozeIter: IndexIterator<Cloze> = debugIterator('clozeIter', flattenIndexIterator(mapIndexIterator(termsIter,
+        );
+        const clozeIter: IndexIterator<Cloze> = flattenIndexIterator(mapIndexIterator(termsIter,
           term => Indexer.getFirstMatching(clozes.byNoteIdReferenceMarkerAndClozeIdx,
             [term.noteId, term.attributes.reference, term.attributes.marker]
           )
-        )));
+        ));
         return mapIndexIterator(clozeIter, cloze => studyDetailsForCloze(cloze, indexes));
       }
-    )), sd => sd.cloze.attributes.schedule.lastAnsweredMinutes < (minutes - 60 * 12)));
+    )), sd => sd.cloze.attributes.schedule.lastAnsweredMinutes < (minutes - 60 * 12));
 
     return mapIndexIterator(sds, sd => <TermSearchResult studyDetails={sd} selectRow={startRelatedStudy}/>)
   }, [
