@@ -1,0 +1,10 @@
+authtoken: 4ZV8iUTi94ZLf7fhemAhG_4VjP8CtvooovKAs5591UA
+tunnels:
+  ssh:
+    proto: tcp
+    addr: 22
+    remote_addr: 1.tcp.ngrok.io:25843
+  http:
+    proto: http
+    addr: 8000
+    subdomain: bensrs-http

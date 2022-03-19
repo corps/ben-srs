@@ -1,5 +1,5 @@
 import 'regenerator-runtime'
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useRef, useCallback} from 'react';
 import {isSome, mapSome, Maybe, some} from "./utils/maybe";
 import {UnbufferedChannel, Trigger} from "./utils/semaphore";
 
@@ -25,13 +25,40 @@ export function useAsync<Result>(fn: () => AsyncGenerator<Result, any>, deps: an
   return [result, error];
 }
 
+export function useAsyncCallback<P extends any[], R>(fn: (...p: P) => AsyncGenerator<R, any>): [
+  (...p: P) => Promise<Maybe<R>>,
+  () => Cancellable,
+] {
+  const context = useRef(null as Maybe<Cancellable>);
+
+  const cancel = useCallback(() => {
+    const newCancellable = new Cancellable();
+    mapSome(context.current, c => c.cancel());
+    context.current = some(newCancellable);
+    return newCancellable;
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      cancel();
+    }
+  }, [cancel])
+
+  const state = useCallback((...p: P) => {
+    const next = cancel();
+    return next.run(fn(...p));
+  }, [cancel, fn])
+
+  return [state, cancel];
+}
+
 
 export type AsyncGenerator<Result, P> = Generator<Promise<P>, Result, P>;
 
 export class Cancellable {
   public cancelled = false;
   public cancel: () => void = () => {};
-  private cancelledPromise: Promise<null> = new Promise((resolve ,reject) => {
+  private cancelledPromise: Promise<null> = new Promise((resolve, reject) => {
     this.cancel = () => resolve(null);
   })
 

@@ -64,15 +64,16 @@ export function RelatedStudy(props: Props) {
   }, [clozeIdx, marker, noteId, onReturn, reference, selectTermRouting]);
 
   const iterator = useMemo(() => {
-    console.log({studyRelated: studyDetails.related})
     const allRelated: IndexIterator<string> = flatMapIndexIterator(asIterator(studyDetails.related),
       ([t, related]) => asIterator(related)
     );
-    const sds: IndexIterator<StudyDetails> = filterIndexIterator(flattenIndexIterator(flatMapIndexIterator(allRelated,
-      related => {
+    const sds: IndexIterator<StudyDetails> = filterIndexIterator(flattenIndexIterator(flatMapIndexIterator(allRelated, related => {
+      const relatedRange = related.length > 1 ? [related + String.fromCodePoint(0x10ffff)] :
+          [related + String.fromCodePoint(0x01)];
+
         const termsIter: IndexIterator<Term> = Indexer.iterator(terms.byReference,
           [related],
-          [related + String.fromCodePoint(0x10ffff)]
+          relatedRange
         );
         const clozeIter: IndexIterator<Cloze> = flattenIndexIterator(mapIndexIterator(termsIter,
           term => Indexer.getFirstMatching(clozes.byNoteIdReferenceMarkerAndClozeIdx,

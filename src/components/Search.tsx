@@ -19,6 +19,7 @@ import {EditTerm} from "./EditTerm";
 import {NoteSearchResult} from "./NoteSearchResult";
 import {TermSearchResult} from "./TermSearchResult";
 import {MediaSearchResult} from "./MediaSearchResult";
+import {useAsyncCallback} from "../cancellable";
 
 interface Props {
   onReturn?: () => void,
@@ -64,38 +65,40 @@ export function Search(props: Props) {
     }
   }, [store, triggerSync])
 
-  const fromYoutube = useCallback(async () => {
-    const url = prompt("Enter a youtube url");
-    if (!url) return;
-    const response = await fetch(location.origin + '/youtubedl.sh?pw=' + password, {
-      method: 'POST', body: url
-    });
+  const [running, setRunning] = useState(false);
 
-    try {
-      if (response.status === 200) {
-        const blob = await response.blob();
-        const filenameMatch = response.headers.get('Content-Disposition')?.match(/filename="(.*)"/);
-        let fileName;
-
-        const id = createId();
-        if (filenameMatch) {
-          fileName = filenameMatch[1];
-        } else {
-          fileName = id + ".mp4";
-        }
-
-        await store.storeBlob(blob,
-          {path: `/${fileName}`, id, rev: "", size: blob.size},
-          true
-        );
-        triggerSync();
-        alert('Success!');
-      }
-    } catch (e) {
-      alert('Failed!');
-      console.error(e);
-    }
-  }, [password, store, triggerSync]);
+  // const [fromYoutube] = useAsyncCallback(function* () {
+  //   const url = prompt("Enter a youtube url");
+  //   if (!url) return;
+  //   const response = await fetch(location.origin + '/youtubedl.sh?pw=' + password, {
+  //     method: 'POST', body: url
+  //   });
+  //
+  //   try {
+  //     if (response.status === 200) {
+  //       const blob = await response.blob();
+  //       const filenameMatch = response.headers.get('Content-Disposition')?.match(/filename="(.*)"/);
+  //       let fileName;
+  //
+  //       const id = createId();
+  //       if (filenameMatch) {
+  //         fileName = filenameMatch[1];
+  //       } else {
+  //         fileName = id + ".mp4";
+  //       }
+  //
+  //       await store.storeBlob(blob,
+  //         {path: `/${fileName}`, id, rev: "", size: blob.size},
+  //         true
+  //       );
+  //       triggerSync();
+  //       alert('Success!');
+  //     }
+  //   } catch (e) {
+  //     alert('Failed!');
+  //     console.error(e);
+  //   }
+  // }, [password, store, triggerSync]);
 
   return <SearchList iterator={iterator} onReturn={onReturn}>
     <div className="lh-copy f4 mt3">
@@ -113,16 +116,7 @@ export function Search(props: Props) {
       {mode === "media" && <div>
         アップロード:
         <div className="w-100">
-          <input type="file"
-                 onChange={uploadFile}
-          />
-          <input type="text"
-                 onChange={(e) => setPassword(e.target.value)}
-                 placeholder="password for youtube"
-          />
-        </div>
-        <div className="w-100">
-          <button onClick={fromYoutube}>From Youtube</button>
+          <input type="file" onChange={uploadFile}/>
         </div>
       </div>}
       <div>

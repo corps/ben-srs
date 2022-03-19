@@ -31,6 +31,7 @@ export class UnbufferedChannel<T = void> {
     }
 
     close(v: T) {
+        if (this.closed) return;
         this.trigger.resolve(v);
         this.closed = true;
     }

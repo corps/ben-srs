@@ -17,7 +17,7 @@ bash: .image ## Start a bash development shell
 
 .PHONY: up
 up: .image ## Runs a development server
-	docker run -d -p 8080:8080 -v $$PWD:/app -u $(shell id -u):$(shell id -g) --name bensrs-srv bensrs websocketd --port 8080 --staticdir docs --cgidir cgi ./server.sh || true
+	docker run -d -p 8080:8080 -v $$PWD:/app -u $(shell id -u):$(shell id -g) --name bensrs-srv bensrs websocketd --port 8080 --staticdir docs ./src/server.ts || true
 	docker run -d -v $$PWD:/app -u $(shell id -u):$(shell id -g) --name bensrs-webpack bensrs webpack --watch || true
 
 .PHONY: down

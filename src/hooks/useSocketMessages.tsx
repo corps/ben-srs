@@ -1,11 +1,13 @@
 import {Dispatch, useEffect, useState} from "react";
 
-export function useSocketMessages(onMessage: Dispatch<any>, password: string) {
+export function useSocketMessages(onMessage: Dispatch<Uint8Array>, password: string) {
   const [socket, setSocket] = useState(() => new WebSocket('wss://' + location.host + '/'));
   const [opened, setOpened] = useState(false);
   const [failures, setFailures] = useState(0);
   const [nextReconnect, setNextReconnect] = useState(1 as any as NodeJS.Timeout);
   const [messages, setMessages] = useState([] as string[]);
+
+  socket.binaryType = 'blob';
 
   useEffect(() => {
     console.log('reconnecting...', failures);
