@@ -13,6 +13,10 @@ RUN apt-get install -y openssh-server
 RUN ssh-keygen -A -v
 RUN mkdir /var/run/sshd
 
+RUN wget https://github.com/dropbox/dbxcli/releases/download/v3.0.0/dbxcli-linux-amd64
+RUN mv dbxcli* /bin/dbxcli
+RUN chmod +x /bin/dbxcli
+
 COPY ./ngrok.yml /root/ngrok.yml
 RUN mkdir /root/.ssh
 COPY ./authorized_keys /root/.ssh/authorized_keys
