@@ -1,4 +1,4 @@
-import React, {PropsWithChildren, useCallback} from 'react';
+import React, {PropsWithChildren, useCallback, useMemo} from 'react';
 import {StudyDetails} from "../study";
 import {Answer} from "../scheduler";
 import {answerMiss, answerOk, answerSkip} from "./Study";
@@ -14,6 +14,33 @@ interface Props {
   editNote: (noteId: string) => void,
 }
 
+const urlRegex = /(https?:\/\/[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+)/;
+function TextOrLink({text}: {text: string}) {
+  const [tail, segments] = useMemo(() => {
+    let tail = text;
+    let segments: [string, string][] = [];
+    let match = tail.match(urlRegex)
+    while (match) {
+      if (match.index == null) throw new Error('nope');
+      segments.push([tail.substr(0, match.index), match[0]])
+      tail = tail.slice(match.index + match[0].length)
+      match = tail.match(urlRegex)
+    }
+
+    return [tail, segments] as [string, [string, string][]]
+  }, [text])
+
+  return <>
+    {segments.map(([text, url], i) => {
+      return <span key={i}>
+        <>{text}</>
+        <a href={url} target="_blank">{url}</a>
+      </span>
+    })}
+    {tail}
+  </>
+}
+
 function AnswerDetails(props: PropsWithChildren<{studyDetails: StudyDetails, readCard: null | (() => void)}>) {
   const {children, studyDetails, readCard} = props;
 
@@ -21,7 +48,7 @@ function AnswerDetails(props: PropsWithChildren<{studyDetails: StudyDetails, rea
 
   return <div className="mw6 center">
     <div className="f4 ph3 mb2 tc">
-      {studyDetails.type === "flash" && studyDetails.beforeTerm}
+      {studyDetails.type === "flash" && <TextOrLink text={studyDetails.beforeTerm}/>}
       {studyDetails.beforeCloze}
 
       <span className="fw8 mh1">
@@ -29,7 +56,7 @@ function AnswerDetails(props: PropsWithChildren<{studyDetails: StudyDetails, rea
       </span>
 
       {studyDetails.afterCloze}
-      {studyDetails.type === "flash" && studyDetails.afterTerm}
+      {studyDetails.type === "flash" && <TextOrLink text={studyDetails.afterTerm}/>}
 
       {readCard ? <button className="mh1 pa1 br2 f5" onClick={readCard}>
         <ReadCardWrapper>
@@ -39,13 +66,18 @@ function AnswerDetails(props: PropsWithChildren<{studyDetails: StudyDetails, rea
     </div>
 
     <div className="f5 h5 overflow-x-hidden overflow-y-auto ph3">
-      {studyDetails.cloze.attributes.type === "listen" ? <div className="mb3">
-        {studyDetails.content.split("\n").map((s, i) => <span key={i + ""}>{s}<br/></span>)}
-      </div> : null}
-      {studyDetails.definition.split("\n").map((s, i) => <span key={i + ""}>{s}<br/></span>)}
+      {studyDetails.cloze.attributes.type === "listen" ? <AnswerParagraph text={studyDetails.content}/> : null}
+      <AnswerParagraph text={studyDetails.definition}/>
+      {studyDetails.studyGuides.map((s, i) => <AnswerParagraph text={s} key={i}/>)}
     </div>
     {children}
   </div>;
+}
+
+function AnswerParagraph({text}: {text: string}) {
+  return <div className="mb3">{text.split("\n").map((s, i) => <span key={i + ""}>
+     <TextOrLink text={s}/>
+  <br/></span>)}</div>
 }
 
 export function BackSide({studyDetails, readCard, answerFront, now, studyStarted, editNote}: Props) {
@@ -93,34 +125,3 @@ export function BackSide({studyDetails, readCard, answerFront, now, studyStarted
     </div>
   </AnswerDetails>
 }
-
-//
-// function RelatedCard(props: {studyDetails: StudyDetails, answerRelated: Props['answerRelated'], now: Props['now'], term: Term}) {
-//   const {studyDetails, answerRelated, now, term} = props;
-//
-//   return <div className="f5 mt5 overflow-y-auto" style={{maxHeight: 65}}>
-//     <button className="mh1 pa1 br2"
-//             onClick={(e) => {
-//               e.stopPropagation();
-//               answerRelated(studyDetails, relatedOk(now));
-//             }}>
-//       OK!
-//     </button>
-//     <button className="ml1 mr3 pa1 br2"
-//             onClick={e => {
-//               e.stopPropagation();
-//               answerRelated(studyDetails, relatedMiss(now));
-//             }}>
-//       間違えた！
-//     </button>
-//     <span className="br2 pa1 bg-light-yellow fw9">
-//       {term.attributes.reference}
-//     </span> -
-//     <span className="br2 pa1 bg-light-green fw9">
-//       {studyDetails.beforeCloze}{studyDetails.clozed}{studyDetails.afterCloze}
-//     </span> -
-//     <span>
-//       {studyDetails.definition}
-//     </span>
-//   </div>;
-// }

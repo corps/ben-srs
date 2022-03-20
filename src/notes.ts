@@ -7,6 +7,7 @@ export const newNote = {
     content: "",
     language: "",
     editsComplete: false,
+    studyGuide: false,
     terms: undefined as void,
     audioFileId: null as string | null | undefined,
     tags: [] as string[],
@@ -129,9 +130,10 @@ export function stringifyNote(note: NormalizedNote): string {
 export type NotesStore = {
   byPath: Indexed<Note>;
   byId: Indexed<Note>;
-  byLanguage: Indexed<Note>;
+  byLanguageAndStudyGuide: Indexed<Note>;
   byAudioFileId: Indexed<Note>;
   byEditsComplete: Indexed<Note>;
+  byStudyGuideAndLanguage: Indexed<Note>;
 };
 
 export type Tagged<T> = {inner: T, tag: string};
@@ -191,7 +193,7 @@ notesTagIndexer.addGroupedIndex(
 export const notesIndexer = new Indexer<Note, NotesStore>("byPath");
 notesIndexer.setKeyer("byPath", note => note.path.split("/"));
 notesIndexer.setKeyer("byId", note => [note.id]);
-notesIndexer.setKeyer("byLanguage", note => [note.attributes.language]);
+notesIndexer.setKeyer("byLanguageAndStudyGuide", note => [note.attributes.language, note.attributes.studyGuide]);
 notesIndexer.setKeyer("byAudioFileId", note => [note.attributes.audioFileId]);
 notesIndexer.setKeyer("byEditsComplete", note => [note.attributes.editsComplete]);
 

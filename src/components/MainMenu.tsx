@@ -24,14 +24,14 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
 
   const languages = useMemo(() => {
     const languages: string[] = [];
-    for (let i = 0; i < notesIndex.notes.byLanguage[1].length;) {
-      const {attributes: {language}} = notesIndex.notes.byLanguage[1][i];
+    for (let i = 0; i < notesIndex.notes.byLanguageAndStudyGuide[1].length;) {
+      const {attributes: {language}} = notesIndex.notes.byLanguageAndStudyGuide[1][i];
       languages.push(language);
-      const {endIdx} = Indexer.getRangeFrom(notesIndex.notes.byLanguage, [language], endKeyMatchingWithin([language]));
+      const {endIdx} = Indexer.getRangeFrom(notesIndex.notes.byLanguageAndStudyGuide, [language], endKeyMatchingWithin([language]));
       i = endIdx;
     }
     return languages;
-  }, [notesIndex.notes.byLanguage]);
+  }, [notesIndex.notes.byLanguageAndStudyGuide]);
 
   const [language, setLanguage] = useState(() => languages[0]);
   const allTags = useAllTags(language, true);

@@ -30,6 +30,7 @@ export interface StudyDetails {
   type: ClozeType;
   audioFileId: string | undefined | null;
   related: [Term, string[]][],
+  studyGuides: string[],
 }
 
 export const defaultStudyDetails: StudyDetails = {
@@ -47,6 +48,7 @@ export const defaultStudyDetails: StudyDetails = {
   type: "produce",
   audioFileId: null,
   related: [],
+  studyGuides: [],
 }
 
 export interface TermId {
@@ -188,6 +190,11 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
     [cloze.noteId, cloze.reference, cloze.marker]
   );
 
+  const studyGuides = Indexer.getAllMatching(
+    indexes.notes.byLanguageAndStudyGuide,
+    [cloze.language, true]
+  ).map(({attributes}) => attributes.content);
+
   const noteTree = toVoid(findNoteTree(indexes, cloze.noteId));
 
   if (term && note && noteTree) {
@@ -226,6 +233,7 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
       type: cloze.attributes.type,
       audioFileId: note.attributes.audioFileId,
       related,
+      studyGuides,
     });
   }
 

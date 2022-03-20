@@ -51,11 +51,12 @@ export function EditNote(props: Props) {
     }
   }, [noteId, setRoute, store, triggerSync]);
 
+  const allAudioMetadatas = useLiveQuery(async () => store.fetchMetadataByExts(Object.keys(audioContentTypes)), [], []);
   const audioMetadatas = useUnusedAudioFiles();
   const audioPaths = useMemo(() => audioMetadatas.map(({path}) => path), [audioMetadatas]);
   const curSelectedAudioPath = useMemo(
-    () => audioMetadatas.find(({id}) => id === normalized.attributes.audioFileId)?.path || "",
-    [audioMetadatas, normalized.attributes.audioFileId]
+    () => allAudioMetadatas.find(({id}) => id === normalized.attributes.audioFileId)?.path || "",
+    [allAudioMetadatas, normalized.attributes.audioFileId]
   );
   const setAudioPath = useCallback((selected: string) => {
     const md = audioMetadatas.find(({path}) => path === selected);
@@ -96,6 +97,14 @@ export function EditNote(props: Props) {
     }))
   }, [])
 
+  const setNoteStudyGuide = useCallback((studyGuide: boolean) => {
+    setNormalized(note => ({
+      ...note, attributes: {
+        ...note.attributes, studyGuide
+      }
+    }))
+  }, [])
+
   const setNoteTags = useCallback((tags: string[]) => {
     setNormalized(note => ({
       ...note, attributes: {
@@ -118,14 +127,23 @@ export function EditNote(props: Props) {
 
         <div className="ml2 w4 dib">
           <SelectSingle
-            placeholder="オーディオ "
+            placeholder={curSelectedAudioPath || "オーディオ "}
             onChange={setAudioPath}
             value={curSelectedAudioPath}
             values={audioPaths}
           />
         </div>
 
-        <div className="ml2 dib">
+        <label className="dib ml2">
+            SG<input
+            className="ml2 mr3"
+            type="checkbox"
+            onChange={e => setNoteStudyGuide(e.target.checked)}
+            checked={normalized.attributes.studyGuide}
+          />
+        </label>
+
+          <div className="ml2 dib">
           <button onClick={playAudioPath}>
             <PlayWrapper>
               テスト
