@@ -179,6 +179,11 @@ export type NotesTagStore = {
   byLangAndTagOfFirstNoteId: Indexed<Tagged<Note>>
 }
 
+export type TermsRelatableStore = {
+  byNoteIdAndReferenceAndMarkerAndRelatable: Indexed<Tagged<Term>>
+  byRelatable: Indexed<Tagged<Term>>
+}
+
 export const notesTagIndexer = new Indexer<Tagged<Note>, NotesTagStore>("byLanguageTagAndNoteId");
 notesTagIndexer.setKeyer("byLanguageTagAndNoteId", ({tag, inner: {attributes: {language}, id}}) => [language, tag, id]);
 notesTagIndexer.setKeyer("byNoteId", ({inner: {id}}) => [id]);
@@ -213,6 +218,9 @@ export const termsTagIndexer = new Indexer<Tagged<Term>, TermsTagStore>("byNoteI
 termsTagIndexer.setKeyer("byNoteIdReferenceMarkerAndTag", ({inner, tag}) => [...termsIndexer.pkKeyer(inner), tag])
 termsTagIndexer.setKeyer("byTag", ({inner, tag}) => [tag])
 
+export const termsRelatableIndex = new Indexer<Tagged<Term>, TermsRelatableStore>("byNoteIdAndReferenceAndMarkerAndRelatable");
+termsRelatableIndex.setKeyer("byNoteIdAndReferenceAndMarkerAndRelatable", ({tag, inner: {attributes: {reference, marker}, noteId}}) => [noteId, reference, marker, tag])
+termsRelatableIndex.setKeyer("byRelatable", ({tag}) => [tag])
 
 export const clozesIndexer = new Indexer<Cloze, ClozesStore>(
     "byNoteIdReferenceMarkerAndClozeIdx"
@@ -462,6 +470,8 @@ export const indexesInitialState = {
   taggedTerms: termsTagIndexer.empty(),
   taggedClozes: clozesTagIndexer.empty(),
   taggedClozeAnswers: clozeAnswersTagIndexer.empty(),
+
+  termsRelatable: termsRelatableIndex.empty(),
 };
 
 export type NoteIndexes = typeof indexesInitialState;
@@ -474,6 +484,7 @@ export function updateNotes(indexes: NoteIndexes, ...trees: NoteTree[]) {
 
   const taggedNotes: Tagged<Note>[] = [];
   const taggedTerms: Tagged<Term>[] = [];
+  const termsRelatable: Tagged<Term>[] = [];
   const taggedClozes: Tagged<Cloze>[] = [];
   const taggedClozeAnswer: Tagged<ClozeAnswer>[] = [];
 
@@ -488,6 +499,12 @@ export function updateNotes(indexes: NoteIndexes, ...trees: NoteTree[]) {
       taggedTerms.push(...tree.terms.map(term => tag(term, tagging)));
       taggedClozes.push(...tree.clozes.map(cloze => tag(cloze, tagging)));
       taggedClozeAnswer.push(...tree.clozeAnswers.map(answer => tag(answer, tagging)));
+    })
+
+    tree.terms.forEach(term => {
+      term.attributes.related?.forEach(relatable => {
+        termsRelatable.push(tag(term, relatable));
+      })
     })
 
     indexes.taggedNotes = notesTagIndexer.removeAll(indexes.taggedNotes,
@@ -512,6 +529,8 @@ export function updateNotes(indexes: NoteIndexes, ...trees: NoteTree[]) {
   indexes.taggedClozes = clozesTagIndexer.update(indexes.taggedClozes, taggedClozes);
   indexes.taggedTerms = termsTagIndexer.update(indexes.taggedTerms, taggedTerms);
   indexes.taggedClozeAnswers = clozeAnswersTagIndexer.update(indexes.taggedClozeAnswers, taggedClozeAnswer);
+
+  indexes.termsRelatable = termsRelatableIndex.update(indexes.termsRelatable, termsRelatable);
 }
 
 

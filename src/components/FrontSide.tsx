@@ -1,4 +1,4 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useCallback, useEffect, useRef, MouseEvent} from 'react';
 import {StudyDetails} from "../study";
 
 interface Props {
@@ -92,6 +92,10 @@ function Speak({studyDetails}: Props) {
 }
 
 function Produce({studyDetails}: Props) {
+  const blockClick = useCallback((e: MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
   return <div>
     <div className="f5 i mb3">
       {studyDetails.hint}
@@ -114,5 +118,12 @@ function Produce({studyDetails}: Props) {
     <span>
         {studyDetails.afterTerm}
       </span>
+    <div className="fixed bottom-0">
+      <textarea
+        onClick={blockClick}
+        rows={3}
+        className="w-100"
+        />
+    </div>
   </div>
 }

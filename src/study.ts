@@ -3,14 +3,15 @@ import {
   ClozeAnswer,
   ClozeType,
   defaultNoteTree,
-  findNoteTree, newCloze,
+  findNoteTree,
+  newCloze,
   newNormalizedTerm,
   NormalizedNote,
   normalizedNote,
   NormalizedTerm,
   NoteIndexes,
   NoteTree,
-  Term
+  Term, TermsRelatableStore
 } from "./notes";
 import {applySome, bindSome, mapSome, Maybe, some, toVoid} from "./utils/maybe";
 import {Indexer} from "./utils/indexable";
@@ -208,7 +209,7 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
 
     clozeSplits = clozeSplits.slice(0, 2 * (cloze.clozeIdx + 1));
 
-    const related = findRelatedTermMarkers(terms, origContent);
+    const related = findRelatedTermMarkers(terms, origContent, indexes.termsRelatable);
 
     return some({
       noteTree,
@@ -240,9 +241,12 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
   return null;
 }
 
-function findRelatedTermMarkers(terms: Term[], origContent: string): [Term, string[]][] {
+function findRelatedTermMarkers(terms: Term[], origContent: string, termsRelatable: TermsRelatableStore): [Term, string[]][] {
   return terms.filter(t => findTermRange(t, origContent)[0] !== -1).map(t => {
     let related = t.attributes.related || [t.attributes.reference];
+    Indexer.getAllMatching(termsRelatable.byRelatable, [t.attributes.reference])
+      .forEach(({inner: {attributes: {reference}}}) =>
+        related.indexOf(reference) < 0 ? related.push(reference) : null)
     return [t, related] as [Term, string[]];
   }).filter(([t, related]) => related.length > 0)
 }

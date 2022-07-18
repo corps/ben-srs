@@ -21,7 +21,7 @@ import {Answer, isWrongAnswer, scheduledBy} from "../scheduler";
 import {useKeypresses} from "../hooks/useKeypress";
 import {BackSide} from "./BackSide";
 import {FrontSide} from "./FrontSide";
-import {useUpdateNote} from "../hooks/useUpdateNote";
+import {useNoteUpdateHistory, useUpdateNote} from "../hooks/useUpdateNote";
 import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
 import {SelectTerm} from "./SelectTerm";
 import {useDataUrl} from "../hooks/useDataUrl";
@@ -46,6 +46,7 @@ export function Study(props: Props) {
   const setRoute = useRoute();
   const time = useTime(1000);
   const nowMinutes = minutesOfTime(time);
+  const {undo, hasUndo, redo, hasRedo} = useNoteUpdateHistory();
 
   const {noteId, reference, marker, language, audioStudy, onReturn = () => setRoute(() => null)} = props;
 
@@ -98,6 +99,16 @@ export function Study(props: Props) {
     })
   }, [answerCloze, props, relatedStudyRouting, studyDetails]);
 
+  const doUndo = useCallback(async () => {
+    await undo();
+    prepareNext();
+  }, [prepareNext, undo]);
+
+  const doRedo = useCallback(async () => {
+    await redo();
+    prepareNext();
+  }, [prepareNext, redo]);
+
   const dueTime = withDefault(mapSome(
     studyDetails,
     studyDetails => timeOfMinutes(studyDetails.cloze.attributes.schedule.nextDueMinutes)
@@ -127,10 +138,14 @@ export function Study(props: Props) {
               {studyData.studied}/{studyData.studied + studyData.due}
               <span className="mh2">{describeDuration(time - cardStartedAt)}</span>
 
-              <WorkflowLinks onReturn={onReturn} />
-              { noteId ? <span className="mh1 pa2 br2">
-                (- {reference})
-              </span> : null }
+              <WorkflowLinks onReturn={onReturn}>
+                { hasUndo ? <SimpleNavLink className="mh1 pa2 br2" onClick={doUndo}>
+                  Undo
+                </SimpleNavLink> : null }
+                { hasRedo ? <SimpleNavLink className="mh1 pa2 br2" onClick={doRedo}>
+                  Redo
+                </SimpleNavLink> : null }
+              </WorkflowLinks>
             </div>
 
             <div>
@@ -143,7 +158,7 @@ export function Study(props: Props) {
 
       <Row stretchRow className="w-100 overflow-y-auto word-wrap">
         <div className="w-100 f3 pv2"
-             onClick={(e) => e.target instanceof HTMLButtonElement ? null : toggleShowBack()}>
+             onClick={(e) => e.target instanceof HTMLButtonElement || e.target instanceof HTMLTextAreaElement ? null : toggleShowBack()}>
           <VCenteringContainer>
             <VCentered>
               <div>

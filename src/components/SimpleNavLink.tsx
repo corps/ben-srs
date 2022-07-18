@@ -1,6 +1,6 @@
 import {classNamesGeneratorFor, PropsWithChildrenAndClassName} from "../utils/class-names-for";
 import * as React from "react";
-import {MouseEventHandler, useCallback} from "react";
+import {MouseEventHandler, PropsWithChildren, useCallback} from "react";
 import {useWithKeybinding} from "../hooks/useWithKeybinding";
 
 export interface SimpleNavLinkProps {
@@ -35,8 +35,8 @@ interface WorkflowLinksProps {
   applyDisabled?: boolean,
 }
 
-export function WorkflowLinks(props: WorkflowLinksProps) {
-  let {onReturn, onApply, hasEdits, applyDisabled} = props;
+export function WorkflowLinks(props: PropsWithChildren<WorkflowLinksProps>) {
+  let {onReturn, onApply, hasEdits, applyDisabled, children} = props;
 
   let [ReturnWrapper] = useWithKeybinding('Escape', useCallback((wasKey) => {
     if (!wasKey || !hasEdits || confirm('Are you sure you want to cancel?')) {
@@ -56,5 +56,7 @@ export function WorkflowLinks(props: WorkflowLinksProps) {
     { onReturn ? <SimpleNavLink className="mh1 pa2 br2" onClick={onReturn}>
       <ReturnWrapper>戻る</ReturnWrapper>
     </SimpleNavLink> : null }
+
+    {children}
   </>
 }

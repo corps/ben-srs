@@ -7,6 +7,7 @@ import {FileStorageContext, NotesIndexContext, SessionContext, TriggerSyncContex
 import {Router} from "./Router";
 import {indexesInitialState} from "../notes";
 import {createDexie} from "../services/dexie";
+import {NoteUpdateHistory, UpdateHistoryContext} from "../hooks/useUpdateNote";
 
 const loginStorage = withNamespace(localStorage, "dropboxLogin");
 
@@ -16,20 +17,23 @@ export function App() {
   const [notesIndex] = useState(() => ({...indexesInitialState}));
   const [syncIdx, setSyncIdx] = useState(0);
   const triggerSync = useCallback(() => setSyncIdx(i => i + 1), []);
+  const [updateHistory, setUpdateHistory] = useState<NoteUpdateHistory>([null, null]);
   if (!session) return null;
   if (error) {
     return <div>{error}</div>
   }
 
   return <div className="wf-mplus1p">
-    <SessionContext.Provider value={session[0]}>
-      <FileStorageContext.Provider value={fileStorage}>
-        <NotesIndexContext.Provider value={notesIndex}>
-          <TriggerSyncContext.Provider value={[triggerSync, syncIdx]}>
-            <Router/>
-          </TriggerSyncContext.Provider>
-        </NotesIndexContext.Provider>
-      </FileStorageContext.Provider>
-    </SessionContext.Provider>
+    <UpdateHistoryContext.Provider value={{updateHistory, setUpdateHistory}}>
+      <SessionContext.Provider value={session[0]}>
+        <FileStorageContext.Provider value={fileStorage}>
+          <NotesIndexContext.Provider value={notesIndex}>
+            <TriggerSyncContext.Provider value={[triggerSync, syncIdx]}>
+              <Router/>
+            </TriggerSyncContext.Provider>
+          </NotesIndexContext.Provider>
+        </FileStorageContext.Provider>
+      </SessionContext.Provider>
+    </UpdateHistoryContext.Provider>
   </div>
 }
