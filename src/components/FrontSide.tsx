@@ -118,7 +118,7 @@ function Produce({studyDetails}: Props) {
     <span>
         {studyDetails.afterTerm}
       </span>
-    <div className="fixed bottom-0">
+    <div className="fixed bottom-0 w-100">
       <textarea
         onClick={blockClick}
         rows={3}
