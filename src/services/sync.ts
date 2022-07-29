@@ -30,8 +30,9 @@ export type FileListProgress = typeof defaultFileListProgress;
 export interface SyncBackend {
     syncFileList(cursor: string): Iterable<Promise<FileListProgress>>,
     downloadFiles(metadata: FileMetadata[]): Iterable<[Promise<[FileMetadata, Blob]>[], Promise<void>]>,
-    uploadFile(media: StoredMedia): Iterable<Promise<void>>,
-    deleteFile(metadata: FileMetadata): Promise<void>,
+    resolveFile(path: string): Promise<FileDelta>,
+    uploadFile(media: StoredMedia): Iterable<Promise<Maybe<"conflict">>>,
+    deleteFile(metadata: FileMetadata): Promise<Maybe<"conflict">>,
 }
 
 export function* syncFiles(
@@ -50,16 +51,29 @@ export function* syncFiles(
     updatePending(1);
 
     const dirty = yield* runPromise(storage.fetchDirty());
+
     updatePending(dirty.length);
+
+    function* handleConflict(work: Promise<Maybe<"conflict">>, d: any) {
+        const uploadConflict = yield* runPromise(work);
+        if (uploadConflict && uploadConflict[0] === "conflict") {
+            yield storage.storeBlob(new Blob([]), d, 2);
+            return true;
+        }
+
+        return false;
+    }
 
     for (let d of dirty) {
         if (d.deleted) {
-            yield backend.deleteFile(d);
-            yield storage.deleteId(d.id);
-            removeNotesByPath(notesIndex, d.path);
+            const conflicted = yield* handleConflict(backend.deleteFile(d), d);
+            if (!conflicted) {
+                yield storage.deleteId(d.id);
+                removeNotesByPath(notesIndex, d.path);
+            }
         } else {
             for (let work of backend.uploadFile(d)) {
-                yield work;
+                yield* handleConflict(work, d);
             }
 
             if (!d.rev) {
@@ -71,13 +85,8 @@ export function* syncFiles(
 
         updatePending(-1);
     }
-    let cursor = yield* runPromise(storage.getCursor());
 
-    for (let fileList of backend.syncFileList(cursor)) {
-        updatePending(1);
-        const {delta, cursor: nextCursor} = yield* runPromise(fileList);
-        updatePending(-1);
-
+    function* handleDelta(delta: FileDelta[]) {
         const deletePaths: string[] = [];
         const updatedReferences: FileMetadata[] = [];
         delta.forEach(({updated, deleted}) => {
@@ -99,7 +108,7 @@ export function* syncFiles(
 
                     try {
                         await storage.storeBlob(blob, md, false);
-                    } catch(e) {
+                    } catch (e) {
                         console.error('problem storing', md, blob, blob.constructor === Blob);
                         throw e;
                     }
@@ -107,8 +116,7 @@ export function* syncFiles(
             }
 
             if (pendingWork.length > 0) {
-                const idx = yield* runPromise(
-                    Promise.race(pendingWork.map((work, idx) => work.then(v => idx))))
+                const idx = yield* runPromise(Promise.race(pendingWork.map((work, idx) => work.then(v => idx))))
                 updatePending(-1);
 
                 pendingWork.splice(idx, 1);
@@ -125,7 +133,28 @@ export function* syncFiles(
             yield storage.deletePath(path);
             updatePending(-1);
         }
+    }
 
+    updatePending(1);
+
+    const conflicted = yield* runPromise(storage.fetchConflicted());
+    const conflictedDeltas: FileDelta[] = [];
+    for (let conflict of conflicted) {
+        updatePending(1);
+        const nextDelta = yield* runPromise(backend.resolveFile(conflict.path));
+        updatePending(-1);
+        conflictedDeltas.push(nextDelta);
+    }
+
+    yield *handleDelta(conflictedDeltas);
+    updatePending(-1);
+
+    let cursor = yield* runPromise(storage.getCursor());
+    for (let fileList of backend.syncFileList(cursor)) {
+        updatePending(1);
+        const {delta, cursor: nextCursor} = yield* runPromise(fileList);
+        updatePending(-1);
+        yield* handleDelta(delta);
         yield storage.storeCursor(nextCursor);
 
         pending = 0;

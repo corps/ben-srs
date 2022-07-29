@@ -1,6 +1,7 @@
-import {FileListProgress, FileMetadata, SyncBackend} from "./sync";
+import {defaultFileDelta, FileDelta, FileListProgress, FileMetadata, SyncBackend} from "./sync";
 import {loadDropboxSession} from "./dropbox";
 import {StoredMedia} from "./storage";
+import {Maybe} from "../utils/maybe";
 
 export const defaultUser = {
   username: "",
@@ -19,7 +20,10 @@ export const defaultSession: Session = {
   },
   syncBackend(): SyncBackend {
     return {
-      uploadFile(media: StoredMedia): Iterable<Promise<void>> {
+      resolveFile(path: string): Promise<FileDelta> {
+        return Promise.resolve(defaultFileDelta);
+      },
+      uploadFile(media: StoredMedia): Iterable<Promise<Maybe<"conflict">>> {
         return [];
       },
       downloadFiles(metadata: FileMetadata[]): Iterable<[Promise<[FileMetadata, Blob]>[], Promise<void>]> {
@@ -28,8 +32,8 @@ export const defaultSession: Session = {
       syncFileList(cursor: string): Iterable<Promise<FileListProgress>> {
         return [];
       },
-      deleteFile(metadata: FileMetadata): Promise<void> {
-        return new Promise(resolve => resolve());
+      deleteFile(metadata: FileMetadata): Promise<Maybe<"conflict">> {
+        return new Promise(resolve => resolve(null));
       }
     }
   }

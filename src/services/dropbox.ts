@@ -2,14 +2,13 @@ import 'regenerator-runtime';
 import {Dropbox, DropboxAuth, DropboxResponseError, files} from "dropbox";
 import {defaultUser, Session, User} from "./backends";
 import {defaultFileDelta, FileDelta, FileListProgress, FileMetadata, SyncBackend} from "./sync";
-import {some} from "../utils/maybe";
+import {Maybe, some} from "../utils/maybe";
 import {withRetries} from "../utils/retryable";
 import {DynamicRateLimitQueue, GatingException} from "../utils/rate-limiting";
 import {normalizeBlob, StoredMedia} from "./storage";
 
 export class DropboxSession implements Session {
-  constructor(
-    private auth: DropboxAuth,
+  constructor(private auth: DropboxAuth,
     public user: User,
     private storage: Storage,
     public refresh: () => Promise<Session>,
@@ -22,7 +21,7 @@ export class DropboxSession implements Session {
   }
 
   syncBackend(): SyncBackend {
-    return new DropboxSyncBackend(new Dropbox({ auth: this.auth }));
+    return new DropboxSyncBackend(new Dropbox({auth: this.auth}));
   }
 }
 
@@ -32,11 +31,30 @@ export class DropboxSyncBackend implements SyncBackend {
   constructor(public db: Dropbox) {
   }
 
-  async deleteFile(metadata: FileMetadata) {
-    if (!metadata.rev) return;
-    await this.db.filesDeleteV2({path: metadata.path, parent_rev: metadata.rev}).catch(error => {
+  resolveFile(path: string): Promise<{ deleted: Maybe<string>; updated: Maybe<FileMetadata>; }> {
+    return this.handleRetry(async () => this.handleRateLimit(async () => {
+      try {
+        const md = await this.db.filesGetMetadata({path, include_deleted: true});
+        if (md.result[".tag"] == "file") {
+          return { deleted: null, updated: some(mapDropboxMetadata(md.result)) };
+        } else {
+          return { deleted: some(path), updated: null };
+        }
+      } catch (error) {
+        if ('status' in error && error.status === 404) {
+          return { deleted: some(path), updated: null };
+        }
+
+        throw error;
+      }
+    }));
+  }
+
+  async deleteFile(metadata: FileMetadata): Promise<Maybe<"conflict">> {
+    if (!metadata.rev) return null;
+    return this.db.filesDeleteV2({path: metadata.path, parent_rev: metadata.rev}).then(v => null, error => {
       if ('status' in error && error.status === 409) {
-        return null;
+        return some("conflict");
       }
 
       throw error;
@@ -138,7 +156,7 @@ export class DropboxSyncBackend implements SyncBackend {
     return syncFileList();
   }
 
-  uploadFile(media: StoredMedia): Iterable<Promise<any>> {
+  uploadFile(media: StoredMedia): Iterable<Promise<Maybe<"conflict">>> {
     const {db} = this;
 
     function* uploadFile() {
@@ -148,7 +166,7 @@ export class DropboxSyncBackend implements SyncBackend {
         mode: media.rev ? {'.tag': "update", update: media.rev} : {'.tag': 'add'},
       }).then(() => null, error => {
         if ('status' in error && error.status === 409) {
-          return null;
+          return some("conflict" as "conflict");
         }
 
         throw error;
@@ -175,6 +193,12 @@ export function mapDropboxListResponse(response: files.ListFolderResult): FileLi
         acc.push({
           ...defaultFileDelta,
           updated: some(mapDropboxMetadata(r)),
+        })
+      }
+      if (r[".tag"] === "deleted" && r.path_lower) {
+        acc.push({
+          ...defaultFileDelta,
+          deleted: some(r.path_lower),
         })
       }
 

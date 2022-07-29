@@ -18,7 +18,6 @@ function requestMore<V>(valueIterator: IndexIterator<V>, pp: number, {page, page
   let n = nextValue;
   const newPagedData = [...pagedData];
   for (; newPagedData.length < (page + 1) * pp && n; n = valueIterator()) {
-    console.log('consuming data...')
     newPagedData.push(n[0]);
   }
 

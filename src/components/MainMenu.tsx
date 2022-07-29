@@ -14,6 +14,7 @@ import {EditNote} from "./EditNote";
 import {createId} from "../services/storage";
 import {Search} from "./Search";
 import {TagsSelector, useAllTags} from "./TagsSelector";
+import {useStoredState} from "../hooks/useStoredState";
 
 export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const session = useSession();
@@ -21,6 +22,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const notesIndex = useNotesIndex();
   const setRoute = useRoute();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [language, setLanguage] = useStoredState(localStorage, "lastLanguage", "");
 
   const languages = useMemo(() => {
     const languages: string[] = [];
@@ -33,9 +35,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
     return languages;
   }, [notesIndex.notes.byLanguageAndStudyGuide]);
 
-  const [language, setLanguage] = useState(() => languages[0]);
   const allTags = useAllTags(language, true);
-
   const [tag, setTag] = useState(() => language);
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
     if (!allTags.includes(tag)) {
       setTag(language);
     }
-  }, [languages, language, allTags, tag]);
+  }, [languages, language, allTags, tag, setLanguage]);
 
   const [audioStudy, setAudioStudy] = useState(false);
   const toggleAudioStudy = useToggle(setAudioStudy);

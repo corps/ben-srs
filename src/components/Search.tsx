@@ -14,12 +14,10 @@ import {SelectTerm} from "./SelectTerm";
 import {findNoteTree, newNormalizedNote, normalizedNote, Note, Term} from "../notes";
 import { audioContentTypes, createId, getExt, normalizeBlob, StoredMetadata, videoContentTypes, withNamespace } from "../services/storage";
 import {useLiveQuery} from "dexie-react-hooks";
-import {useStoredState} from "../hooks/useStoredState";
 import {EditTerm} from "./EditTerm";
 import {NoteSearchResult} from "./NoteSearchResult";
 import {TermSearchResult} from "./TermSearchResult";
 import {MediaSearchResult} from "./MediaSearchResult";
-import {useAsyncCallback} from "../cancellable";
 
 interface Props {
   onReturn?: () => void,
@@ -28,7 +26,6 @@ interface Props {
   onApply?: (studyDetails: StudyDetails) => Promise<void>,
 }
 
-export const mediaEditingStorage = withNamespace(localStorage, 'mediaEditing');
 
 const searchModes = ["notes", "terms", "media"];
 
@@ -44,7 +41,6 @@ export function Search(props: Props) {
   const [mode, setMode] = useState(defaultMode);
   const [triggerSync, lastSync] = useTriggerSync();
   const iterator = useSearchResults(mode, search, lastSync, onReturn, props.onApply);
-  const [password, setPassword] = useStoredState(mediaEditingStorage, 'password', '');
 
   const uploadFile = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const {target: {files}} = e;
@@ -64,41 +60,6 @@ export function Search(props: Props) {
       });
     }
   }, [store, triggerSync])
-
-  const [running, setRunning] = useState(false);
-
-  // const [fromYoutube] = useAsyncCallback(function* () {
-  //   const url = prompt("Enter a youtube url");
-  //   if (!url) return;
-  //   const response = await fetch(location.origin + '/youtubedl.sh?pw=' + password, {
-  //     method: 'POST', body: url
-  //   });
-  //
-  //   try {
-  //     if (response.status === 200) {
-  //       const blob = await response.blob();
-  //       const filenameMatch = response.headers.get('Content-Disposition')?.match(/filename="(.*)"/);
-  //       let fileName;
-  //
-  //       const id = createId();
-  //       if (filenameMatch) {
-  //         fileName = filenameMatch[1];
-  //       } else {
-  //         fileName = id + ".mp4";
-  //       }
-  //
-  //       await store.storeBlob(blob,
-  //         {path: `/${fileName}`, id, rev: "", size: blob.size},
-  //         true
-  //       );
-  //       triggerSync();
-  //       alert('Success!');
-  //     }
-  //   } catch (e) {
-  //     alert('Failed!');
-  //     console.error(e);
-  //   }
-  // }, [password, store, triggerSync]);
 
   return <SearchList iterator={iterator} onReturn={onReturn}>
     <div className="lh-copy f4 mt3">
@@ -146,7 +107,6 @@ function useTermSearch(search: string): IndexIterator<StudyDetails> {
   const {clozeAnswers, clozes, terms} = notesIndex;
 
   return useMemo(() => {
-    console.log('useTermSearch')
     function filteredTermIter(predicate: (t: Term) => boolean) {
       return flattenIndexIterator(mapIndexIterator(Indexer.reverseIter(clozeAnswers.byLastAnsweredOfNoteIdReferenceMarkerAndClozeIdx),
         clozeAnswer => {

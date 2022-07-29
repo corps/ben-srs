@@ -91,7 +91,7 @@ export const allContentTypes = {...audioContentTypes, ...noteContentTypes, ...vi
 
 export interface StoredMetadata extends FileMetadata {
   ext: string,
-  dirty: 0 | 1,
+  dirty: 0 | 1 | 2,
   updatedAt: number,
   deleted?: true,
 }
@@ -111,16 +111,18 @@ export type StoredBlob = Blob | ArrayBufferEnvelop;
 export type DirtyStoreIndex = {
   byPath: Indexed<StoredMedia>;
   byId: Indexed<StoredMedia>;
+  byDirty: Indexed<StoredMedia>;
 };
 
 export const dirtyStoreIndexer = new Indexer<StoredMedia, DirtyStoreIndex>("byId");
 dirtyStoreIndexer.setKeyer("byPath", ({path}) => path.split("/"));
 dirtyStoreIndexer.setKeyer("byId", ({id}) => [id]);
+dirtyStoreIndexer.setKeyer("byDirty", ({dirty}) => [dirty]);
 
 export class FileStore {
   writeSemaphore = new Semaphore();
   dirtyIndex = dirtyStoreIndexer.empty();
-  dirtiesLoaded: Promise<void>;
+  metaLoaded: Promise<void>;
 
   constructor(private db: Dexie) {
     this.db.version(2).stores({
@@ -129,7 +131,7 @@ export class FileStore {
       'blobs': '&id,path,ext,dirty',
     });
 
-    this.dirtiesLoaded = this.db.table('blobs').where('dirty').equals(1).toArray().then(media => {
+    this.metaLoaded = this.db.table('blobs').where('dirty').above(0).toArray().then(media => {
       this.dirtyIndex = dirtyStoreIndexer.update(this.dirtyIndex, media);
     });
   }
@@ -148,19 +150,27 @@ export class FileStore {
     })
 
     return medias.map(media => {
-      if (media.id in byId) return byId[media.id];
+      if (media.id in byId) {
+        const entry = byId[media.id];
+        if (entry.dirty === 1) return entry;
+      }
       return media;
     })
   }
 
   async fetchDirty(): Promise<StoredMedia[]> {
-    await this.dirtiesLoaded;
-    return this.dirtyIndex.byId[1];
+    await this.metaLoaded;
+    return Indexer.getAllMatching(this.dirtyIndex.byDirty, [1]);
+  }
+
+  async fetchConflicted(): Promise<StoredMedia[]> {
+    await this.metaLoaded;
+    return Indexer.getAllMatching(this.dirtyIndex.byDirty, [2]);
   }
 
   async clear() {
+    await this.metaLoaded;
     this.dirtyIndex = dirtyStoreIndexer.empty();
-    await this.dirtiesLoaded;
     await this.writeSemaphore.ready(async () => {
       await this.db.table('metadata').clear();
       await this.db.table('blobs').clear();
@@ -179,9 +189,9 @@ export class FileStore {
     return cursor?.cursor || "";
   }
 
-  async storeBlob(blob: Blob, metadata: FileMetadata, localChange: boolean): Promise<void> {
+  async storeBlob(blob: Blob, metadata: FileMetadata, localChange: boolean | 2): Promise<void> {
     const ext = withDefault(getExt(metadata.path), '');
-    const storedMetadata: StoredMetadata = {...metadata, ext, dirty: localChange ? 1 : 0, updatedAt: Date.now()};
+    const storedMetadata: StoredMetadata = {...metadata, ext, dirty: localChange ? localChange === 2 ? 2 : 1 : 0, updatedAt: Date.now()};
     await this.storeBlobAndMetadata(storedMetadata, blob);
   }
 
@@ -190,7 +200,7 @@ export class FileStore {
     const type = withDefault(getMimeFromFileName(storedMetadata.path), blob.type);
     const storedBlob: ArrayBufferEnvelop = { data, type, size: blob.size };
     const media: StoredMedia = {...storedMetadata, blob: storedBlob };
-    await this.dirtiesLoaded;
+    await this.metaLoaded;
 
     const work = this.writeSemaphore.ready(async () => {
       await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
@@ -201,15 +211,15 @@ export class FileStore {
 
     if (storedMetadata.dirty) {
       this.dirtyIndex = dirtyStoreIndexer.update(this.dirtyIndex, [media]);
-      return;
+    } else {
+      this.dirtyIndex = dirtyStoreIndexer.removeByPk(this.dirtyIndex, [media.id]);
     }
 
-    this.dirtyIndex = dirtyStoreIndexer.removeByPk(this.dirtyIndex, [media.id]);
     await work;
   }
 
   async deleteId(id: string): Promise<void> {
-    await this.dirtiesLoaded;
+    await this.metaLoaded;
     this.dirtyIndex = dirtyStoreIndexer.removeByPk(this.dirtyIndex, [id]);
     await this.writeSemaphore.ready(async () => {
       await this.db.transaction('rw!', 'metadata', 'blobs', async () => {
@@ -220,7 +230,7 @@ export class FileStore {
   }
 
   async deletePath(path: string): Promise<void> {
-    await this.dirtiesLoaded;
+    await this.metaLoaded;
     this.dirtyIndex = dirtyStoreIndexer.removeAll(this.dirtyIndex, Indexer.getAllMatching(this.dirtyIndex.byPath, path.split("/")));
 
     await this.writeSemaphore.ready(async () => {
