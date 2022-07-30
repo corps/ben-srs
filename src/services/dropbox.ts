@@ -242,6 +242,15 @@ export async function getDropboxAuthOrLogin(clientId: string, storage: Storage, 
   });
 
   let match;
+  if ((match = window.location.search.match(/dt=([^&]+)/))) {
+    const code = match[1];
+    auth.setAccessToken(code);
+    auth.setAccessTokenExpiresAt(new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 365 * 3));
+    storage.setItem('token', code);
+    storage.setItem('expires', auth.getAccessTokenExpiresAt().getTime() + "");
+    return auth;
+  }
+
   if ((match = window.location.search.match(/code=([^&]+)/))) {
     const code = match[1];
     if (code) {

@@ -114,6 +114,11 @@ export function Study(props: Props) {
     studyDetails => timeOfMinutes(studyDetails.cloze.attributes.schedule.nextDueMinutes)
   ), 0);
 
+  const lastAnsweredTime = withDefault(mapSome(
+    studyDetails,
+    studyDetails => timeOfMinutes(studyDetails.cloze.attributes.schedule.lastAnsweredMinutes)
+  ), 0);
+
   const intervalTime = withDefault(mapSome(
     studyDetails,
     studyDetails => timeOfMinutes(studyDetails.cloze.attributes.schedule.intervalMinutes)
@@ -150,7 +155,8 @@ export function Study(props: Props) {
 
             <div>
               期日: {describeDuration(time - dueTime, false)} <br/>
-              期間: {describeDuration(intervalTime)}
+              期間: {describeDuration(intervalTime)} <br/>
+              前回: {describeDuration(time - lastAnsweredTime, false)}
             </div>
           </VCentered>
         </VCenteringContainer>

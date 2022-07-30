@@ -63,11 +63,6 @@ export function RelatedStudy(props: Props) {
     }, {onReturn, noteId, marker, reference, clozeIdx})
   }, [clozeIdx, marker, noteId, onReturn, reference, selectTermRouting]);
 
-  function trace(v: any): any {
-    console.log(v);
-    return Object.values(v)[0];
-  }
-
   const iterator = useMemo(() => {
     const allRelated: IndexIterator<string> = flatMapIndexIterator(asIterator(studyDetails.related),
       ([t, related]) => asIterator(related)
@@ -88,7 +83,7 @@ export function RelatedStudy(props: Props) {
         return mapIndexIterator(clozeIter, cloze => studyDetailsForCloze(cloze, indexes));
       }
     )), ({cloze: {attributes: {schedule: {lastAnsweredMinutes, nextDueMinutes}}}}) =>
-      trace({nextDueMinutes}) < trace({minutes}) || trace({lastAnsweredMinutes}) < trace({mmm: (minutes - 60 * 24 * 7)}));
+      nextDueMinutes < minutes || lastAnsweredMinutes < (minutes - 60 * 24 * 7));
 
     return mapIndexIterator(sds, sd => <TermSearchResult studyDetails={sd} selectRow={startRelatedStudy}/>)
   }, [
