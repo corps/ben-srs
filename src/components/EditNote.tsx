@@ -4,15 +4,19 @@ import {SelectSingle} from "./SelectSingle";
 import {
   findNoteTree, newNormalizedNote, NormalizedNote, normalizedNote, NoteTree,
 } from "../notes";
-import {mapSome, Maybe, withDefault} from "../utils/maybe";
+import {mapSome, mapSomeAsync, Maybe, withDefault} from "../utils/maybe";
 import {useLiveQuery} from "dexie-react-hooks";
-import {audioContentTypes} from "../services/storage";
+import {audioContentTypes, createId, getExt, imageContentTypes, normalizeBlob, readDataUrl} from "../services/storage";
 import {Indexer} from "../utils/indexable";
 import {playAudio} from "../services/speechAndAudio";
 import {useDataUrl} from "../hooks/useDataUrl";
 import {TagsSelector} from "./TagsSelector";
 import {WorkflowLinks} from "./SimpleNavLink";
 import {useWithKeybinding} from "../hooks/useWithKeybinding";
+import {useOnPaste} from "../hooks/useOnPaste";
+import {runPromise, useAsync} from "../cancellable";
+
+const imageExts = ["png", "jpeg", "gif", "bmp", "jpg", "svg", "ico", "tiff"]
 
 interface Props {
   onReturn?: () => void,
@@ -50,6 +54,39 @@ export function EditNote(props: Props) {
       triggerSync();
     }
   }, [noteId, setRoute, store, triggerSync]);
+
+  useOnPaste(async (files: File[]) => {
+    for (let f of files) {
+      await withDefault(mapSome(getExt(f.name), async (ext: string) => {
+        if (!(ext in imageContentTypes)) return;
+
+        const id = createId();
+        await store.storeBlob(f, {
+          path: `/${id}.${ext}`,
+          id,
+          rev: "",
+          size: f.size,
+        }, true);
+
+
+        setNormalized(note => ({
+          ...note, attributes: {
+            ...note.attributes, imageFileIds: [...note.attributes.imageFileIds || [], id],
+          }
+        }))
+      }), Promise.resolve());
+    }
+
+    triggerSync()
+  }, [triggerSync, setNormalized]);
+  const removeImage = useCallback((toRemove: string) => {
+    setNormalized(note => ({
+      ...note, attributes: {
+        ...note.attributes,
+        imageFileIds: (note.attributes.imageFileIds || []).filter(id => id !== toRemove),
+      }
+    }))
+  }, [])
 
   const allAudioMetadatas = useLiveQuery(async () => store.fetchMetadataByExts(Object.keys(audioContentTypes)), [], []);
   const audioMetadatas = useUnusedAudioFiles();
@@ -113,6 +150,24 @@ export function EditNote(props: Props) {
     }))
   }, [])
 
+  const [dataUrls, setDataUrls] = useState({} as {[k: string]: string});
+  useAsync(function *() {
+    const imageIds = (normalized.attributes.imageFileIds || []);
+    const dataUrls: Record<string, string> = {};
+    for (let imageId of imageIds) {
+      const media = yield* runPromise(store.fetchBlob(imageId));
+      if (media) {
+        const dataUrl = yield* runPromise(readDataUrl(normalizeBlob(media[0].blob)));
+        dataUrls[imageId] = dataUrl;
+      }
+    }
+
+    setDataUrls(dataUrls);
+  }, [normalized.attributes.imageFileIds, store])
+
+  const images = (normalized.attributes.imageFileIds || [])
+    .map(imageId => ({url: dataUrls[imageId], imageId})).filter(i => !!i.url);
+
   return <div>
     <div className="tc pt5-ns fw5 mb2">
       <div className="f5">
@@ -172,6 +227,17 @@ export function EditNote(props: Props) {
           value={normalized.attributes.content}
         />
       </div>
+
+      {images.length === 0 ? null : <div className="pb3">
+        <div className="cf">
+          { images.map(({url, imageId}) => <div className="fl w-50 w-25-m w-20-l pa2">
+            <a href="#" className="db link dim tc" onClick={() => removeImage(imageId)}>
+              <img src={url} className="w-100 db outline black-10"/>
+            </a>
+          </div>) }
+        </div>
+      </div>
+      }
 
       <div className="tr">
         <WorkflowLinks onApply={onApply} onReturn={onReturn} applyDisabled={!normalized.attributes.content || !normalized.attributes.language}/>

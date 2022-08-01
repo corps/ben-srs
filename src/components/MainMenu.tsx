@@ -22,7 +22,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const notesIndex = useNotesIndex();
   const setRoute = useRoute();
   const [loggingOut, setLoggingOut] = useState(false);
-  const [language, setLanguage] = useStoredState(localStorage, "lastLanguage", "");
+  const [selectedLanguage, setLanguage] = useStoredState(localStorage, "lastLanguage", "");
 
   const languages = useMemo(() => {
     const languages: string[] = [];
@@ -35,17 +35,16 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
     return languages;
   }, [notesIndex.notes.byLanguageAndStudyGuide]);
 
+  const language = languages.includes(selectedLanguage) ? selectedLanguage : "";
+
   const allTags = useAllTags(language, true);
   const [tag, setTag] = useState(() => language);
 
   useEffect(() => {
-    if (!languages.includes(language)) {
-      setLanguage(languages[0]);
-    }
     if (!allTags.includes(tag)) {
       setTag(language);
     }
-  }, [languages, language, allTags, tag, setLanguage]);
+  }, [allTags, tag]);
 
   const [audioStudy, setAudioStudy] = useState(false);
   const toggleAudioStudy = useToggle(setAudioStudy);

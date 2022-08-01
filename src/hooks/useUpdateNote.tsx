@@ -76,5 +76,5 @@ export function useUpdateNote(confirmEdit = false, undoable = true) {
     }, true);
 
     triggerSync();
-  }, [notesIndex, storage, triggerSync, confirmEdit]);
+  }, [undoable, notesIndex, storage, triggerSync, confirmEdit, setUpdateHistory]);
 }
