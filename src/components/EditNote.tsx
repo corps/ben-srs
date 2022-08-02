@@ -1,4 +1,4 @@
-import React, {ChangeEvent, useCallback, useEffect, useMemo, useState} from 'react';
+import React, {ChangeEvent, useCallback, useMemo, useState} from 'react';
 import {useFileStorage, useNotesIndex, useRoute, useTriggerSync} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
 import {
@@ -14,10 +14,8 @@ import {TagsSelector} from "./TagsSelector";
 import {WorkflowLinks} from "./SimpleNavLink";
 import {useWithKeybinding} from "../hooks/useWithKeybinding";
 import {useOnPaste} from "../hooks/useOnPaste";
-import {runPromise, useAsync} from "../cancellable";
-
-const imageExts = ["png", "jpeg", "gif", "bmp", "jpg", "svg", "ico", "tiff"]
-
+import {useCardImages} from "../hooks/useCardImages";
+import {Images} from "./Images";
 interface Props {
   onReturn?: () => void,
   onApply: (tree: Maybe<NoteTree>, updated: NormalizedNote) => Promise<void>,
@@ -150,23 +148,7 @@ export function EditNote(props: Props) {
     }))
   }, [])
 
-  const [dataUrls, setDataUrls] = useState({} as {[k: string]: string});
-  useAsync(function *() {
-    const imageIds = (normalized.attributes.imageFileIds || []);
-    const dataUrls: Record<string, string> = {};
-    for (let imageId of imageIds) {
-      const media = yield* runPromise(store.fetchBlob(imageId));
-      if (media) {
-        const dataUrl = yield* runPromise(readDataUrl(normalizeBlob(media[0].blob)));
-        dataUrls[imageId] = dataUrl;
-      }
-    }
-
-    setDataUrls(dataUrls);
-  }, [normalized.attributes.imageFileIds, store])
-
-  const images = (normalized.attributes.imageFileIds || [])
-    .map(imageId => ({url: dataUrls[imageId], imageId})).filter(i => !!i.url);
+  const images = useCardImages(normalized.attributes.imageFileIds);
 
   return <div>
     <div className="tc pt5-ns fw5 mb2">
@@ -219,7 +201,7 @@ export function EditNote(props: Props) {
     </div>
 
     <div className="mw6 center">
-      <div className="pa3">
+      <div className="pt3">
         <textarea
           className="w-100 input-reset"
           rows={6}
@@ -228,16 +210,7 @@ export function EditNote(props: Props) {
         />
       </div>
 
-      {images.length === 0 ? null : <div className="pb3">
-        <div className="cf">
-          { images.map(({url, imageId}) => <div className="fl w-50 w-25-m w-20-l pa2">
-            <a href="#" className="db link dim tc" onClick={() => removeImage(imageId)}>
-              <img src={url} className="w-100 db outline black-10"/>
-            </a>
-          </div>) }
-        </div>
-      </div>
-      }
+      <Images images={images} onClick={removeImage}/>
 
       <div className="tr">
         <WorkflowLinks onApply={onApply} onReturn={onReturn} applyDisabled={!normalized.attributes.content || !normalized.attributes.language}/>

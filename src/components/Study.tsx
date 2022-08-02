@@ -172,7 +172,7 @@ export function Study(props: Props) {
               </div>
               <HideIf hidden={!showBack}>
                 <BackSide editNote={editNote} studyDetails={studyDetails} answerFront={answerFront}
-                          readCard={readCard} startNext={startNext} now={time} studyStarted={cardStartedAt}/> :
+                          readCard={readCard} startNext={startNext} now={time} studyStarted={cardStartedAt}/>
               </HideIf>
               <HideIf hidden={showBack}>
                 <FrontSide readCard={readCard} studyDetails={studyDetails}/>

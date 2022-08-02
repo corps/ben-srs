@@ -3,6 +3,8 @@ import {StudyDetails} from "../study";
 import {Answer} from "../scheduler";
 import {answerMiss, answerOk, answerSkip} from "./Study";
 import {useWithKeybinding} from "../hooks/useWithKeybinding";
+import {Images} from "./Images";
+import {useCardImages} from "../hooks/useCardImages";
 
 interface Props {
   studyDetails: StudyDetails,
@@ -97,6 +99,8 @@ export function BackSide({studyDetails, readCard, answerFront, now, studyStarted
     editNote(studyDetails.cloze.noteId);
   }, [editNote, studyDetails.cloze.noteId]))
 
+  const images = useCardImages(studyDetails.imageFileIds);
+
   return <AnswerDetails studyDetails={studyDetails} readCard={readCard}>
     <div className="f5 mt2 tc">
       <button className="mh1 pa1 br2" onClick={ok}>
@@ -123,5 +127,7 @@ export function BackSide({studyDetails, readCard, answerFront, now, studyStarted
         </EditWrapper>
       </button>
     </div>
+
+    <Images images={images}/>
   </AnswerDetails>
 }
