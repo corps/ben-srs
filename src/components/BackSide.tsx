@@ -99,7 +99,7 @@ export function BackSide({studyDetails, readCard, answerFront, now, studyStarted
     editNote(studyDetails.cloze.noteId);
   }, [editNote, studyDetails.cloze.noteId]))
 
-  const images = useCardImages(studyDetails.imageFileIds);
+  const images = useCardImages(studyDetails.imageFilePaths);
 
   return <AnswerDetails studyDetails={studyDetails} readCard={readCard}>
     <div className="f5 mt2 tc">

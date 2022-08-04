@@ -10,7 +10,7 @@ export const newNote = {
     studyGuide: false,
     terms: undefined as void,
     audioFileId: null as string | null | undefined,
-    imageFileIds: null as string[] | null | undefined,
+    imageFilePaths: null as string[] | null | undefined,
     tags: [] as string[],
   },
 

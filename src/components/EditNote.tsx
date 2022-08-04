@@ -59,8 +59,9 @@ export function EditNote(props: Props) {
         if (!(ext in imageContentTypes)) return;
 
         const id = createId();
+        const path = `/${id}.${ext}`;
         await store.storeBlob(f, {
-          path: `/${id}.${ext}`,
+          path,
           id,
           rev: "",
           size: f.size,
@@ -69,7 +70,7 @@ export function EditNote(props: Props) {
 
         setNormalized(note => ({
           ...note, attributes: {
-            ...note.attributes, imageFileIds: [...note.attributes.imageFileIds || [], id],
+            ...note.attributes, imageFilePaths: [...note.attributes.imageFilePaths || [], path],
           }
         }))
       }), Promise.resolve());
@@ -77,11 +78,12 @@ export function EditNote(props: Props) {
 
     triggerSync()
   }, [triggerSync, setNormalized]);
+
   const removeImage = useCallback((toRemove: string) => {
     setNormalized(note => ({
       ...note, attributes: {
         ...note.attributes,
-        imageFileIds: (note.attributes.imageFileIds || []).filter(id => id !== toRemove),
+        imageFilePaths: (note.attributes.imageFilePaths || []).filter(id => id !== toRemove),
       }
     }))
   }, [])
@@ -148,7 +150,7 @@ export function EditNote(props: Props) {
     }))
   }, [])
 
-  const images = useCardImages(normalized.attributes.imageFileIds);
+  const images = useCardImages(normalized.attributes.imageFilePaths);
 
   return <div>
     <div className="tc pt5-ns fw5 mb2">

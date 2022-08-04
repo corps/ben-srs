@@ -3,25 +3,25 @@ import {runPromise, useAsync} from "../cancellable";
 import {normalizeBlob, readDataUrl} from "../services/storage";
 import {useFileStorage} from "./contexts";
 
-export function useCardImages(imageFileIds: string[] | null | undefined) {
+export function useCardImages(imageFilePaths: string[] | null | undefined) {
   const store = useFileStorage();
   const [dataUrls, setDataUrls] = useState({} as {[k: string]: string});
-  useAsync(function *() {
-    const imageIds = imageFileIds || [];
+  const [_, err] = useAsync(function *() {
+    const imagePaths = imageFilePaths || [];
     const dataUrls: Record<string, string> = {};
-    for (let imageId of imageIds) {
-      const media = yield* runPromise(store.fetchBlob(imageId));
+    for (let imagePath of imagePaths) {
+      const media = yield* runPromise(store.fetchBlobByPath(imagePath));
       if (media) {
         const dataUrl = yield* runPromise(readDataUrl(normalizeBlob(media[0].blob)));
-        dataUrls[imageId] = dataUrl;
+        dataUrls[imagePath] = dataUrl;
       }
     }
 
     setDataUrls(dataUrls);
-  }, [imageFileIds, store])
+  }, [imageFilePaths, store])
 
-  const images = (imageFileIds || [])
-    .map(imageId => ({url: dataUrls[imageId], imageId})).filter(i => !!i.url);
+  const images = (imageFilePaths || [])
+    .map(imageFilePath => ({url: dataUrls[imageFilePath], imageFilePath})).filter(i => !!i.url);
 
   return images;
 }

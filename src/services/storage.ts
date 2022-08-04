@@ -256,6 +256,13 @@ export class FileStore {
     return this.db.table('blobs').where('id').equals(id).first().then(fromVoid);
   }
 
+  async fetchBlobByPath(path: string): Promise<Maybe<StoredMedia>> {
+    const match = Indexer.getFirstMatching(this.dirtyIndex.byPath, [path]);
+    if (match) return Promise.resolve(match);
+    return this.db.table('blobs').where('path').equals(path).first().then(fromVoid);
+  }
+
+
   async fetchBlobsByExt(ext: string): Promise<StoredMedia[]> {
     return this.db.table('blobs').where('ext').equals(ext).toArray().then(media => this.replaceFromDirty(media));
   }

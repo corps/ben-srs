@@ -30,7 +30,7 @@ export interface StudyDetails {
   definition: string;
   type: ClozeType;
   audioFileId: string | undefined | null;
-  imageFileIds: string[] | undefined | null;
+  imageFilePaths: string[] | undefined | null;
   related: [Term, string[]][],
   studyGuides: string[],
 }
@@ -49,7 +49,7 @@ export const defaultStudyDetails: StudyDetails = {
   definition: "",
   type: "produce",
   audioFileId: null,
-  imageFileIds: null,
+  imageFilePaths: null,
   related: [],
   studyGuides: [],
 }
@@ -235,7 +235,7 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
       hint: term.attributes.hint,
       type: cloze.attributes.type,
       audioFileId: note.attributes.audioFileId,
-      imageFileIds: note.attributes.imageFileIds,
+      imageFilePaths: note.attributes.imageFilePaths,
       related,
       studyGuides,
     });
