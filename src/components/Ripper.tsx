@@ -77,6 +77,7 @@ export function Ripper({language}: Props) {
         const blob = new Blob([JSON.stringify({
           videoUrl, start: s, end: e, noteContent,
         })]);
+
         await store.storeBlob(blob, {
           path: `/${createId()}.cmd`,
           id: createId(),

@@ -83,7 +83,8 @@ export function RelatedStudy(props: Props) {
         return mapIndexIterator(clozeIter, cloze => studyDetailsForCloze(cloze, indexes));
       }
     )), ({cloze: {attributes: {schedule: {lastAnsweredMinutes, nextDueMinutes}}}}) =>
-      nextDueMinutes < minutes || lastAnsweredMinutes < (minutes - 60 * 24 * 7));
+      nextDueMinutes < minutes ||
+      minutes > (nextDueMinutes - lastAnsweredMinutes) * 0.25 + lastAnsweredMinutes);
 
     return mapIndexIterator(sds, sd => <TermSearchResult studyDetails={sd} selectRow={startRelatedStudy}/>)
   }, [

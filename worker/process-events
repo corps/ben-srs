@@ -1,0 +1,41 @@
+#! /usr/bin/env nix-shell
+#! nix-shell -i bash -p jq youtube-dl ffmpeg
+
+set -eo pipefail
+set -x
+
+root="~/Dropbox/アプリ/Ben Srs Dev"
+
+while true; do
+  next="$(ls ~/Dropbox/アプリ/Ben\ Srs\ Dev/*.cmd | head -n 1)"
+  if [[ -z "$next" ]]; then
+    sleep 10
+    continue
+  fi
+
+  echo "Processing $next"
+  cmd="$(cat "$next")"
+  videoUrl="$(echo "$cmd" | jq -r '.videoUrl')"
+  a="$(echo "$cmd" | jq -r '.start')"
+  b="$(echo "$cmd" | jq -r '.end')"
+  content="$(echo "$cmd" | jq -r '.noteContent')"
+  
+
+
+
+  mp4Out=$(mktemp -d)
+  mp3Out=$(mktemp --suffix=.mp3)
+  clipOut=$(mktemp --suffix=.mp3)
+  youtube-dl -f mp4 --no-playlist "$videoUrl" -o "$mp4Out/%(id)s.%(ext)s"
+  ffmpeg -y -i $mp4Out/* -map 0:a "$mp3Out"
+  ffmpeg -y -i $mp3Out -acodec copy -ss "$a" -t "$(calc "$b-$a")" $clipOut
+  hash=$(cat $clipOut | md5sum | cut -d' ' -f1)
+  mv $clipOut ~/Dropbox/アプリ/Ben\ Srs\ Dev/$hash.mp3
+  echo "
+  $hash
+  $content
+  ===
+  {}
+  " > ~/Dropbox/アプリ/Ben\ Srs\ Dev/$hash.txt
+  rm "$next"
+done
