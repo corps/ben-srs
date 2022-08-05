@@ -15,6 +15,7 @@ import {createId} from "../services/storage";
 import {Search} from "./Search";
 import {TagsSelector, useAllTags} from "./TagsSelector";
 import {useStoredState} from "../hooks/useStoredState";
+import {Ripper} from "./Ripper";
 
 export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const session = useSession();
@@ -147,6 +148,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
           <br/>
         </CircleButton>
 
+
         { session.user.needsRefreshAt.getTime() < time || syncFailed ? <CircleButton
           onClick={() => session.refresh()}
           blue
@@ -155,7 +157,17 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
           <br/>
           <span className="fw1">認</span>
           <span className="fw3">証</span>
-        </CircleButton> : null }
+        </CircleButton> :
+          <CircleButton
+            onClick={() => setRoute(() => some(<Ripper language={language}/>))}
+            purple
+            className="mh2 pointer dim"
+          >
+            RIP
+          </CircleButton> }
+      </div>
+
+      <div className="mv2">
       </div>
     </div>
 

@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 
 #cd $(mktemp -d)
+#
+#b.cutFileSegment() {
+#  IN=$1
+#  start=$2
+#  end=$3
+#
+#  start=$(())
+#
+#  if [[ -z "$end" ]]; then
+#    echo "$0 <in file> <start> <end time>"
+#    return 1
+#  fi
+#}
 
 b.splitFile() {
   IN=$1
