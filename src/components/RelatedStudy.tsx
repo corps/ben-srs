@@ -28,13 +28,14 @@ interface Props {
   noteId: string,
   marker: string,
   reference: string,
-  clozeIdx: number
+  clozeIdx: number,
+  seenNoteIds: string[],
 }
 
 export function RelatedStudy(props: Props) {
   const setRoute = useRoute();
   const defaultReturn = useCallback(() => setRoute(() => null), [setRoute]);
-  const {onReturn = defaultReturn, noteId, marker, reference, clozeIdx} = props;
+  const {onReturn = defaultReturn, noteId, marker, reference, clozeIdx, seenNoteIds} = props;
   const now = useTime();
   const minutes = minutesOfTime(now);
   const updatedNote = useUpdateNote();
@@ -55,13 +56,12 @@ export function RelatedStudy(props: Props) {
 
   const startRelatedStudy = useCallback((sd: StudyDetails) => {
     selectTermRouting({
-      audioStudy: false,
-      language: sd.cloze.language,
       reference: sd.cloze.reference,
       marker: sd.cloze.marker,
-      noteId: sd.cloze.noteId
-    }, {onReturn, noteId, marker, reference, clozeIdx})
-  }, [clozeIdx, marker, noteId, onReturn, reference, selectTermRouting]);
+      noteId: sd.cloze.noteId,
+      seenNoteIds: [...seenNoteIds, noteId],
+    }, {onReturn, noteId, marker, reference, clozeIdx, seenNoteIds})
+  }, [clozeIdx, marker, noteId, onReturn, reference, selectTermRouting, seenNoteIds]);
 
   const iterator = useMemo(() => {
     const allRelated: IndexIterator<string> = flatMapIndexIterator(asIterator(studyDetails.related),
@@ -82,9 +82,9 @@ export function RelatedStudy(props: Props) {
         ));
         return mapIndexIterator(clozeIter, cloze => studyDetailsForCloze(cloze, indexes));
       }
-    )), ({cloze: {attributes: {schedule: {lastAnsweredMinutes, nextDueMinutes}}}}) =>
-      nextDueMinutes < minutes ||
-      minutes > (nextDueMinutes - lastAnsweredMinutes) * 0.25 + lastAnsweredMinutes);
+    )), ({cloze: {noteId, attributes: {schedule: {lastAnsweredMinutes, nextDueMinutes}}}}) =>
+      !seenNoteIds.includes(noteId) &&
+      (nextDueMinutes < minutes || minutes > (nextDueMinutes - lastAnsweredMinutes) * 0.25 + lastAnsweredMinutes));
 
     return mapIndexIterator(sds, sd => <TermSearchResult studyDetails={sd} selectRow={startRelatedStudy}/>)
   }, [
@@ -93,7 +93,8 @@ export function RelatedStudy(props: Props) {
     minutes,
     startRelatedStudy,
     studyDetails.related,
-    terms.byReference
+    terms.byReference,
+    seenNoteIds
   ]);
 
   const [hasSome, i] = useMemo(() => {
@@ -131,12 +132,12 @@ export function RelatedStudy(props: Props) {
   }, [studyDetails.noteTree, updatedNote]);
 
   return <SearchList iterator={i} onReturn={onReturn}>
-    {studyDetails.related.map(([term, allRelated]) => <div key={term.attributes.reference + term.attributes.marker}>
+    {studyDetails.related.map(([term, allRelated]) => <span className="mh2" key={term.attributes.reference + term.attributes.marker}>
       From <a href="javascript:void(0)" onClick={() => editTermRouting({
       ...studyDetails.cloze, normalized: normalizedNote(studyDetails.noteTree),
-    }, props)}>{term.attributes.reference}</a>: <ul>{allRelated.map(related => <li key={related}>
+    }, props)}>{term.attributes.reference}</a>: {allRelated.map(related => <span className="mh2" key={related}>
       <b>{related}</b> (<a href="javascript:void(0)"
-                           onClick={() => removeRelated(term, allRelated, related)}>[X]</a>) </li>)}</ul>
-    </div>)}
+                           onClick={() => removeRelated(term, allRelated, related)}>[X]</a>) </span>)}
+    </span>)}
   </SearchList>
 }

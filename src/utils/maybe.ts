@@ -1,4 +1,40 @@
 export type Maybe<T> = null | [T];
+export type Either<A, B> = {left: B} | {right: A};
+
+export function zipSome<A>(a: Maybe<A>, b: Maybe<A>, f: (a: A, b: A) => A): Maybe<A> {
+  if (a) {
+    if (b) {
+      return some(f(a[0], b[0]));
+    }
+    return a;
+  }
+
+  return b;
+}
+
+export function left<B, A = unknown>(left: B): Either<A, B> {
+  return {left};
+}
+
+export function right<A, B = unknown>(right: A): Either<A, B> {
+  return {right};
+}
+
+export function getLeft<A, B>(either: Either<A, B>): Maybe<B> {
+  if ('left' in either) {
+    return some(either.left);
+  }
+  
+  return null;
+}
+
+export function getRight<A, B>(either: Either<A, B>): Maybe<A> {
+  if ('right' in either) {
+    return some(either.right);
+  }
+  
+  return null;
+}
 
 export function withDefault<T>(v: Maybe<T>, d: T) {
   if (v == null) return d;

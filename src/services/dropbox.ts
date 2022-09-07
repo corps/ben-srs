@@ -2,7 +2,7 @@ import 'regenerator-runtime';
 import {Dropbox, DropboxAuth, DropboxResponseError, files} from "dropbox";
 import {defaultUser, Session, User} from "./backends";
 import {defaultFileDelta, FileDelta, FileListProgress, FileMetadata, SyncBackend} from "./sync";
-import {Maybe, some} from "../utils/maybe";
+import {Either, left, Maybe, right, some} from "../utils/maybe";
 import {withRetries} from "../utils/retryable";
 import {DynamicRateLimitQueue, GatingException} from "../utils/rate-limiting";
 import {normalizeBlob, StoredMedia} from "./storage";
@@ -156,17 +156,17 @@ export class DropboxSyncBackend implements SyncBackend {
     return syncFileList();
   }
 
-  uploadFile(media: StoredMedia): Iterable<Promise<Maybe<"conflict">>> {
+  uploadFile(media: StoredMedia): Iterable<Promise<Either<FileMetadata, "conflict">>> {
     const {db} = this;
 
-    function* uploadFile() {
+    function* uploadFile(): Generator<Promise<Either<FileMetadata, "conflict">>> {
       yield db.filesUpload({
         contents: normalizeBlob(media.blob),
         path: media.path,
         mode: media.rev ? {'.tag': "update", update: media.rev} : {'.tag': 'add'},
-      }).then(() => null, error => {
+      }).then(res => right(mapDropboxMetadata(res.result)), error => {
         if ('status' in error && error.status === 409) {
-          return some("conflict" as "conflict");
+          return left("conflict" as "conflict");
         }
 
         throw error;

@@ -1,12 +1,12 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {useFileStorage, useNotesIndex, useRoute, useSession} from "../hooks/contexts";
+import React, {SetStateAction, useCallback, useEffect, useMemo, useState} from 'react';
+import {useFileStorage, useNotesIndex, useRoute, useSession, useStudyContext} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
 import {endKeyMatchingWithin, Indexer} from "../utils/indexable";
 import {useToggle} from "../hooks/useToggle";
 import {useTime} from "../hooks/useTime";
 import {useStudyData} from "../hooks/useStudyData";
 import {CircleButton} from "./CircleButton";
-import {some} from "../utils/maybe";
+import {Maybe, some} from "../utils/maybe";
 import {Study} from "./Study";
 import {useUpdateNote} from "../hooks/useUpdateNote";
 import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
@@ -16,6 +16,15 @@ import {Search} from "./Search";
 import {TagsSelector, useAllTags} from "./TagsSelector";
 import {useStoredState} from "../hooks/useStoredState";
 import {Ripper} from "./Ripper";
+import { minutesOfTime } from '../utils/time';
+
+const targets = [
+  "7 Days",
+  "30 Days",
+  "90 Days",
+  "1 Day",
+  "Slow",
+];
 
 export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const session = useSession();
@@ -24,6 +33,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const setRoute = useRoute();
   const [loggingOut, setLoggingOut] = useState(false);
   const [selectedLanguage, setLanguage] = useStoredState(localStorage, "lastLanguage", "");
+  const [studyContext, setStudyContext] = useStudyContext();
 
   const languages = useMemo(() => {
     const languages: string[] = [];
@@ -39,17 +49,46 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const language = languages.includes(selectedLanguage) ? selectedLanguage : "";
 
   const allTags = useAllTags(language, true);
-  const [tag, setTag] = useState(() => language);
+  const {tag, target} = studyContext;
+  
+  const setTag = useCallback((tag: string) => {
+    setStudyContext({...studyContext, tag});
+  }, [setStudyContext, studyContext]);
 
   useEffect(() => {
     if (!allTags.includes(tag)) {
       setTag(language);
     }
-  }, [allTags, tag]);
+  }, [allTags, tag, setStudyContext, language, setTag]);
 
-  const [audioStudy, setAudioStudy] = useState(false);
+  const {audioStudy} = studyContext;
+  const setAudioStudy = useCallback((update: SetStateAction<boolean>) => {
+    let {audioStudy} = studyContext;
+    if (update instanceof Function) {
+      audioStudy = update(audioStudy);
+    } else {
+      audioStudy = update;
+    }
+
+    setStudyContext({...studyContext, audioStudy});
+  }, [studyContext, setStudyContext]);
   const toggleAudioStudy = useToggle(setAudioStudy);
   const time = useTime();
+
+
+  const nowMinutes = minutesOfTime(time);
+  const setTarget = useCallback((target: string) => {
+    let result: Maybe<number> = null;
+    const parsed = parseInt(target);
+    if (!isNaN(parsed)) {
+      result = some(parsed);
+    }
+
+    setStudyContext({...studyContext, target: result});
+  }, [setStudyContext, nowMinutes, studyContext]);
+
+  const targetString = target ? `${target} Days` : "Slow";
+
 
   const updateNote = useUpdateNote();
   const newNoteRouting = useWorkflowRouting(EditNote, MainMenu, updateNote);
@@ -59,7 +98,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
     }, {syncFailed}, undefined)
   }, [newNoteRouting, syncFailed]);
 
-  const studyData = useStudyData(time, tag, audioStudy);
+  const studyData = useStudyData();
 
   const doLogout = useCallback(async () => {
     setLoggingOut(true);
@@ -91,6 +130,17 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
         </div>
       </div>
 
+      <div className="f5">
+        目標:
+        <div className="ml2 w4 dib">
+          <SelectSingle
+            onChange={setTarget}
+            value={targetString}
+            values={targets}
+          />
+        </div>
+      </div>
+
       <TagsSelector value={[tag]} language={language} onChange={(vs) => setTag(vs[0])} singular/>
 
       <div className="f5">
@@ -105,7 +155,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
     </div>
 
     <div className="tc f4 fw2 mb1">
-      予定: {studyData.due} {studyData.new ? "(" + studyData.new + ")" : ""}
+      予定: <span className={studyData.status}>{studyData.due}</span>
     </div>
     {studyData.delayed ? <div className="tc f4 fw2 mb1">休止: {studyData.delayed}</div> : ""}
 
@@ -116,7 +166,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
     <div className="tc">
       <div className="mv2">
         <CircleButton
-          onClick={() => setRoute(() => some(<Study audioStudy={audioStudy} language={tag}/>))}
+          onClick={() => setRoute(() => some(<Study />))}
           red
           className="mh2 pointer dim">
           <span className="fw6">訓</span>

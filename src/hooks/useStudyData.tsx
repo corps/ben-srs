@@ -1,7 +1,12 @@
-import {useNotesIndex} from "./contexts";
+import {useNotesIndex, useStudyContext} from "./contexts";
 import {endOfDay, minutesOfTime, startOfDay} from "../utils/time";
 import {useMemo} from "react";
-import {Indexer} from "../utils/indexable";
+import {Indexed, Indexer} from "../utils/indexable";
+import { Cloze, indexesInitialState, Tagged } from "../notes";
+import { Schedule } from "../scheduler";
+import { mapSome, Maybe, some, withDefault, zipSome } from "../utils/maybe";
+import { okAnswerFactor } from "../study";
+import { useTime } from "./useTime";
 
 export const newStudyData = {
     studied: 0,
@@ -10,49 +15,107 @@ export const newStudyData = {
     delayed: 0,
     terms: 0,
     clozes: 0,
+    status: '',
 };
 
 export type StudyData = typeof newStudyData;
 
-export function useStudyData(
-    now = Date.now(),
-    language: string,
-    audioStudy: boolean,
-) {
-    const notesIndex = useNotesIndex();
-    const minutesNow = minutesOfTime(now);
+export function calculateAverageDailyIntake(notesIndex: typeof indexesInitialState, nowMinutes: number, tag: string, audioStudy: boolean, studyEnd: Maybe<number> = null) {
+    function findStudyEndBySpoken(spoken: boolean) {
+        return mapSome(Indexer.reverseIter(notesIndex.taggedClozes.byTagSpokenAndNextDue, [tag, spoken, true, Infinity])(), (m: Tagged<Cloze>) => (m.inner.attributes.schedule.nextDueMinutes));
+    }
 
-    return useMemo(() => {
-        const languageStartKey = [language];
-        const studyStartKey = [language, audioStudy, false];
-        const result = {...newStudyData};
+    function countOccurrences(startMinutes: number, endMinutes: number, startInterval: number, intervalRate: number) {
+        const result = Math.max(0, Math.log((endMinutes - startMinutes) / startInterval)) / Math.log(intervalRate) + 1;
+        return result;
+    }
 
-        let startOfCurDay = minutesOfTime(startOfDay(now));
+    function calculateOccurrencesBySpoken(spoken: boolean, studyEnd: number, nowMinutes: number) {
+        const iter = Indexer.iterator(
+            notesIndex.taggedClozes.byTagSpokenAndNextDue, 
+            [tag, spoken, true], [tag, spoken, true, studyEnd + 1, null]);
 
-        let range = Indexer.getRangeFrom(notesIndex.taggedTerms.byTag, languageStartKey,
-            [language, Infinity]);
-        result.terms = range.endIdx - range.startIdx;
+        let result = 0;
 
-        range = Indexer.getRangeFrom(notesIndex.taggedClozes.byTagSpokenAndNextDue, studyStartKey,
-            [language, audioStudy, true, Infinity]);
-        result.clozes = range.endIdx - range.startIdx;
-
-        range = Indexer.getRangeFrom(notesIndex.taggedClozeAnswers.byTagAndAnswered,
-            [language, startOfCurDay], [language, Infinity]);
-        result.studied = range.endIdx - range.startIdx;
-
-        range = Indexer.getRangeFrom(notesIndex.taggedClozes.byTagSpokenAndNextDue,
-            [language, audioStudy, true], [language, audioStudy, true, minutesNow + 1]);
-        result.due = range.endIdx - range.startIdx;
-
-        range = Indexer.getRangeFrom(notesIndex.taggedClozes.byTagSpokenAndNextDue,
-            [language, audioStudy, true], [language, audioStudy, true, 1]);
-        result.new = range.endIdx - range.startIdx;
-
-        range = Indexer.getRangeFrom(notesIndex.taggedClozes.byTagSpokenAndNextDue,
-          [language, audioStudy, false], [language, audioStudy, false, Infinity]);
-        result.delayed = range.endIdx - range.startIdx;
+        for (let next = iter(); next; next = iter()) {
+            mapSome(next, ({inner}) => {
+                result += countOccurrences(Math.max(inner.attributes.schedule.nextDueMinutes, nowMinutes), studyEnd, 
+                                           Math.max(inner.attributes.schedule.intervalMinutes, 1), okAnswerFactor(10000, inner.attributes.type))
+            });
+        }
 
         return result;
-    }, [language, audioStudy, now, notesIndex.taggedTerms.byTag, notesIndex.taggedClozes.byTagSpokenAndNextDue, notesIndex.taggedClozeAnswers.byTagAndAnswered, minutesNow]);
+    }
+
+    if (!studyEnd) {
+        studyEnd = findStudyEndBySpoken(audioStudy);
+        if (audioStudy) {
+            studyEnd = zipSome(studyEnd, findStudyEndBySpoken(false), (a, b) => a > b ? a : b)
+        }
+    }
+
+    return withDefault(mapSome(studyEnd, studyEnd => {
+        let occurrences = calculateOccurrencesBySpoken(audioStudy, studyEnd, nowMinutes);
+        if (audioStudy) occurrences += calculateOccurrencesBySpoken(false, studyEnd, nowMinutes);
+        const days = ((studyEnd - nowMinutes) / (60 * 24));
+        return occurrences / days;
+    }), 0);
+}
+
+export function useStudyData() {
+    const notesIndex = useNotesIndex();
+    const now = useTime();
+    const minutesNow = minutesOfTime(now);
+    const [{tag, audioStudy, target}] = useStudyContext();
+    const startOfCurDay = minutesOfTime(startOfDay(now));
+
+    const adi = useMemo(() =>
+      calculateAverageDailyIntake(notesIndex, minutesNow, tag, audioStudy, mapSome(target, target => minutesNow + target * 60 * 24)),
+    [notesIndex, minutesNow, tag, audioStudy, target]);
+    return useMemo(() => {
+        const languageStartKey = [tag];
+        const result = {...newStudyData};
+
+        let range = Indexer.getRangeFrom(notesIndex.taggedTerms.byTag, languageStartKey,
+            [tag, Infinity]);
+        result.terms = range.endIdx - range.startIdx;
+
+        range = Indexer.getRangeFrom(notesIndex.taggedClozeAnswers.byTagAndAnswered,
+            [tag, startOfCurDay], [tag, Infinity]);
+        result.studied = range.endIdx - range.startIdx;
+
+
+        function addByAudioStudy(audioStudy: boolean) {
+            range = Indexer.getRangeFrom(notesIndex.taggedClozes.byTagSpokenAndNextDue, [tag, audioStudy, false],
+                [tag, audioStudy, true, Infinity]);
+            result.clozes += range.endIdx - range.startIdx;
+
+            range = Indexer.getRangeFrom(notesIndex.taggedClozes.byTagSpokenAndNextDue,
+                [tag, audioStudy, true], [tag, audioStudy, true, minutesNow + 1]);
+            result.due += range.endIdx - range.startIdx;
+
+            range = Indexer.getRangeFrom(notesIndex.taggedClozes.byTagSpokenAndNextDue,
+                [tag, audioStudy, true], [tag, audioStudy, true, 1]);
+            result.new += range.endIdx - range.startIdx;
+
+            range = Indexer.getRangeFrom(notesIndex.taggedClozes.byTagSpokenAndNextDue,
+              [tag, audioStudy, false], [tag, audioStudy, false, Infinity]);
+            result.delayed += range.endIdx - range.startIdx;
+        }
+
+        addByAudioStudy(audioStudy);
+        if (audioStudy) addByAudioStudy(false);
+
+
+        let status = 'green fw6';
+        const remainingAdi = Math.max(Math.floor(adi) - result.studied, 0);
+        if (remainingAdi > 0) status = 'red fw6';
+        else if (result.due > 0) status = 'yellow fw6';
+
+        result.status = status;
+
+        result.due = Math.min(result.due, remainingAdi);
+
+        return result;
+    }, [tag, audioStudy, startOfCurDay, adi, notesIndex.taggedTerms.byTag, notesIndex.taggedClozes.byTagSpokenAndNextDue, notesIndex.taggedClozeAnswers.byTagAndAnswered, minutesNow]);
 }

@@ -170,6 +170,10 @@ export class FileStore {
     return Indexer.getAllMatching(this.dirtyIndex.byDirty, [1]);
   }
 
+  async updateRev(fd: FileMetadata) {
+
+  }
+
   async fetchConflicted(): Promise<StoredMedia[]> {
     await this.metaLoaded;
     return Indexer.getAllMatching(this.dirtyIndex.byDirty, [2]);

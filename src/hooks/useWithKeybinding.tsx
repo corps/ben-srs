@@ -10,15 +10,14 @@ export function useWithKeybinding(key: string, cb: ((wasKey?: boolean) => void) 
   }, [cb, key])
 
   const Wrapper = useMemo(() => function KeyWrapper({children}: PropsWithChildren<{}>) {
+    useKeypresses(keypressCb, [keypressCb])
     return <span className="dib tc">
       <span className="ml1 ttu tracked dib-ns dn f7 white bg-gray br dib">
         ({key})
       </span><br/>
       {children}
     </span>
-  }, [key]);
-
-  useKeypresses(keypressCb, [keypressCb])
+  }, [key, keypressCb]);
 
   return [Wrapper, cb] as [FC<{}>, () => void];
 }

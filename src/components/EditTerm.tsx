@@ -170,11 +170,11 @@ export function EditTerm(props: Props) {
   const [SearchWrapper] = useWithKeybinding('?', searchTerm);
 
   const studyTerm = useCallback(() => {
-    routeStudy({noteId, marker, reference, language: normalized.attributes.language, audioStudy: false},
+    routeStudy({noteId, marker, reference},
       props,
       () => props
     )
-  }, [marker, normalized.attributes.language, noteId, props, reference, routeStudy])
+  }, [marker, noteId, props, reference, routeStudy])
 
   const [DeleteWrapper] = useWithKeybinding('Delete', onDelete);
   const [StudyWrapper] = useWithKeybinding('.', useCallback(() => hasStudy ? studyTerm() : null, [hasStudy, studyTerm]))

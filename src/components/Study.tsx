@@ -1,11 +1,12 @@
 import React, {Dispatch, useCallback, useEffect, useMemo, useState} from 'react';
-import {useNotesIndex, useRoute} from "../hooks/contexts";
+import {useNotesIndex, useRoute, useStudyContext} from "../hooks/contexts";
 import {useToggle} from "../hooks/useToggle";
 import {useTime} from "../hooks/useTime";
 import {
   findNextStudyClozeWithinTerm,
   findNextStudyDetails,
   findTermInNormalizedNote,
+  okAnswerFactor,
   StudyDetails, studyDetailsForCloze
 } from "../study";
 import {describeDuration, minutesOfTime, timeOfMinutes} from "../utils/time";
@@ -31,11 +32,10 @@ import {HideIf} from "./HideIf";
 
 interface Props {
   onReturn?: Dispatch<void>,
-  language: string,
-  audioStudy: boolean,
   noteId?: string,
   reference?: string,
   marker?: string,
+  seenNoteIds?: string[],
 }
 
 export function Study(props: Props) {
@@ -47,16 +47,18 @@ export function Study(props: Props) {
   const time = useTime(1000);
   const nowMinutes = minutesOfTime(time);
   const {undo, hasUndo, redo, hasRedo} = useNoteUpdateHistory();
+  const [{tag: language, audioStudy}] = useStudyContext();
 
-  const {noteId, reference, marker, language, audioStudy, onReturn = () => setRoute(() => null)} = props;
+  const {noteId, reference, marker, onReturn = () => setRoute(() => null)} = props;
+  const [seenNoteIds] = useState(() => props.seenNoteIds || []);
 
   const updateNoteAndConfirm = useUpdateNote(true);
   const selectTermRouting = useWorkflowRouting(SelectTerm, Study, updateNoteAndConfirm);
   const relatedStudyRouting = useWorkflowRouting(RelatedStudy, Study);
   const editNote = useCallback((editNoteId: string) => {
     const normalized = withDefault(mapSome(findNoteTree(notesIndex, editNoteId), normalizedNote), {...newNormalizedNote});
-    selectTermRouting({noteId: editNoteId, normalized}, {noteId, reference, marker, language, audioStudy, onReturn})
-  }, [audioStudy, language, marker, noteId, notesIndex, onReturn, reference, selectTermRouting])
+    selectTermRouting({noteId: editNoteId, normalized}, {noteId, reference, marker, onReturn})
+  }, [marker, noteId, notesIndex, onReturn, reference, selectTermRouting])
 
   const prepareNext = useCallback(() => {
     setCardStartedAt(Date.now());
@@ -82,7 +84,7 @@ export function Study(props: Props) {
     return findNextStudyDetails(language, nowMinutes, notesIndex, audioStudy);
   }, [noteId, reference, marker, language, nowMinutes, notesIndex, audioStudy, onReturn]);
 
-  const studyData = useStudyData(time, language, audioStudy);
+  const studyData = useStudyData();
   const [studyDetails, setStudyDetails] = useState(prepareNext);
   const startNext = useCallback(() => setStudyDetails(prepareNext()), [setStudyDetails, prepareNext]);
   const answerCloze = useAnswerCloze(notesIndex);
@@ -93,11 +95,12 @@ export function Study(props: Props) {
     setShowBack(false);
 
     mapSome(studyDetails, studyDetails => {
-      if (studyDetails.related.length > 0) {
-        relatedStudyRouting(studyDetails.cloze, props);
-      }
+      // if (studyDetails.related.length > 0) {
+        console.log({seenNoteIds});
+        relatedStudyRouting({...studyDetails.cloze, seenNoteIds}, props);
+      // }
     })
-  }, [answerCloze, props, relatedStudyRouting, studyDetails]);
+  }, [answerCloze, props, relatedStudyRouting, studyDetails, seenNoteIds]);
 
   const doUndo = useCallback(async () => {
     await undo();
@@ -140,7 +143,7 @@ export function Study(props: Props) {
           <VCentered className="tc">
             <div>
               <span className="mh2">経過</span>
-              {studyData.studied}/{studyData.studied + studyData.due}
+              <span className={studyData.status}>{studyData.studied}/{studyData.studied + studyData.due}</span>
               <span className="mh2">{describeDuration(time - cardStartedAt)}</span>
 
               <WorkflowLinks onReturn={onReturn}>
@@ -271,23 +274,3 @@ export function answerSkip(now: number): Answer {
   return [minutesOfTime(now), ["d", 0.6, 2.0]];
 }
 
-function okAnswerFactor(timeToAnswer: number, type: ClozeType) {
-  switch (type) {
-    case "produce":
-      return timeToAnswer < 6000 ? 3.0 : 2.4;
-
-    case "recognize":
-      return timeToAnswer <= 4000 ? 3.0 : 2.0;
-
-    case "listen":
-      return timeToAnswer < 10000 ? 3.6 : 2.8;
-
-    case "speak":
-      return timeToAnswer < 10000 ? 3.6 : 2.8;
-
-    case "flash":
-      return timeToAnswer <= 4000 ? 3.0 : 2.0;
-  }
-
-  return 1;
-}

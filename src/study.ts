@@ -155,27 +155,62 @@ export function findNextStudyCloze(language: string,
                                    fromMinutes: number,
                                    indexes: NoteIndexes,
                                    spoken: boolean): Maybe<Cloze> {
-  let nextCloze = Indexer.reverseIter(
-    indexes.taggedClozes.byTagSpokenNewAndNextDue,
-    [language, spoken, true, true, fromMinutes],
-    [language, spoken, true, true, null]
-  )();
-  nextCloze =
-    nextCloze ||
-    Indexer.reverseIter(
-      indexes.taggedClozes.byTagSpokenNewAndNextDue,
-      [language, spoken, false, true, fromMinutes],
-      [language, spoken, false, true, null]
-    )();
-  nextCloze =
-    nextCloze ||
-    Indexer.iterator(
-      indexes.taggedClozes.byTagSpokenAndNextDue,
-      [language, spoken, false, fromMinutes],
-      [language, spoken, Infinity, Infinity]
-    )();
 
-  return mapSome(nextCloze, ({inner}) => inner);
+    function zip<A>(a: Maybe<A>, b: Maybe<A>, f: (a: A, b: A) => A): Maybe<A> {
+      if (a) {
+        if (b) {
+          return some(f(a[0], b[0]));
+        }
+
+        return a;
+      }
+      return b;
+    }
+
+    function findNew(spoken: boolean) {
+      return Indexer.reverseIter(
+        indexes.taggedClozes.byTagSpokenNewAndNextDue,
+        [language, spoken, true, true, fromMinutes],
+        [language, spoken, true, true, null]
+      )();
+    }
+
+    function findDue(spoken: boolean) {
+      return Indexer.reverseIter(
+        indexes.taggedClozes.byTagSpokenNewAndNextDue,
+        [language, spoken, false, true, fromMinutes],
+        [language, spoken, false, true, null]
+      )();
+    }
+
+    function findDelayed(spoken: boolean) {
+      return Indexer.iterator(
+        indexes.taggedClozes.byTagSpokenAndNextDue,
+        [language, spoken, false, fromMinutes],
+        [language, spoken, Infinity, Infinity]
+      )();
+    }
+
+    let nextCloze = findNew(spoken);
+    if (spoken) {
+      nextCloze = zip(nextCloze, findNew(false), (a, b) => a.inner.attributes.schedule.nextDueMinutes < b.inner.attributes.schedule.nextDueMinutes ? b : a);
+    }
+
+    if (!nextCloze) {
+      nextCloze = findDue(spoken);
+      if (spoken) {
+        nextCloze = zip(nextCloze, findDue(false), (a, b) => a.inner.attributes.schedule.nextDueMinutes < b.inner.attributes.schedule.nextDueMinutes ? b : a);
+      }
+    }
+
+    if (!nextCloze) {
+      nextCloze = findDelayed(spoken);
+      if (spoken) {
+        nextCloze = zip(nextCloze, findDelayed(false), (a, b) => a.inner.attributes.schedule.nextDueMinutes > b.inner.attributes.schedule.nextDueMinutes ? b : a);
+      }
+    }
+
+    return mapSome(nextCloze, ({inner}) => inner);
 }
 
 export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<StudyDetails> {
@@ -431,4 +466,25 @@ export function fullTermMarker(term: TermId) {
   if (term.attributes.marker.indexOf(term.attributes.reference) === 0)
     return term.attributes.marker;
   return term.attributes.reference + "[" + term.attributes.marker + "]";
+}
+
+export function okAnswerFactor(timeToAnswer: number, type: ClozeType) {
+  switch (type) {
+    case "produce":
+      return timeToAnswer < 6000 ? 3.0 : 2.4;
+
+    case "recognize":
+      return timeToAnswer <= 4000 ? 3.0 : 2.0;
+
+    case "listen":
+      return timeToAnswer < 10000 ? 3.6 : 2.8;
+
+    case "speak":
+      return timeToAnswer < 10000 ? 3.6 : 2.8;
+
+    case "flash":
+      return timeToAnswer <= 4000 ? 3.0 : 2.0;
+  }
+
+  return 1;
 }

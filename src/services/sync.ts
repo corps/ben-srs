@@ -1,7 +1,7 @@
-import {mapSome, Maybe, withDefault} from "../utils/maybe";
+import {Either, getLeft, getRight, mapSome, Maybe, withDefault} from "../utils/maybe";
 import {runPromise} from "../cancellable";
 import 'regenerator-runtime';
-import {FileStore, getExt, readText, StoredMedia} from "./storage";
+import {FileStore, getExt, normalizeBlob, readText, StoredMedia} from "./storage";
 import {denormalizedNote, NoteIndexes, parseNote, removeNotesByPath, updateNotes} from "../notes";
 
 export const defaultFileMetadata = {
@@ -31,7 +31,7 @@ export interface SyncBackend {
     syncFileList(cursor: string): Iterable<Promise<FileListProgress>>,
     downloadFiles(metadata: FileMetadata[]): Iterable<[Promise<[FileMetadata, Blob]>[], Promise<void>]>,
     resolveFile(path: string): Promise<FileDelta>,
-    uploadFile(media: StoredMedia): Iterable<Promise<Maybe<"conflict">>>,
+    uploadFile(media: StoredMedia): Iterable<Promise<Either<FileMetadata, "conflict">>>,
     deleteFile(metadata: FileMetadata): Promise<Maybe<"conflict">>,
 }
 
@@ -73,7 +73,16 @@ export function* syncFiles(
             }
         } else {
             for (let work of backend.uploadFile(d)) {
-                yield* handleConflict(work, d);
+                const result = yield* runPromise(work);
+                const conflict = getLeft(result);
+                const updated = getRight(result);
+                
+                yield* runPromise(withDefault(mapSome(updated, updated => {
+                    const updatedSf = {...d, ...updated};
+                    return storage.storeBlob(normalizeBlob(updatedSf.blob), updatedSf, false);
+                }), Promise.resolve()));
+
+                yield* handleConflict(Promise.resolve(conflict), d);
             }
 
             if (!d.rev) {
