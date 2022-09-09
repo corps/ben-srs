@@ -1,2 +1,2 @@
-#! /usr/bin/env -S node -r "ts-node/register"
+#! /usr/bin/env node -r "ts-node/register"
 // nevermind
