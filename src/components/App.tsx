@@ -26,18 +26,18 @@ export function App() {
   }
 
   return <div className="wf-mplus1p">
-    <StudyContext.Provider value={[studyContext, setStudyContext]}>
-      <UpdateHistoryContext.Provider value={{updateHistory, setUpdateHistory}}>
-        <SessionContext.Provider value={session[0]}>
-          <FileStorageContext.Provider value={fileStorage}>
-            <NotesIndexContext.Provider value={notesIndex}>
-              <TriggerSyncContext.Provider value={[triggerSync, syncIdx]}>
+    <UpdateHistoryContext.Provider value={{updateHistory, setUpdateHistory}}>
+      <SessionContext.Provider value={session[0]}>
+        <FileStorageContext.Provider value={fileStorage}>
+          <NotesIndexContext.Provider value={notesIndex}>
+            <TriggerSyncContext.Provider value={[triggerSync, syncIdx]}>
+              <StudyContext.Provider value={[studyContext, setStudyContext]}>
                 <Router/>
-              </TriggerSyncContext.Provider>
-            </NotesIndexContext.Provider>
-          </FileStorageContext.Provider>
-        </SessionContext.Provider>
-      </UpdateHistoryContext.Provider>
-    </StudyContext.Provider>
+              </StudyContext.Provider>
+            </TriggerSyncContext.Provider>
+          </NotesIndexContext.Provider>
+        </FileStorageContext.Provider>
+      </SessionContext.Provider>
+    </UpdateHistoryContext.Provider>
   </div>
 }

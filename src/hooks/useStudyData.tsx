@@ -105,7 +105,7 @@ export function useStudyData() {
             addByAudioStudy(audioStudy);
             if (audioStudy) addByAudioStudy(false);
 
-            if (!isSyncing) {
+            if (!isSyncing || !studyData.clozes) {
                 const adi = calculateAverageDailyIntake(
                     notesIndex.taggedClozes, minutesNow, tag, audioStudy, 
                     mapSome(target, target => minutesNow + target * 60 * 24)
