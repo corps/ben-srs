@@ -95,10 +95,7 @@ export function Study(props: Props) {
     setShowBack(false);
 
     mapSome(studyDetails, studyDetails => {
-      // if (studyDetails.related.length > 0) {
-        console.log({seenNoteIds});
-        relatedStudyRouting({...studyDetails.cloze, seenNoteIds}, props);
-      // }
+      relatedStudyRouting({...studyDetails.cloze, seenNoteIds}, props);
     })
   }, [answerCloze, props, relatedStudyRouting, studyDetails, seenNoteIds]);
 

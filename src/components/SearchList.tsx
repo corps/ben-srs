@@ -14,7 +14,6 @@ interface Props {
 
 export function SearchList({iterator, perPage = 15, children, onReturn}: PropsWithChildren<Props>) {
   const [cursorIdx, setCursorIdx] = useState<Maybe<number>>(null);
-  useEffect(() => setCursorIdx(null), [iterator]);
   const container = useRef<HTMLDivElement | null>(null);
 
   const {nextPage, data, prevPage, hasMore, page} = usePagination(iterator, perPage);

@@ -76,7 +76,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const time = useTime();
 
 
-  const nowMinutes = minutesOfTime(time);
+  // const nowMinutes = minutesOfTime(time);
   const setTarget = useCallback((target: string) => {
     let result: Maybe<number> = null;
     const parsed = parseInt(target);
@@ -85,9 +85,9 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
     }
 
     setStudyContext({...studyContext, target: result});
-  }, [setStudyContext, nowMinutes, studyContext]);
+  }, [setStudyContext, studyContext]);
 
-  const targetString = target ? `${target} Days` : "Slow";
+  const targetString = target ? `${target[0]} Day${target[0] == 1 ? '' : 's'}` : "Slow";
 
 
   const updateNote = useUpdateNote();

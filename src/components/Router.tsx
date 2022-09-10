@@ -1,5 +1,5 @@
 import React, {ReactElement, useCallback, useEffect, useState} from 'react';
-import {RouteContext} from "../hooks/contexts";
+import {RouteContext, useStudyContext} from "../hooks/contexts";
 import {MainMenu} from "./MainMenu";
 import {ProgressBar} from "./ProgressBar";
 import {useProgress} from "../hooks/useProgress";
@@ -15,12 +15,25 @@ import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
 export function Router() {
     const [route, setRoute] = useState(null as Maybe<ReactElement>);
     const {pending, completed, onProgress} = useProgress();
-    const [_, syncError] = useSync(onProgress);
+    const [syncResult, syncError] = useSync(onProgress);
     const syncFailed = !!syncError;
+    const [{isSyncing, ...studyContext}, setStudyContext] = useStudyContext();
 
     useEffect(() => {
         syncError && console.error(syncError);
     }, [syncError]);
+
+    useEffect(() => {
+      if (!isSyncing) {
+          if (!syncResult && !syncError) {
+              setStudyContext({...studyContext, isSyncing: true});
+          }
+      } else {
+          if (syncResult || syncError) {
+              setStudyContext({...studyContext, isSyncing: false});
+          }
+      }
+    }, [isSyncing, studyContext, setStudyContext, syncResult, syncError]);
 
     const ele = withDefault(route, <MainMenu syncFailed={syncFailed}/>);
     const query = useQuery();
