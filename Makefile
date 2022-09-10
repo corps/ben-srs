@@ -1,4 +1,8 @@
+.PHONY: push
+push: build-image
+	docker push corps/bensrs:latest
+
 .PHONY: build-image
 build-image:
 	cat $$(nix-build base-image.nix) | docker load
-	docker build .
+	docker build . --tag corps/bensrs:latest
