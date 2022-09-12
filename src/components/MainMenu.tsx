@@ -52,8 +52,8 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const {tag, target} = studyContext;
   
   const setTag = useCallback((tag: string) => {
-    setStudyContext({...studyContext, tag});
-  }, [setStudyContext, studyContext]);
+    setStudyContext(studyContext => ({...studyContext, tag}));
+  }, [setStudyContext]);
 
   useEffect(() => {
     if (!allTags.includes(tag)) {
@@ -63,15 +63,17 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
 
   const {audioStudy} = studyContext;
   const setAudioStudy = useCallback((update: SetStateAction<boolean>) => {
-    let {audioStudy} = studyContext;
-    if (update instanceof Function) {
-      audioStudy = update(audioStudy);
-    } else {
-      audioStudy = update;
-    }
+    setStudyContext(studyContext => {
+      let {audioStudy} = studyContext;
+      if (update instanceof Function) {
+        audioStudy = update(audioStudy);
+      } else {
+        audioStudy = update;
+      }
 
-    setStudyContext({...studyContext, audioStudy});
-  }, [studyContext, setStudyContext]);
+      return {...studyContext, audioStudy};
+    });
+  }, [setStudyContext]);
   const toggleAudioStudy = useToggle(setAudioStudy);
   const time = useTime();
 
@@ -84,8 +86,8 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
       result = some(parsed);
     }
 
-    setStudyContext({...studyContext, target: result});
-  }, [setStudyContext, studyContext]);
+    setStudyContext(studyContext => ({...studyContext, target: result}));
+  }, [setStudyContext]);
 
   const targetString = target ? `${target[0]} Day${target[0] == 1 ? '' : 's'}` : "Slow";
 

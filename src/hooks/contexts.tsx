@@ -10,7 +10,7 @@ export type StudyContextData = typeof defaultStudyContext;
 export const SessionContext = createContext(defaultSession);
 export const NotesIndexContext = createContext({...indexesInitialState});
 export const FileStorageContext = createContext({} as FileStore);
-export const StudyContext = createContext([defaultStudyContext, () => null] as [StudyContextData, Dispatch<StudyContextData>]);
+export const StudyContext = createContext([defaultStudyContext, () => null] as [StudyContextData, Dispatch<StudyContextData | ((sd: StudyContextData) => StudyContextData)>]);
 export const RouteContext = createContext((() => []) as Dispatch<(v: Maybe<ReactElement>) => Maybe<ReactElement>>);
 export const TriggerSyncContext = createContext([() => null, 0] as [() => void, number]);
 
@@ -30,7 +30,7 @@ export function useNotesIndex() {
     return useContext(NotesIndexContext);
 }
 
-export function useStudyContext(): [StudyContextData, Dispatch<StudyContextData>] {
+export function useStudyContext(): [StudyContextData, Dispatch<StudyContextData | ((sd: StudyContextData) => StudyContextData)>] {
     return useContext(StudyContext);
 }
 
