@@ -10,7 +10,6 @@ interface Props {
   studyDetails: StudyDetails,
   readCard: () => void,
   answerFront: (answer: Answer) => void,
-  startNext: () => void,
   now: number,
   studyStarted: number,
   editNote: (noteId: string) => void,

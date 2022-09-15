@@ -36,6 +36,7 @@ interface Props {
   reference?: string,
   marker?: string,
   seenNoteIds?: string[],
+  seenRelated?: boolean,
 }
 
 export function Study(props: Props) {
@@ -49,7 +50,7 @@ export function Study(props: Props) {
   const {undo, hasUndo, redo, hasRedo} = useNoteUpdateHistory();
   const [{tag: language, audioStudy}] = useStudyContext();
 
-  const {noteId, reference, marker,  onReturn = () => setRoute(() => null)} = props;
+  const {noteId, reference, marker, seenRelated = false,  onReturn = () => setRoute(() => null)} = props;
   const [seenNoteIds] = useState(() => props.seenNoteIds || []);
 
   const updateNoteAndConfirm = useUpdateNote(true);
@@ -67,6 +68,10 @@ export function Study(props: Props) {
     if (noteId && reference && marker) {
       const next = findNextStudyClozeWithinTerm(noteId, reference, marker, notesIndex, nowMinutes, audioStudy);
       if (next) {
+        if (next[0].attributes.schedule.nextDueMinutes > nowMinutes && seenRelated) { 
+          onReturn();
+          return null;
+        }
         return bindSome(next, next => studyDetailsForCloze(next, notesIndex));
       }
 
@@ -78,8 +83,7 @@ export function Study(props: Props) {
   }, [noteId, reference, marker, language, nowMinutes, notesIndex, audioStudy, onReturn]);
 
   const studyData = useStudyData();
-  const [studyDetails, setStudyDetails] = useState(prepareNext);
-  const startNext = useCallback(() => setStudyDetails(prepareNext()), [setStudyDetails, prepareNext]);
+  const [studyDetails] = useState(prepareNext);
   const answerCloze = useAnswerCloze(notesIndex);
   const readCard = useReadCard(studyDetails);
 
@@ -88,7 +92,7 @@ export function Study(props: Props) {
     setShowBack(false);
 
     mapSome(studyDetails, studyDetails => {
-      relatedStudyRouting({...studyDetails.cloze, seenNoteIds}, props);
+      relatedStudyRouting({...studyDetails.cloze, seenNoteIds}, {...props, seenRelated: true});
     })
   }, [answerCloze, props, relatedStudyRouting, studyDetails, seenNoteIds]);
 
@@ -165,7 +169,7 @@ export function Study(props: Props) {
               </div>
               <HideIf hidden={!showBack}>
                 <BackSide editNote={editNote} studyDetails={studyDetails} answerFront={answerFront}
-                          readCard={readCard} startNext={startNext} now={time} studyStarted={cardStartedAt}/>
+                          readCard={readCard}  now={time} studyStarted={cardStartedAt}/>
               </HideIf>
               <HideIf hidden={showBack}>
                 <FrontSide readCard={readCard} studyDetails={studyDetails}/>
@@ -181,7 +185,9 @@ export function Study(props: Props) {
 function useReadCard(studyDetails: Maybe<StudyDetails>) {
   const audioDataUrl = useDataUrl(withDefault(mapSome(studyDetails, d => d.audioFileId), ""));
   const playAudioPath = useCallback(() => {
-    mapSome(audioDataUrl, (url) => playAudio(url, studyDetails.audioStart, studyDetails.audioEnd));
+    return bindSome(studyDetails, studyDetails => {
+      return mapSome(audioDataUrl, (url) => playAudio(url, studyDetails.audioStart, studyDetails.audioEnd));
+    });
   }, [audioDataUrl])
 
   return useCallback(() => {
