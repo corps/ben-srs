@@ -141,6 +141,14 @@ export function EditNote(props: Props) {
     }))
   }, [])
 
+  const setShareAudio = useCallback((shareAudio: boolean) => {
+    setNormalized(note => ({
+      ...note, attributes: {
+        ...note.attributes, shareAudio
+      }
+    }))
+  }, [])
+
   const setNoteTags = useCallback((tags: string[]) => {
     setNormalized(note => ({
       ...note, attributes: {
@@ -177,6 +185,15 @@ export function EditNote(props: Props) {
             type="checkbox"
             onChange={e => setNoteStudyGuide(e.target.checked)}
             checked={normalized.attributes.studyGuide}
+          />
+        </label>
+
+        <label className="dib ml2">
+            SA<input
+            className="ml2 mr3"
+            type="checkbox"
+            onChange={e => setShareAudio(e.target.checked)}
+            checked={normalized.attributes.shareAudio}
           />
         </label>
 
@@ -223,7 +240,5 @@ function useUnusedAudioFiles() {
   const store = useFileStorage();
   const {notes} = useNotesIndex();
   const audioMetadatas = useLiveQuery(async () => store.fetchMetadataByExts(Object.keys(audioContentTypes)), [], []);
-  return useMemo(() => audioMetadatas.filter(metadata => !Indexer.getFirstMatching(notes.byAudioFileId,
-    [metadata.id]
-  ) && metadata.rev && !metadata.deleted), [audioMetadatas, notes.byAudioFileId]);
+  return useMemo(() => audioMetadatas.filter(metadata => withDefault(mapSome(Indexer.getFirstMatching(notes.byAudioFileId, [metadata.id]), note => note.attributes.shareAudio), true) && metadata.rev && !metadata.deleted), [audioMetadatas, notes.byAudioFileId]);
 }

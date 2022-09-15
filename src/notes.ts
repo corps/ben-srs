@@ -8,6 +8,7 @@ export const newNote = {
     language: "",
     editsComplete: false,
     studyGuide: false,
+    shareAudio: false,
     terms: undefined as void,
     audioFileId: null as string | null | undefined,
     imageFilePaths: null as string[] | null | undefined,
