@@ -48,7 +48,7 @@ export function useOnPaste(cb: (files: File[]) => void, deps: any[]) {
           while (q.length) {
             const next = q.pop();
             if (!next) break;
-            if (next.nodeName === "IMG") {
+            if (next.nodeName === "IMG" || next.nodeName === "AUDIO") {
               try {
                 const image = await loadImage(next.getAttribute("src") || "");
                 files.push(image);

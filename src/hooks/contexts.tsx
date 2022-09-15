@@ -4,7 +4,7 @@ import {indexesInitialState, NoteIndexes} from "../notes";
 import {FileStore} from "../services/storage";
 import {Maybe, some} from "../utils/maybe";
 
-export const defaultStudyContext = { tag: "", audioStudy: false, target: some(30), isSyncing: false };
+export const defaultStudyContext = { tag: "", audioStudy: true, target: some(30), isSyncing: false };
 export type StudyContextData = typeof defaultStudyContext;
 
 export const SessionContext = createContext(defaultSession);

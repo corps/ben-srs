@@ -108,10 +108,10 @@ define("./service-worker.js",['./workbox-2a8a8a96'], function (workbox) { 'use s
     "revision": "e5ea8cacb44bf4cb3aa834acdcddd1b3"
   }, {
     "url": "main.js",
-    "revision": "9637c8e66192b7f13170a5bb5e69ed2f"
+    "revision": "96f1faf8e131e7262d51e3dfcdd38ba3"
   }, {
     "url": "src_services_index-worker_ts.js",
-    "revision": "c22507d8e5175f456fa71e814f770d94"
+    "revision": "eac5941d5ad31e0bef1734cf95895708"
   }, {
     "url": "vendors-node_modules_dexie_dist_dexie_mjs-node_modules_regenerator-runtime_runtime_js.js",
     "revision": "9860e5f601530845383e4cb95180f911"

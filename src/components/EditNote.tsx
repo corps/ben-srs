@@ -15,7 +15,8 @@ import {WorkflowLinks} from "./SimpleNavLink";
 import {useWithKeybinding} from "../hooks/useWithKeybinding";
 import {useOnPaste} from "../hooks/useOnPaste";
 import {useCardImages} from "../hooks/useCardImages";
-import {Images} from "./Images";
+import {Image, Images} from "./Images";
+import { SelectAudioFile } from './SelectAudioFile';
 interface Props {
   onReturn?: () => void,
   onApply: (tree: Maybe<NoteTree>, updated: NormalizedNote) => Promise<void>,
@@ -56,7 +57,9 @@ export function EditNote(props: Props) {
   useOnPaste(async (files: File[]) => {
     for (let f of files) {
       await withDefault(mapSome(getExt(f.name), async (ext: string) => {
-        if (!(ext in imageContentTypes)) return;
+        const isImage = ext in imageContentTypes;
+        const isAudio = ext in audioContentTypes;
+        if (!isImage && !isAudio) return;
 
         const id = createId();
         const path = `/${id}.${ext}`;
@@ -68,46 +71,42 @@ export function EditNote(props: Props) {
         }, true);
 
 
-        setNormalized(note => ({
-          ...note, attributes: {
-            ...note.attributes, imageFilePaths: [...note.attributes.imageFilePaths || [], path],
-          }
-        }))
+        if (isImage) {
+          setNormalized(note => ({
+            ...note, attributes: {
+              ...note.attributes, imageFilePaths: [...note.attributes.imageFilePaths || [], path],
+            }
+          }))
+        }
       }), Promise.resolve());
     }
 
     triggerSync()
   }, [triggerSync, setNormalized]);
 
-  const removeImage = useCallback((toRemove: string) => {
+  const removeImage = useCallback((toRemove: Image) => {
     setNormalized(note => ({
       ...note, attributes: {
         ...note.attributes,
-        imageFilePaths: (note.attributes.imageFilePaths || []).filter(id => id !== toRemove),
+        imageFilePaths: (note.attributes.imageFilePaths || []).filter(path => path !== toRemove.imageFilePath),
       }
     }))
   }, [])
 
   const allAudioMetadatas = useLiveQuery(async () => store.fetchMetadataByExts(Object.keys(audioContentTypes)), [], []);
   const audioMetadatas = useUnusedAudioFiles();
-  const audioPaths = useMemo(() => audioMetadatas.map(({path}) => path), [audioMetadatas]);
-  const curSelectedAudioPath = useMemo(
-    () => allAudioMetadatas.find(({id}) => id === normalized.attributes.audioFileId)?.path || "",
-    [allAudioMetadatas, normalized.attributes.audioFileId]
-  );
-  const setAudioPath = useCallback((selected: string) => {
-    const md = audioMetadatas.find(({path}) => path === selected);
-    if (!md) return;
 
+  const setAudioFileId = useCallback((selectedId: Maybe<string>) => {
     setNormalized(note => ({
       ...note, attributes: {
-        ...note.attributes, audioFileId: md.id,
+        ...note.attributes, audioFileId: withDefault(selectedId, ""),
       }
     }))
-  }, [audioMetadatas])
+  }, [])
+
   const audioDataUrl = useDataUrl(normalized.attributes.audioFileId);
   const playAudioPath = useCallback(() => {
-    mapSome(audioDataUrl, playAudio);
+    mapSome(audioDataUrl, (dataUrl) => playAudio(dataUrl, null, null));
   }, [audioDataUrl])
 
   const [PlayWrapper] = useWithKeybinding('j', playAudioPath)
@@ -165,11 +164,10 @@ export function EditNote(props: Props) {
         </div>
 
         <div className="ml2 w4 dib">
-          <SelectSingle
-            placeholder={curSelectedAudioPath || "オーディオ "}
-            onChange={setAudioPath}
-            value={curSelectedAudioPath}
-            values={audioPaths}
+          <SelectAudioFile
+            value={normalized.attributes.audioFileId || ""}
+            options={audioMetadatas}
+            onChange={setAudioFileId}
           />
         </div>
 

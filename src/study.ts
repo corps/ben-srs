@@ -14,7 +14,7 @@ import {
   Term, TermsRelatableStore
 } from "./notes";
 import {applySome, bindSome, mapSome, Maybe, some, toVoid} from "./utils/maybe";
-import {Indexer} from "./utils/indexable";
+import {concatIndexIterators, filterIndexIterator, Indexer} from "./utils/indexable";
 
 export interface StudyDetails {
   noteTree: NoteTree;
@@ -33,6 +33,8 @@ export interface StudyDetails {
   imageFilePaths: string[] | undefined | null;
   related: [Term, string[]][],
   studyGuides: string[],
+  audioStart: number | null | undefined,
+  audioEnd: number | null | undefined,
 }
 
 export const defaultStudyDetails: StudyDetails = {
@@ -52,6 +54,8 @@ export const defaultStudyDetails: StudyDetails = {
   imageFilePaths: null,
   related: [],
   studyGuides: [],
+  audioStart: null,
+  audioEnd: null,
 }
 
 export interface TermId {
@@ -139,16 +143,21 @@ export function findNextStudyClozeWithinTerm(
   marker: string,
   indexes: NoteIndexes,
   fromMinutes: number,
+  spoken: boolean
 ): Maybe<Cloze> {
-  return Indexer.reverseIter(
+  const iter = filterIndexIterator(concatIndexIterators(Indexer.reverseIter(
     indexes.clozes.byNoteIdReferenceMarkerAndNextDue,
     [noteId, reference, marker, fromMinutes],
     [noteId, reference, marker, null],
-  )() || Indexer.iterator(
+  ), Indexer.iterator(
     indexes.clozes.byNoteIdReferenceMarkerAndNextDue,
     [noteId, reference, marker, fromMinutes],
     [noteId, reference, marker, Infinity]
-  )();
+  )), cloze => {
+    return spoken || !['listen', 'speak'].includes(cloze.attributes.type);
+  });
+
+  return iter();
 }
 
 export function findNextStudyCloze(language: string,
@@ -159,6 +168,7 @@ export function findNextStudyCloze(language: string,
     function zip<A>(a: Maybe<A>, b: Maybe<A>, f: (a: A, b: A) => A): Maybe<A> {
       if (a) {
         if (b) {
+          console.log({a, b});
           return some(f(a[0], b[0]));
         }
 
@@ -270,9 +280,11 @@ export function studyDetailsForCloze(cloze: Cloze, indexes: NoteIndexes): Maybe<
       hint: term.attributes.hint,
       type: cloze.attributes.type,
       audioFileId: note.attributes.audioFileId,
-      imageFilePaths: note.attributes.imageFilePaths,
+      imageFilePaths: term.attributes.imageFilePaths || note.attributes.imageFilePaths,
       related,
       studyGuides,
+      audioStart: term.attributes.audioStart,
+      audioEnd: term.attributes.audioEnd,
     });
   }
 

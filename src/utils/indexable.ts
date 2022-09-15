@@ -76,6 +76,19 @@ export function mapIndexIterator<A, B>(iterator: IndexIterator<A>, f: (a: A) => 
     return () => mapSome(iterator(), f);
 }
 
+export function concatIndexIterators<A>(...iterators: IndexIterator<A>[]): IndexIterator<A> {
+    let i = 0;
+    return () => {
+        while (i < iterators.length) {
+            const next = iterators[i]();
+            if (next) return next;
+            else ++i;
+        }
+
+        return null;
+    }
+}
+
 export function flatMapIndexIterator<A, B>(iterator: IndexIterator<A>, f: (a: A) => IndexIterator<B>): IndexIterator<B> {
     let cur: Maybe<IndexIterator<B>> = null;
     return () => {

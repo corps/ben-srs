@@ -1,7 +1,7 @@
 import {defaultFileDelta, FileDelta, FileListProgress, FileMetadata, SyncBackend} from "./sync";
 import {loadDropboxSession} from "./dropbox";
 import {StoredMedia} from "./storage";
-import {Maybe} from "../utils/maybe";
+import {Either, Maybe} from "../utils/maybe";
 
 export const defaultUser = {
   username: "",
@@ -23,7 +23,7 @@ export const defaultSession: Session = {
       resolveFile(path: string): Promise<FileDelta> {
         return Promise.resolve(defaultFileDelta);
       },
-      uploadFile(media: StoredMedia): Iterable<Promise<Maybe<"conflict">>> {
+      uploadFile(media: StoredMedia): Iterable<Promise<Either<FileMetadata, "conflict">>> {
         return [];
       },
       downloadFiles(metadata: FileMetadata[]): Iterable<[Promise<[FileMetadata, Blob]>[], Promise<void>]> {

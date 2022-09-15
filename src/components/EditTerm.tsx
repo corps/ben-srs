@@ -10,13 +10,13 @@ import {
   NormalizedTerm,
   NoteTree
 } from "../notes";
-import {useNotesIndex, useRoute} from "../hooks/contexts";
+import {useNotesIndex, useRoute, useStudyContext} from "../hooks/contexts";
 import {
   findNextStudyClozeWithinTerm, findTermInNormalizedNote, findTermRange, StudyDetails, updateTermInNormalizedNote
 } from "../study";
 import {SimpleNavLink, WorkflowLinks} from "./SimpleNavLink";
 import {useToggle} from "../hooks/useToggle";
-import {playAudio, speak} from "../services/speechAndAudio";
+import {playAudio, speak, usePlayTime} from "../services/speechAndAudio";
 import {DictionaryLookup} from "./DictionaryLookup";
 import {medianSchedule} from "../scheduler";
 import {useDataUrl} from "../hooks/useDataUrl";
@@ -26,6 +26,8 @@ import {minutesOfTime} from "../utils/time";
 import {useTime} from "../hooks/useTime";
 import {Study} from "./Study";
 import {useWithKeybinding} from "../hooks/useWithKeybinding";
+import { useCardImages } from '../hooks/useCardImages';
+import { Images } from './Images';
 
 interface Props {
   onReturn?: () => void,
@@ -45,6 +47,7 @@ function useTypeToggle(workingTerm: NormalizedTerm, type: ClozeType) {
 export function EditTerm(props: Props) {
   const setRoute = useRoute();
   const notesIndex = useNotesIndex();
+  const [{audioStudy}] = useStudyContext();
 
   const {onReturn = () => setRoute(() => null), normalized, reference, marker, noteId} = props;
   const [workingTerm, setWorkingTerm] = useState(() => {
@@ -58,8 +61,33 @@ export function EditTerm(props: Props) {
     reference,
     marker,
     notesIndex,
-    minutesOfTime(time)
-  ), [marker, noteId, notesIndex, reference, time])
+    minutesOfTime(time),
+    audioStudy
+  ), [marker, noteId, notesIndex, reference, time, audioStudy])
+
+  const noteImages = useCardImages(normalized.attributes.imageFilePaths)
+  const termImages = useCardImages(workingTerm.attributes.imageFilePaths)
+
+  const toggleTermImage = useCallback((image: Image) => {
+    setWorkingTerm(workingTerm => {
+      const idx = workingTerm.attributes.imageFilePaths?.indexOf(image.imageFilePath);
+      if (idx != null && idx !== -1) {
+        workingTerm = {...workingTerm};
+        workingTerm.attributes = {...workingTerm.attributes};
+        const imageFilePaths = [...(workingTerm.attributes.imageFilePaths || [])];
+        imageFilePaths.splice(idx, 1);
+        workingTerm.attributes.imageFilePaths = imageFilePaths;
+      } else {
+        workingTerm = {...workingTerm};
+        workingTerm.attributes = {...workingTerm.attributes};
+        const imageFilePaths = [...(workingTerm.attributes.imageFilePaths || [])];
+        imageFilePaths.push(image.imageFilePath);
+        workingTerm.attributes.imageFilePaths = imageFilePaths;
+      }
+
+      return workingTerm;
+    });
+  }, [setWorkingTerm]);
 
   const [recognize, toggleRecognize] = useTypeToggle(workingTerm, "recognize");
   const [produce, toggleProduce] = useTypeToggle(workingTerm, "produce");
@@ -126,6 +154,24 @@ export function EditTerm(props: Props) {
     })
   }, [setWorkingTerm])
 
+  const onChangeAudioStart = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    let audioStart: number | null = parseInt(e.target.value);
+    audioStart = audioStart >= 0 ? audioStart : null;
+
+    setWorkingTerm(term => {
+      return {...term, attributes: {...term.attributes, audioStart}};
+    })
+  }, [setWorkingTerm])
+
+  const onChangeAudioEnd = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    let audioEnd: number | null = parseInt(e.target.value);
+    audioEnd = audioEnd > 0 ? audioEnd : null;
+
+    setWorkingTerm(term => {
+      return {...term, attributes: {...term.attributes, audioEnd}};
+    })
+  }, [setWorkingTerm])
+
   const onChangeDefinition = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
     setWorkingTerm(term => {
       return {...term, attributes: {...term.attributes, definition: e.target.value}};
@@ -134,8 +180,8 @@ export function EditTerm(props: Props) {
 
   const audioDataUrl = useDataUrl(normalized.attributes.audioFileId);
   const playAudioPath = useCallback(() => {
-    mapSome(audioDataUrl, playAudio);
-  }, [audioDataUrl])
+    mapSome(audioDataUrl, (url) => playAudio(url, workingTerm.attributes.audioStart, workingTerm.attributes.audioEnd));
+  }, [audioDataUrl, workingTerm.attributes])
 
   const testSpeech = useCallback(() => {
     if (normalized.attributes.audioFileId) {
@@ -179,6 +225,8 @@ export function EditTerm(props: Props) {
   const [DeleteWrapper] = useWithKeybinding('Delete', onDelete);
   const [StudyWrapper] = useWithKeybinding('.', useCallback(() => hasStudy ? studyTerm() : null, [hasStudy, studyTerm]))
   const [SpeakWrapper] = useWithKeybinding('j', testSpeech);
+
+  const curAudioTime = usePlayTime();
 
   return <div className="mw6 center">
     <div className="tc">
@@ -291,6 +339,20 @@ export function EditTerm(props: Props) {
                  className="w-100"
           />
         </div>
+        <div className="w-100">
+          <span>Time ({curAudioTime}s)</span>
+          <input type="number"
+                 onChange={onChangeAudioStart}
+                 value={workingTerm.attributes.audioStart || 0}
+                 className="fl w-50 ma2"
+          />
+
+          <input type="number"
+                 onChange={onChangeAudioEnd}
+                 value={workingTerm.attributes.audioEnd || 0}
+                 className="fl w-50 ma2"
+          />
+        </div>
       </div>) : null}
 
       {produce ? (<div>
@@ -325,6 +387,14 @@ export function EditTerm(props: Props) {
           word={workingTerm.attributes.reference}
         />
       </div>
+    </div>
+    <div className="mt2">
+      <div>Note Images:</div>
+      <Images images={noteImages} onClick={toggleTermImage}/>
+    </div>
+    <div>
+      <div>Term Images:</div>
+      <Images images={termImages}/>
     </div>
   </div>
 }

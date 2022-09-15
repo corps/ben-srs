@@ -49,7 +49,7 @@ export function Study(props: Props) {
   const {undo, hasUndo, redo, hasRedo} = useNoteUpdateHistory();
   const [{tag: language, audioStudy}] = useStudyContext();
 
-  const {noteId, reference, marker, onReturn = () => setRoute(() => null)} = props;
+  const {noteId, reference, marker,  onReturn = () => setRoute(() => null)} = props;
   const [seenNoteIds] = useState(() => props.seenNoteIds || []);
 
   const updateNoteAndConfirm = useUpdateNote(true);
@@ -65,14 +65,7 @@ export function Study(props: Props) {
     setShowBack(false);
 
     if (noteId && reference && marker) {
-      const next = bindSome(findNextStudyClozeWithinTerm(noteId, reference, marker, notesIndex, nowMinutes), next => {
-        if (next.attributes.schedule.lastAnsweredMinutes > nowMinutes - 60 * 12) {
-          return null;
-        }
-
-        return some(next);
-      })
-
+      const next = findNextStudyClozeWithinTerm(noteId, reference, marker, notesIndex, nowMinutes, audioStudy);
       if (next) {
         return bindSome(next, next => studyDetailsForCloze(next, notesIndex));
       }
@@ -188,7 +181,7 @@ export function Study(props: Props) {
 function useReadCard(studyDetails: Maybe<StudyDetails>) {
   const audioDataUrl = useDataUrl(withDefault(mapSome(studyDetails, d => d.audioFileId), ""));
   const playAudioPath = useCallback(() => {
-    mapSome(audioDataUrl, playAudio);
+    mapSome(audioDataUrl, (url) => playAudio(url, studyDetails.audioStart, studyDetails.audioEnd));
   }, [audioDataUrl])
 
   return useCallback(() => {

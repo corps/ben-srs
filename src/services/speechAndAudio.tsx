@@ -1,6 +1,8 @@
 import {defaultLanguageSettings} from "../settings";
 import {getMimeFromFileName} from "./storage";
-import {mapSome, mapSomeAsync, Maybe, some} from "../utils/maybe";
+import {mapSome, mapSomeAsync, Maybe, some, withDefault} from "../utils/maybe";
+import { useEffect, useState } from "react";
+import { useTime } from "../hooks/useTime";
 
 export function speak(language: string, text: string) {
   speechSynthesis.cancel();
@@ -24,10 +26,44 @@ export function speak(language: string, text: string) {
   speechSynthesis.speak(utterance);
 }
 
-let lastAudio: Maybe<HTMLAudioElement> = null;
-export function playAudio(dataUrl: string) {
-  mapSome(lastAudio, lastAudio => lastAudio.pause());
+let lastAudio: HTMLAudioElement = new Audio();
+export function playAudio(dataUrl: string, start: number | null | undefined, end: number | null | undefined) {
+  lastAudio.pause();
   const audio = new Audio(dataUrl);
-  lastAudio = some(audio);
+  if (start != null) audio.fastSeek(start);
+
+
+  const timeupdate = () => {
+    if (end && audio.currentTime >= end) audio.pause();
+  }
+
+  const pause = () => {
+    audio.removeEventListener('timeupdate', timeupdate);
+    audio.removeEventListener('pause', pause);
+  }
+  
+  audio.addEventListener('timeupdate', timeupdate);
+  audio.addEventListener('pause', pause);
+
+  lastAudio = audio;
   audio.play().catch(e => alert(e));
+}
+
+export function usePlayTime() {
+  const [time, setTime] = useState(0);
+  useTime(1000);
+
+  useEffect(() => {
+    const timeupdate = () => {
+      setTime(lastAudio.currentTime);
+    }
+    
+    lastAudio.addEventListener('timeupdate', timeupdate);
+
+    return () => {
+      lastAudio.removeEventListener('timeupdate', timeupdate);
+    }
+  }, [lastAudio]);
+
+  return time;
 }

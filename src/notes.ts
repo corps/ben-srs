@@ -45,6 +45,9 @@ export const newTerm = {
     hint: "",
     clozes: undefined as void,
     related: undefined as (string[] | undefined | null),
+    imageFilePaths: null as string[] | null | undefined,
+    audioStart: null as number | null | undefined,
+    audioEnd: null as number | null | undefined,
   }
 };
 
