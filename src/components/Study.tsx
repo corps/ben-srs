@@ -14,7 +14,6 @@ import {
   ClozeAnswer, ClozeType, findNoteTree, newNormalizedNote, normalizedNote, NoteIndexes, Tagged, Term
 } from "../notes";
 import {bindSome, mapSome, mapSomeAsync, Maybe, some, withDefault} from "../utils/maybe";
-import {playAudio, speak} from "../services/speechAndAudio";
 import {useStudyData} from "../hooks/useStudyData";
 import {FlexContainer, Row, VCentered, VCenteringContainer} from "./layout-utils";
 import {SimpleNavLink, WorkflowLinks} from "./SimpleNavLink";
@@ -29,6 +28,7 @@ import {useDataUrl} from "../hooks/useDataUrl";
 import {Indexer} from "../utils/indexable";
 import {RelatedStudy} from "./RelatedStudy";
 import {HideIf} from "./HideIf";
+import { useSpeechAndAudio } from '../hooks/useSpeechAndAudio';
 
 interface Props {
   onReturn?: Dispatch<void>,
@@ -80,7 +80,7 @@ export function Study(props: Props) {
     }
 
     return findNextStudyDetails(language, nowMinutes, notesIndex, audioStudy);
-  }, [noteId, reference, marker, language, nowMinutes, notesIndex, audioStudy, onReturn]);
+  }, [noteId, reference, marker, language, nowMinutes, notesIndex, audioStudy, onReturn, seenRelated]);
 
   const studyData = useStudyData();
   const [studyDetails] = useState(prepareNext);
@@ -184,21 +184,22 @@ export function Study(props: Props) {
 
 function useReadCard(studyDetails: Maybe<StudyDetails>) {
   const audioDataUrl = useDataUrl(withDefault(mapSome(studyDetails, d => d.audioFileId), ""));
+  const {playAudioInScope, speakInScope} = useSpeechAndAudio();
   const playAudioPath = useCallback(() => {
     return bindSome(studyDetails, studyDetails => {
-      return mapSome(audioDataUrl, (url) => playAudio(url, studyDetails.audioStart, studyDetails.audioEnd));
+      return mapSome(audioDataUrl, (url) => playAudioInScope(url, studyDetails.audioStart, studyDetails.audioEnd));
     });
-  }, [audioDataUrl])
+  }, [audioDataUrl, playAudioInScope, studyDetails])
 
   return useCallback(() => {
     mapSome(studyDetails, studyDetails => {
       if (studyDetails.audioFileId) {
         playAudioPath();
       } else {
-        speak(studyDetails.cloze.language, studyDetails.spoken);
+        speakInScope(studyDetails.cloze.language, studyDetails.spoken);
       }
     });
-  }, [studyDetails, playAudioPath]);
+  }, [studyDetails, playAudioPath, speakInScope]);
 }
 
 function useAnswerCloze(noteIndexes: NoteIndexes) {

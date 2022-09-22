@@ -20,7 +20,7 @@ export function useAllTags(language: string, singular?: boolean) {
   return singular ? tagsInIndex : ["", "/new/", ...tagsInIndex];
 }
 
-export function TagsSelector({value, language, onChange, singular}: PropsWithChildren<Props>) {
+export function TagsSelector({value, language, onChange, singular, children}: PropsWithChildren<Props>) {
   const allTags = useAllTags(language, singular);
 
   const updateCurTags = useCallback((newValue: string, i: number) => {
@@ -53,5 +53,7 @@ export function TagsSelector({value, language, onChange, singular}: PropsWithChi
         values={allTags}
       />
     </div> : null}
+
+    {children}
   </div>;
 }

@@ -16,7 +16,6 @@ import {
 } from "../study";
 import {SimpleNavLink, WorkflowLinks} from "./SimpleNavLink";
 import {useToggle} from "../hooks/useToggle";
-import {playAudio, speak, usePlayTime} from "../services/speechAndAudio";
 import {DictionaryLookup} from "./DictionaryLookup";
 import {medianSchedule} from "../scheduler";
 import {useDataUrl} from "../hooks/useDataUrl";
@@ -27,7 +26,8 @@ import {useTime} from "../hooks/useTime";
 import {Study} from "./Study";
 import {useWithKeybinding} from "../hooks/useWithKeybinding";
 import { useCardImages } from '../hooks/useCardImages';
-import { Images } from './Images';
+import { Images, Image } from './Images';
+import { useSpeechAndAudio } from '../hooks/useSpeechAndAudio';
 
 interface Props {
   onReturn?: () => void,
@@ -179,22 +179,24 @@ export function EditTerm(props: Props) {
   }, [setWorkingTerm])
 
   const audioDataUrl = useDataUrl(normalized.attributes.audioFileId);
+  const {speakInScope, playAudioInScope, timePosition} = useSpeechAndAudio();
   const playAudioPath = useCallback(() => {
-    mapSome(audioDataUrl, (url) => playAudio(url, workingTerm.attributes.audioStart, workingTerm.attributes.audioEnd));
-  }, [audioDataUrl, workingTerm.attributes])
+    mapSome(audioDataUrl, (url) => playAudioInScope(url, workingTerm.attributes.audioStart, workingTerm.attributes.audioEnd));
+  }, [audioDataUrl, workingTerm.attributes, playAudioInScope])
 
   const testSpeech = useCallback(() => {
     if (normalized.attributes.audioFileId) {
       playAudioPath();
     } else {
-      speak(normalized.attributes.language, workingTerm.attributes.pronounce || workingTerm.attributes.reference)
+      speakInScope(normalized.attributes.language, workingTerm.attributes.pronounce || workingTerm.attributes.reference)
     }
   }, [
     normalized.attributes.audioFileId,
     normalized.attributes.language,
     playAudioPath,
     workingTerm.attributes.pronounce,
-    workingTerm.attributes.reference
+    workingTerm.attributes.reference,
+    speakInScope
   ])
 
   const routeSearch = useWorkflowRouting(Search, EditTerm);
@@ -225,8 +227,6 @@ export function EditTerm(props: Props) {
   const [DeleteWrapper] = useWithKeybinding('Delete', onDelete);
   const [StudyWrapper] = useWithKeybinding('.', useCallback(() => hasStudy ? studyTerm() : null, [hasStudy, studyTerm]))
   const [SpeakWrapper] = useWithKeybinding('j', testSpeech);
-
-  const curAudioTime = usePlayTime();
 
   return <div className="mw6 center">
     <div className="tc">
@@ -340,7 +340,7 @@ export function EditTerm(props: Props) {
           />
         </div>
         <div className="w-100">
-          <span>Time ({curAudioTime}s)</span>
+          <span>Time ({timePosition}s)</span>
           <input type="number"
                  onChange={onChangeAudioStart}
                  value={workingTerm.attributes.audioStart || 0}
