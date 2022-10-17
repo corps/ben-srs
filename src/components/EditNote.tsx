@@ -19,6 +19,7 @@ import {Image, Images} from "./Images";
 import { SelectAudioFile } from './SelectAudioFile';
 import Tesseract, { createWorker } from 'tesseract.js';
 import { TakePicture } from './TakePicture';
+import { useSpeechAndAudio } from '../hooks/useSpeechAndAudio';
 interface Props {
   onReturn?: () => void,
   onApply: (tree: Maybe<NoteTree>, updated: NormalizedNote) => Promise<void>,
@@ -112,8 +113,10 @@ export function EditNote(props: Props) {
   }, [])
 
   const audioDataUrl = useDataUrl(normalized.attributes.audioFileId);
+
+  const {playAudioInScope} = useSpeechAndAudio();
   const playAudioPath = useCallback(() => {
-    mapSome(audioDataUrl, (dataUrl) => playAudio(dataUrl, null, null));
+    mapSome(audioDataUrl, (dataUrl) => playAudioInScope(dataUrl, null, null));
   }, [audioDataUrl])
 
   const [CaptureWrapper] = useWithKeybinding('o', playAudioPath)
