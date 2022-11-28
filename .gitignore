@@ -6,3 +6,8 @@ node_modules
 ngrok.yml
 authorized_keys
 result
+venv
+.pytest_cache
+.test_cache
+.mypy_cache
+__pycache__

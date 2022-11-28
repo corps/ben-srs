@@ -1,8 +1,0 @@
-build:
-  docker:
-    web: Dockerfile
-  config:
-    UID: 1000
-    GID: 100
-run:
-  web: websocketd --port $PORT --staticdir docs ./src/server.ts
