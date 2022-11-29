@@ -88,6 +88,11 @@ def as_json_handler(
 def test_start():
     get_value_from_cache_or_browser("authorization-code", app.start_url, 0)
 
+@app.route("/")
+@app.route("")
+def index_endpoint():
+    return send_file(os.path.join(app.root_path, app.static_folder, "index.html"))
+
 @app.route("/start")
 def start_endpoint():
     return redirect(app.start_url)

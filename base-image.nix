@@ -1,12 +1,10 @@
-{ pkgs ? import <nixpkgs> { }
-, pkgsLinux ? import <nixpkgs> { system = "x86_64-linux"; }
-}:
+{ pkgsLinux ? import <nixpkgs> { system = "x86_64-linux"; } }:
 
 let 
   env = import ./default.nix { pkgs = pkgsLinux; };
 in
 
-pkgs.dockerTools.buildImage {
+pkgsLinux.dockerTools.buildImage {
   name = "bensrs";
   tag = "base-image";
   created = "now";

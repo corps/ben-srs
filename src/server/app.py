@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import os
 import tempfile
+import threading
 from functools import cached_property
 from typing import (
     Any,
@@ -135,21 +136,20 @@ class App(Flask):
         self.__init__()
 
     def around_request(self, context: Callable[[], ContextManager]) -> None:
-        c: ContextManager | None = None
-
         @self.before_request
         def enter_context():
-            nonlocal c
-            assert c is None
-            c = context()
-            c.__enter__()
+            assert state.c is None
+            state.c = context()
+            state.c.__enter__()
 
         @self.teardown_request
         def exit_context(exc: BaseException | None):
-            nonlocal c
-            if c is not None:
-                c.__exit__(type(exc) if exc else None, exc, None)
-            c = None
+            if state.c is not None:
+                state.c.__exit__(type(exc) if exc else None, exc, None)
+            state.c = None
 
+class State(threading.local):
+    c: ContextManager | None = None
+state = State()
 
 app: App = App()
