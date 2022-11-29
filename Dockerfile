@@ -21,5 +21,5 @@ RUN webpack
 COPY wsgi.py /app/
 COPY __init__.py /app/
 
-CMD flask run -p 3000 --reload
+CMD flask run -h 0.0.0.0 -p 3000
 
