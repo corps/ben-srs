@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import os
 import tempfile
+from functools import cached_property
 from typing import (
     Any,
     Generator,
@@ -47,9 +48,17 @@ class App(Flask):
     json_provider_class = PydanticJSONProvider
 
     app_key: str = "tlu6ta8q9mu0w01"
-    app_secret: str = os.environ.get("APP_SECRET") or ""
-    store_path: str = "db.sqlite"
-    blob_path: str = "blobs"
+    store_path: str = "data/db.sqlite"
+    blob_path: str = "data/blobs"
+
+    @cached_property
+    def app_secret(self):
+        if "APP_SECRET" in os.environ:
+            return os.environ["APP_SECRET"]
+        if os.path.exists("/run/secrets/bensrs-secret"):
+            with open("/run/secrets/bensrs-secret", "r") as f:
+                return f.read()
+        return ""
 
     def blob_file_path(self, blob_id: str) -> str:
         path = os.path.join(self.root_path, self.blob_path)
