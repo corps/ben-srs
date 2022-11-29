@@ -10,13 +10,7 @@
 , coreutils ? pkgs.coreutils
 , cacert ? pkgs.cacert
 , python ? pkgs.python39
-, expat ? pkgs.expat
-, zlib ? pkgs.zlib
-, jansson ? pkgs.jansson
-, pcre ? pkgs.pcre
-, libxcrypt ? pkgs.libxcrypt
 , lib ? pkgs.lib
-, stdenv ? pkgs.stdenv
 }:
 
 symlinkJoin {
@@ -32,8 +26,7 @@ symlinkJoin {
     coreutils
     cacert
     python
-    jansson pcre libxcrypt
-  ] ++ lib.optionals (stdenv.isDarwin && stdenv.isAarch64) [ expat zlib ];
+  ];
 
   postBuild = ''
     for f in $out/lib/node_modules/.bin/*; do

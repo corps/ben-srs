@@ -3,7 +3,7 @@
 }:
 
 let 
-  env = pkgs.callPackage ./default.nix {};
+  env = import ./default.nix { pkgs = pkgsLinux; };
 in
 
 pkgs.dockerTools.buildImage {
@@ -19,15 +19,11 @@ pkgs.dockerTools.buildImage {
     ];
   };
 
-  contents = env;
+  contents = [ env ];
 
   runAsRoot = ''
-    #!${pkgs.runtimeShell}
-    ${pkgs.dockerTools.shadowSetup}
-    useradd -Ums /bin/bash -u 1002 bensrs
+    #!${pkgsLinux.runtimeShell}
     mkdir /app
-    chgrp -R bensrs /app
-    chown -R bensrs /app
     mkdir /usr
     ln -s /bin /usr/bin
     mkdir /tmp

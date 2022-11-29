@@ -114,7 +114,7 @@ class App(Flask):
             static_url_path="",
             static_folder="docs",
             root_path=os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", "..")
+                os.path.join(os.path.dirname(__file__), "..", "..", "..")
             )
         )
 
