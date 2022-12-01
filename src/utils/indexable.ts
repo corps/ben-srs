@@ -168,7 +168,7 @@ export class Indexer<V, I extends IndexStore<V>> {
                     groupKeyer: Keyer<V>,
                     reducer: GroupReducer<V>) {
         if (!this.indexKeyers[groupAttr as string]) {
-            throw new Error("Dependent index " + groupAttr + " should be defined before " + attr);
+            throw new Error(`Dependent index ${String(groupAttr)} should be defined before ${String(attr)}`);
         }
 
         this.setKeyer(attr, keyer);

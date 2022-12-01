@@ -5,7 +5,6 @@ import {Either, Maybe} from "../utils/maybe";
 
 export const defaultUser = {
   username: "",
-  needsRefreshAt: new Date(Date.now() + 1000 * 3600),
 };
 
 export type User = typeof defaultUser;

@@ -73,16 +73,16 @@ export function* syncFiles(
             }
         } else {
             for (let work of backend.uploadFile(d)) {
-                const result = yield* runPromise(work);
-                const conflict = getLeft(result);
-                const updated = getRight(result);
+                const result: Either<FileMetadata, "conflict"> = yield* runPromise(work);
+                const conflict: Maybe<"conflict"> = getLeft<FileMetadata, "conflict">(result);
+                const updated = getRight<FileMetadata, "conflict">(result);
                 
                 yield* runPromise(withDefault(mapSome(updated, updated => {
-                    const updatedSf = {...d, ...updated};
+                    const updatedSf: StoredMedia = {...d, ...updated};
                     return storage.storeBlob(normalizeBlob(updatedSf.blob), updatedSf, false);
                 }), Promise.resolve()));
 
-                yield* handleConflict(Promise.resolve(conflict), d);
+                yield* handleConflict(Promise.resolve<Maybe<"conflict">>(conflict as any), d);
             }
 
             if (!d.rev) {

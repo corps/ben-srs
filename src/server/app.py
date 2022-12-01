@@ -2,24 +2,21 @@ from __future__ import annotations
 
 import contextlib
 import os
-import tempfile
 import threading
 from functools import cached_property
 from typing import (
     Any,
     Generator,
     ContextManager,
-    Callable, BinaryIO,
+    Callable,
 )
 
-from dropbox import Dropbox
 from flask import Flask
 from flask.json.provider import DefaultJSONProvider
 from pydantic import BaseModel
 from pydantic.json import pydantic_encoder
 
-from .datasource import Store, FileMetadata
-from .utils import iterable_to_stream
+from .datasource import Store
 
 
 @contextlib.contextmanager
@@ -36,6 +33,7 @@ def override(**options) -> Generator[None, None, None]:
         for k, v in old.items():
             setattr(app, k, v)
 
+
 class PydanticJSONProvider(DefaultJSONProvider):
     @staticmethod
     def default(i: Any) -> Any:
@@ -48,51 +46,21 @@ class App(Flask):
     store: Store | None = None
     json_provider_class = PydanticJSONProvider
 
+    batch_size: int = 100
     app_key: str = "tlu6ta8q9mu0w01"
     store_path: str = "data/db.sqlite"
     blob_path: str = "data/blobs"
+    max_upload_size: int = 1024 * 1024 * 50
 
     @cached_property
     def app_secret(self):
         if "APP_SECRET" in os.environ:
             return os.environ["APP_SECRET"]
-        if os.path.exists("/run/secrets/bensrs-secret"):
-            with open("/run/secrets/bensrs-secret", "r") as f:
-                return f.read()
-        return ""
-
-    def blob_file_path(self, blob_id: str) -> str:
-        path = os.path.join(self.root_path, self.blob_path)
-        if not os.path.exists(path):
-            os.mkdir(path)
-        return os.path.abspath(os.path.join(path, blob_id))
-
-
-    @contextlib.contextmanager
-    def write_cache_entry(self, blob_id: str) -> Generator[BinaryIO, None, None]:
-        with tempfile.NamedTemporaryFile("wb", delete=False) as file:
-            try:
-                yield file
-            except:
-                file.delete = True
-                raise
-        os.replace(file.name, self.blob_file_path(blob_id))
-
-    def read_cache_entry(self, blob_id: str) -> BinaryIO:
-        return open(self.blob_file_path(blob_id), "rb")
-
-    @contextlib.contextmanager
-    def read_blob(self, metadata: FileMetadata, dropbox: Dropbox) -> Generator[BinaryIO, None, None]:
-        if os.path.exists(self.blob_file_path(metadata.remote_id)):
-            yield self.read_cache_entry(metadata.remote_id)
-            return
-        dropbox.files_download(
-            path=metadata.path,
-            rev=metadata.rev,
-        )
-        _, response = dropbox.files_download(metadata.path, metadata.rev)
-        with contextlib.closing(response):
-            yield iterable_to_stream(iterable=response.iter_content())
+        for path in ["/run/secrets/bensrs-secret", os.path.join(app.root_path, ".secret-key")]:
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    return f.read().rstrip()
+        raise ValueError("Could not determine app secret!")
 
     @property
     def secret_key(self) -> str:
@@ -125,7 +93,7 @@ class App(Flask):
             static_folder="docs",
             root_path=os.path.abspath(
                 os.path.join(os.path.dirname(__file__), "..", "..")
-            )
+            ),
         )
 
         self.around_request(self.open_store)
@@ -148,8 +116,11 @@ class App(Flask):
                 state.c.__exit__(type(exc) if exc else None, exc, None)
             state.c = None
 
+
 class State(threading.local):
     c: ContextManager | None = None
+
+
 state = State()
 
 app: App = App()

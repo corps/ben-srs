@@ -1,11 +1,12 @@
 import 'regenerator-runtime';
-import {Dropbox, DropboxAuth, DropboxResponseError, files} from "dropbox";
+import {Dropbox, DropboxAuth, files} from "dropbox";
 import {defaultUser, Session, User} from "./backends";
 import {defaultFileDelta, FileDelta, FileListProgress, FileMetadata, SyncBackend} from "./sync";
 import {Either, left, Maybe, right, some} from "../utils/maybe";
 import {withRetries} from "../utils/retryable";
 import {DynamicRateLimitQueue, GatingException} from "../utils/rate-limiting";
 import {normalizeBlob, StoredMedia} from "./storage";
+import {BensrsClient} from "./bensrs";
 
 export class DropboxSession implements Session {
   constructor(private auth: DropboxAuth,
@@ -17,7 +18,7 @@ export class DropboxSession implements Session {
 
   logout(): Promise<void> {
     this.storage.clear();
-    return Promise.resolve(undefined);
+    return Promise.resolve();
   }
 
   syncBackend(): SyncBackend {
@@ -36,11 +37,11 @@ export class DropboxSyncBackend implements SyncBackend {
       try {
         const md = await this.db.filesGetMetadata({path, include_deleted: true});
         if (md.result[".tag"] == "file") {
-          return { deleted: null, updated: some(mapDropboxMetadata(md.result)) };
+          return { deleted: null, updated: some(mapDropboxMetadata(md.result as files.FileMetadataReference)) };
         } else {
           return { deleted: some(path), updated: null };
         }
-      } catch (error) {
+      } catch (error: any) {
         if ('status' in error && error.status === 404) {
           return { deleted: some(path), updated: null };
         }
@@ -52,9 +53,9 @@ export class DropboxSyncBackend implements SyncBackend {
 
   async deleteFile(metadata: FileMetadata): Promise<Maybe<"conflict">> {
     if (!metadata.rev) return null;
-    return this.db.filesDeleteV2({path: metadata.path, parent_rev: metadata.rev}).then(v => null, error => {
+    return this.db.filesDeleteV2({path: metadata.path, parent_rev: metadata.rev}).then<Maybe<"conflict">>(v => null as any, error => {
       if ('status' in error && error.status === 409) {
-        return some("conflict");
+        return some("conflict" as "conflict") as any;
       }
 
       throw error;
@@ -74,7 +75,7 @@ export class DropboxSyncBackend implements SyncBackend {
   async handleRateLimit<T>(fn: () => Promise<T>): Promise<T> {
     try {
       return await fn();
-    } catch (e) {
+    } catch (e: any) {
       if ('status' in e) {
         if (e.status === 429) {
           if (e.headers['Retry-After']) {
@@ -164,9 +165,9 @@ export class DropboxSyncBackend implements SyncBackend {
         contents: normalizeBlob(media.blob),
         path: media.path,
         mode: media.rev ? {'.tag': "update", update: media.rev} : {'.tag': 'add'},
-      }).then(res => right(mapDropboxMetadata(res.result)), error => {
+      }).then<Either<FileMetadata, "conflict">>(res => right<FileMetadata, "conflict">(mapDropboxMetadata(res.result)), error => {
         if ('status' in error && error.status === 409) {
-          return left("conflict" as "conflict");
+          return left<"conflict", FileMetadata>("conflict" as "conflict") as any;
         }
 
         throw error;
@@ -192,7 +193,7 @@ export function mapDropboxListResponse(response: files.ListFolderResult): FileLi
       if (r[".tag"] === "file") {
         acc.push({
           ...defaultFileDelta,
-          updated: some(mapDropboxMetadata(r)),
+          updated: some(mapDropboxMetadata(r as files.FileMetadataReference)),
         })
       }
       if (r[".tag"] === "deleted" && r.path_lower) {
@@ -208,11 +209,11 @@ export function mapDropboxListResponse(response: files.ListFolderResult): FileLi
   };
 }
 
-export function loadDropboxSession(clientId: string) {
+export function loadDropboxSession() {
   return async function loadDropboxSession(storage: Storage, force = false): Promise<Session> {
-    const auth = await getDropboxAuthOrLogin(clientId, storage, force);
+    const auth = await getDropboxAuthOrLogin(storage, force);
 
-    let user = {...defaultUser, needsRefreshAt: auth.getAccessTokenExpiresAt() };
+    let user = {...defaultUser};
     const existingUserName = storage.getItem('username');
     if (existingUserName) {
       user = {...user, username: existingUserName };
@@ -224,80 +225,42 @@ export function loadDropboxSession(clientId: string) {
   }
 }
 
-export async function getDropboxAuthOrLogin(clientId: string, storage: Storage, force = false): Promise<DropboxAuth> {
-  const existingToken = storage.getItem('token');
-  const existingExpiresAt = storage.getItem('expires');
+export async function getDropboxAuthOrLogin(storage: Storage, force = false): Promise<DropboxAuth> {
+  const existingToken = storage.get('token');
+  const existingAppKey = storage.get('key');
 
-  if (!force && existingToken && existingExpiresAt) {
-    const expiresAt = parseInt(existingExpiresAt, 10);
-    return new DropboxAuth({
-      accessToken: existingToken,
-      accessTokenExpiresAt: new Date(expiresAt),
-      clientId,
-    });
+  const bensrs = new BensrsClient();
+
+  if (force) {
+    window.location.href = bensrs.startUrl();
+    return new DropboxAuth();
   }
-
-  const auth = new DropboxAuth({
-    clientId,
-  });
 
   let match;
-  if ((match = window.location.search.match(/dt=([^&]+)/))) {
-    const code = match[1];
-    auth.setAccessToken(code);
-    auth.setAccessTokenExpiresAt(new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 365 * 3));
-    storage.setItem('token', code);
-    storage.setItem('expires', auth.getAccessTokenExpiresAt().getTime() + "");
-    return auth;
+  if ((match = window.location.search.match(/\?at=([^&]+)/))) {
+    const authorization_code = match[1];
+    await bensrs.callJson(BensrsClient.LoginEndpoint, {authorization_code});
+    window.location.href = bensrs.host;
+    return new DropboxAuth();
   }
 
-  if ((match = window.location.search.match(/code=([^&]+)/))) {
-    const code = match[1];
-    if (code) {
-      try {
-        const verifier = storage.getItem('verifier');
-        if (verifier) {
-          auth.setCodeVerifier(verifier);
+  try {
+    const {success, ...auth} = await bensrs.callJson(BensrsClient.LoginEndpoint, {});
 
-          const response = await auth.getAccessTokenFromCode(window.location.origin + window.location.pathname, code);
-          const result: DropboxAccessTokenAuthResponse = response.result as any;
-          auth.setAccessToken(result.access_token);
-          auth.setAccessTokenExpiresAt(new Date(new Date().getTime() + result.expires_in * 1000))
-
-          storage.setItem('token', result.access_token);
-          storage.setItem('expires', auth.getAccessTokenExpiresAt().getTime() + "");
-
-          const dropbox = new Dropbox({ auth });
-          const account = await dropbox.usersGetCurrentAccount();
-          const username = account.result.email;
-          storage.setItem('username', username);
-
-          location.href = location.origin + location.pathname;
-          return auth;
-        }
-
-        return Promise.reject('Dropbox authentication failed, code verifier not found in storage!');
-      } catch (e) {
-        storage.clear();
-        location.href = location.origin + location.pathname;
-        throw e;
-      }
+    if (success && 'access_token' in auth) {
+      storage.setItem('username', auth.email || "");
+      storage.setItem('token', auth.access_token || "");
+      storage.setItem('key', auth.app_key || "")
+      return new DropboxAuth({
+        accessToken: auth.access_token,
+        clientId: auth.app_key,
+      });
     }
+  } catch (e) {
+    return new DropboxAuth({accessToken: existingToken, clientId: existingAppKey});
   }
 
-  storage.clear();
-  const authUrl =  await auth.getAuthenticationUrl(
-    window.location.href, undefined, 'code', 'offline', undefined, undefined, true);
-  storage.setItem("verifier", auth.getCodeVerifier());
-  window.location.href = authUrl.toString();
-  return null as any;
-}
-
-
-export interface DropboxAccessTokenAuthResponse {
-  access_token: string,
-  uid: string,
-  expires_in: number,
-  refresh_token: string,
-  account_id: string,
+  window.open(bensrs.startUrl(), "_blank")
+  window.location.href = bensrs.authorizeUrl();
+  return new DropboxAuth();
 }

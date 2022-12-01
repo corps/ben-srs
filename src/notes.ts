@@ -49,6 +49,7 @@ export const newTerm = {
     imageFilePaths: null as string[] | null | undefined,
     audioStart: null as number | null | undefined,
     audioEnd: null as number | null | undefined,
+    url: null as string | null | undefined,
   }
 };
 

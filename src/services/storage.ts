@@ -6,7 +6,7 @@ import {Semaphore} from "../utils/semaphore";
 import {Indexed, Indexer} from "../utils/indexable";
 
 export function withNamespace(storage: Storage, ns: string): Storage {
-  return {
+  return <Storage>{
     getItem(key: string): string | null {
       return storage.getItem(`${ns}${key}`);
     }, key(index: number): string | null {

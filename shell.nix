@@ -11,7 +11,9 @@ pkgs.mkShell {
         if [ -e ./requirements.txt ]; then
             pip install -r requirements.txt
         fi
+        export PATH=$PWD/node_modules/.bin:$PATH
 
         pip freeze | grep -v "file:" > requirements.txt
+        pydantic2ts --module ./src/server/endpoints.py --output ./src/server/types.ts
     '';
 }

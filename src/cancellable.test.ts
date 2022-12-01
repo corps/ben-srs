@@ -17,7 +17,7 @@ describe('cancellable', () => {
             function run() {
                 return cancellable.iocRun(function* () {
                     yield* runAsync(async () => 1)
-                    yield* runAsync<number>(async () => { throw Error('oh no') })
+                    yield* runAsync<void>(async () => { throw Error('oh no') })
                 }())
             }
 
@@ -35,7 +35,7 @@ describe('cancellable', () => {
                 try {
                     await result;
                     throw new Error('Expected failure')
-                } catch (e) {
+                } catch (e: any) {
                     expect(e.toString()).toEqual('Error: oh no')
                 }
             })
@@ -63,7 +63,7 @@ describe('cancellable', () => {
                 try {
                     await result;
                     throw new Error('Expected failure')
-                } catch (e) {
+                } catch (e: any) {
                     expect(e.toString()).toEqual('Error: oh no')
                 }
             })

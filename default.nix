@@ -2,7 +2,6 @@
 , symlinkJoin ? pkgs.symlinkJoin
 , runCommand ? pkgs.runCommand
 , nodejs ? pkgs.nodejs
-, nodePackages ? pkgs.nodePackages
 , ffmpeg ? pkgs.ffmpeg
 , youtube-dl ? pkgs.youtube-dl
 , node2nix ? pkgs.node2nix
@@ -17,8 +16,6 @@ symlinkJoin {
   name = "ben-srs-env";
   paths = [
     nodejs
-    nodePackages.typescript-language-server 
-    nodePackages.typescript
     ffmpeg
     youtube-dl
     node2nix

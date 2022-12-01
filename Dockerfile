@@ -17,6 +17,7 @@ COPY tsconfig.json /app/
 ENV BABEL_DISABLE_CACHE=1
 ENV NODE_ENV=production
 RUN webpack
+RUN pydantic2ts --module ./src/server/endpoints.py --output ./src/server/types.ts
 
 COPY wsgi.py /app/
 COPY __init__.py /app/

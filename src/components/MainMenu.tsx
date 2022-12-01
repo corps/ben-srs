@@ -201,7 +201,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
         </CircleButton>
 
 
-        { session.user.needsRefreshAt.getTime() < time || syncFailed ? <CircleButton
+        { syncFailed ? <CircleButton
           onClick={() => session.refresh()}
           blue
           className="mh2 pointer dim">
