@@ -15,8 +15,6 @@ import {createId} from "../services/storage";
 import {Search} from "./Search";
 import {TagsSelector, useAllTags} from "./TagsSelector";
 import {useStoredState} from "../hooks/useStoredState";
-import {Ripper} from "./Ripper";
-import { minutesOfTime } from '../utils/time';
 
 const targets = [
   "7 Days",
@@ -209,14 +207,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
           <br/>
           <span className="fw1">認</span>
           <span className="fw3">証</span>
-        </CircleButton> :
-          <CircleButton
-            onClick={() => setRoute(() => some(<Ripper language={language}/>))}
-            purple
-            className="mh2 pointer dim"
-          >
-            RIP
-          </CircleButton> }
+        </CircleButton> : null }
       </div>
 
       <div className="mv2">

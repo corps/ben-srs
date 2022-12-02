@@ -20,6 +20,7 @@ export function App() {
   const [updateHistory, setUpdateHistory] = useState<NoteUpdateHistory>([null, null]);
   const [studyContext, setStudyContext] = useState(defaultStudyContext);
 
+  if(error) console.error(error)
   if (!session) return null;
   if (error) {
     return <div>{error}</div>

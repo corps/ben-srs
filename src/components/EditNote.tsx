@@ -1,14 +1,13 @@
-import React, {ChangeEvent, useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {ChangeEvent, useCallback, useMemo, useRef, useState} from 'react';
 import {useFileStorage, useNotesIndex, useRoute, useTriggerSync} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
 import {
   findNoteTree, newNormalizedNote, NormalizedNote, normalizedNote, NoteTree,
 } from "../notes";
-import {mapSome, mapSomeAsync, Maybe, some, withDefault} from "../utils/maybe";
+import {mapSome, Maybe, withDefault} from "../utils/maybe";
 import {useLiveQuery} from "dexie-react-hooks";
 import {audioContentTypes, createId, getExt, imageContentTypes, normalizeBlob, readDataUrl} from "../services/storage";
 import {Indexer} from "../utils/indexable";
-import {playAudio} from "../services/speechAndAudio";
 import {useDataUrl} from "../hooks/useDataUrl";
 import {TagsSelector} from "./TagsSelector";
 import {SimpleNavLink, WorkflowLinks} from "./SimpleNavLink";
@@ -17,8 +16,6 @@ import {useOnPaste} from "../hooks/useOnPaste";
 import {useCardImages} from "../hooks/useCardImages";
 import {Image, Images} from "./Images";
 import { SelectAudioFile } from './SelectAudioFile';
-import Tesseract, { createWorker } from 'tesseract.js';
-import { TakePicture } from './TakePicture';
 import { useSpeechAndAudio } from '../hooks/useSpeechAndAudio';
 interface Props {
   onReturn?: () => void,
@@ -29,13 +26,6 @@ interface Props {
 }
 
 const allLanguages = ['Japanese', 'Cantonese', 'English', 'Todos'];
-const languageToTesseractLang: Record<string, string> = {
-  'Japanese': 'jpn',
-  'English': 'eng',
-  'Cantonese': 'chi_tra',
-  'Todos': 'eng',
-};
-
 export function EditNote(props: Props) {
   const notesIndex = useNotesIndex();
   const setRoute = useRoute();
@@ -168,45 +158,8 @@ export function EditNote(props: Props) {
     }))
   }, [])
 
-  const [processing, setProcessing] = useState(false);
-
-  const readImage = useCallback(async (f: File) => {
-    const lang = languageToTesseractLang[normalized.attributes.language];
-    if (!lang) return;
-    
-    let wasProcessing = false;
-    setProcessing(processing => {
-      wasProcessing = processing;
-      return true;
-    });
-    if (wasProcessing) return;
-
-    try {
-      const worker = createWorker({
-        logger: m => console.log(m),
-        errorHandler: e => console.error(e),
-      });
-          
-      try { 
-        await worker.load();
-        await worker.loadLanguage(lang);
-        await worker.initialize(lang);
-        const { data: { text } } = await worker.recognize(f);
-        setNormalized(note => ({
-          ...note, attributes: {
-            ...note.attributes, content: note.attributes.content + text + "\n",
-          }
-        }));
-      } finally {
-        await worker.terminate();
-      }
-    } finally {
-      setProcessing(false);
-    }
-  }, [normalized.attributes.language]);
-
   const images = useCardImages(normalized.attributes.imageFilePaths);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  useRef<HTMLVideoElement>(null);
 
   return <div>
     <div className="tc pt5-ns fw5 mb2">
@@ -231,7 +184,7 @@ export function EditNote(props: Props) {
 
       <TagsSelector value={normalized.attributes.tags} language={normalized.attributes.language} onChange={setNoteTags}>
         <label className="dib ml2">
-            SG<input
+            参考<input
             className="ml2 mr3"
             type="checkbox"
             onChange={e => setNoteStudyGuide(e.target.checked)}
@@ -240,7 +193,7 @@ export function EditNote(props: Props) {
         </label>
 
         <label className="dib ml2">
-            SA<input
+          共有<input
             className="ml2 mr3"
             type="checkbox"
             onChange={e => setShareAudio(e.target.checked)}
@@ -257,17 +210,12 @@ export function EditNote(props: Props) {
             </PlayWrapper>
           </button>
         </div>
-
-        <div className="ml2 dib">
-          <TakePicture onPicture={readImage}/>
-        </div>
       </div>
     </div>
 
     <div className="mw6 center">
       <div className="pt3">
         <textarea
-            disabled={processing}
             className="w-100 input-reset"
             rows={6}
             onChange={setNoteContent}

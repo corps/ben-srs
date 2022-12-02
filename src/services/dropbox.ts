@@ -226,8 +226,8 @@ export function loadDropboxSession() {
 }
 
 export async function getDropboxAuthOrLogin(storage: Storage, force = false): Promise<DropboxAuth> {
-  const existingToken = storage.get('token');
-  const existingAppKey = storage.get('key');
+  const existingToken = storage.getItem('token');
+  const existingAppKey = storage.getItem('key');
 
   const bensrs = new BensrsClient();
 
@@ -257,7 +257,7 @@ export async function getDropboxAuthOrLogin(storage: Storage, force = false): Pr
       });
     }
   } catch (e) {
-    return new DropboxAuth({accessToken: existingToken, clientId: existingAppKey});
+    return new DropboxAuth({accessToken: existingToken || "", clientId: existingAppKey || ""});
   }
 
   window.open(bensrs.startUrl(), "_blank")

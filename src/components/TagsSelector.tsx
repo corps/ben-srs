@@ -38,7 +38,7 @@ export function TagsSelector({value, language, onChange, singular, children}: Pr
 
   return <div className="f5">
     タグ:
-    {value.map((tag, i) => <div className="ml2 w4 dib">
+    {value.map((tag, i) => <div key={tag} className="ml2 w4 dib">
       <SelectSingle
         onChange={tag => updateCurTags(tag, i)}
         value={tag}
