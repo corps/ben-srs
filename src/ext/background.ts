@@ -1,5 +1,5 @@
-import {listen, Message} from "./message";
 import 'regenerator-runtime';
+import {listen, Message} from "./utils";
 
 listen(async (msg: Message, sender, sendResponse) => {
     console.log("got message", msg)
