@@ -7,6 +7,7 @@ import {withRetries} from "../utils/retryable";
 import {DynamicRateLimitQueue, GatingException} from "../utils/rate-limiting";
 import {normalizeBlob, StoredMedia} from "./storage";
 import {BensrsClient} from "./bensrs";
+import {delay, never} from "../utils/delay";
 
 export class DropboxSession implements Session {
   constructor(private auth: DropboxAuth,
@@ -65,6 +66,7 @@ export class DropboxSyncBackend implements SyncBackend {
   async handleRetry<T>(fn: () => Promise<T>): Promise<T> {
     return await withRetries(fn, (e) => {
       if ('status' in e) {
+        console.log({e})
         return e.status >= 500 ? 1 : 0;
       }
 
@@ -231,36 +233,25 @@ export async function getDropboxAuthOrLogin(storage: Storage, force = false): Pr
 
   const bensrs = new BensrsClient();
 
-  if (force) {
-    window.location.href = bensrs.startUrl();
-    return new DropboxAuth();
-  }
+  if (!force) {
+    try {
+      const {success, ...auth} = await bensrs.callJson(BensrsClient.LoginEndpoint, {});
 
-  let match;
-  if ((match = window.location.search.match(/\?at=([^&]+)/))) {
-    const authorization_code = match[1];
-    await bensrs.callJson(BensrsClient.LoginEndpoint, {authorization_code});
-    window.location.href = bensrs.host;
-    return new DropboxAuth();
-  }
-
-  try {
-    const {success, ...auth} = await bensrs.callJson(BensrsClient.LoginEndpoint, {});
-
-    if (success && 'access_token' in auth) {
-      storage.setItem('username', auth.email || "");
-      storage.setItem('token', auth.access_token || "");
-      storage.setItem('key', auth.app_key || "")
-      return new DropboxAuth({
-        accessToken: auth.access_token,
-        clientId: auth.app_key,
-      });
+      if (success && 'access_token' in auth) {
+        storage.setItem('username', auth.email || "");
+        storage.setItem('token', auth.access_token || "");
+        storage.setItem('key', auth.app_key || "")
+        return new DropboxAuth({
+          accessToken: auth.access_token,
+          clientId: auth.app_key,
+        });
+      }
+    } catch (e) {
+      return new DropboxAuth({accessToken: existingToken || "", clientId: existingAppKey || ""});
     }
-  } catch (e) {
-    return new DropboxAuth({accessToken: existingToken || "", clientId: existingAppKey || ""});
   }
 
-  window.open(bensrs.startUrl(), "_blank")
-  window.location.href = bensrs.authorizeUrl();
+  window.location.href = bensrs.startUrl();
+  await never(); // prevents safari from going crazy, this really only exists to satisfy type system.
   return new DropboxAuth();
 }

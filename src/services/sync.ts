@@ -40,6 +40,7 @@ export function* syncFiles(
     storage: FileStore,
     onSetPending: (v: number) => void = () => null,
     notesIndex: NoteIndexes,
+    ignoreBin = false
 ) {
     let pending = 0;
 

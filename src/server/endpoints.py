@@ -6,8 +6,12 @@ import dataclasses
 import json
 import os.path
 import time
-from typing import TypeVar, Generic, Type, Any, Callable, Optional, Tuple, List, Mapping
+import urllib
+import uuid
+from typing import TypeVar, Generic, Type, Any, Callable, Optional, Tuple, List, Mapping, cast
+from urllib.parse import urlencode
 
+import dropbox
 import requests
 import vcr
 from dropbox import Dropbox
@@ -18,6 +22,7 @@ from dropbox.files import (
     DeletedMetadata,
     WriteMode,
 )
+from dropbox.oauth import OAuth2FlowResult
 from dropbox.users import FullAccount
 from flask import Response, request, make_response, redirect, session, send_file
 from flask.testing import FlaskClient
@@ -113,7 +118,9 @@ def index_endpoint():
 
 @app.route("/start")
 def start_endpoint():
-    return redirect(app.start_url)
+    session['csrf'] = uuid.uuid4().hex
+    oauth_flow = app.oauth_flow(request, cast(dict, session), session['csrf'])
+    return redirect(oauth_flow.start())
 
 
 class OauthTokenResponse(BaseModel):
@@ -684,10 +691,7 @@ def test_terms(client: FlaskClient, logged_in_user: User):
 
 @app.route("/authorize")
 def authorize():
-    return make_response("""
-    <html>
-        <form method="GET" action="/">
-            <input name="at" type="text"/>
-        </form>
-    </html>
-    """)
+    oauth_flow = app.oauth_flow(request, cast(dict, session), session['csrf'])
+    result: OAuth2FlowResult = oauth_flow.finish(request.args)
+    Login().login(result.refresh_token)
+    return redirect("/")

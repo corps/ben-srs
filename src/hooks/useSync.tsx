@@ -22,7 +22,12 @@ export function useSync(onProgress: Dispatch<number>): [Maybe<any>, Maybe<any>] 
     return useAsync(function *() {
         onProgress(0);
         onProgress(1);
-        yield notesLoaded;
-        yield* syncFiles(session.syncBackend(), storage, onProgress, notesIndex)
+        try {
+            yield notesLoaded;
+            yield* syncFiles(session.syncBackend(), storage, onProgress, notesIndex)
+        } catch (e) {
+            console.error(e);
+            throw e;
+        }
     }, [syncLastUpdate, onProgress, session, storage, onProgress, notesIndex, notesLoaded], () => onProgress(0));
 }

@@ -18,7 +18,11 @@ export function useAsync<Result>(fn: () => AsyncGenerator<Result, any>, deps: an
     useWithContext((context) => {
         setError(null);
         setResult(null);
-        context.run(fn()).then(setResult, (v) => setError(some(v))).finally(cleanup);
+        try {
+            context.run(fn()).then(setResult, (v) => setError(some(v))).finally(cleanup);
+        } catch (e) {
+            setError(some(e));
+        }
     }, deps);
 
     return [result, error];

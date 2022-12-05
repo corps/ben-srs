@@ -16,14 +16,16 @@ export class UnbufferedChannel<T = void> {
 
     send(v: T) {
         if (this.closed) return;
-        this.trigger.resolve(v);
+        const {trigger} = this;
         this.trigger = new Trigger();
+        trigger.resolve(v);
     }
 
     reject(e: any) {
         if (this.closed) return;
-        this.trigger.reject(e);
+        const {trigger} = this;
         this.trigger = new Trigger();
+        trigger.reject(e);
     }
 
     async receive(): Promise<T> {
@@ -32,8 +34,8 @@ export class UnbufferedChannel<T = void> {
 
     close(v: T) {
         if (this.closed) return;
-        this.trigger.resolve(v);
         this.closed = true;
+        this.trigger.resolve(v);
     }
 }
 

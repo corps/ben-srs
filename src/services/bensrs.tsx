@@ -46,8 +46,4 @@ export class BensrsClient {
     startUrl() {
         return `${this.host}/start`;
     }
-
-    authorizeUrl() {
-        return `${this.host}/authorize`;
-    }
 }

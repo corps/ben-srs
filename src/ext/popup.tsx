@@ -30,7 +30,7 @@ function ExtPopup() {
             return () => subscription.close();
         }, [])
 
-        return <div className="w6">
+        return <div className="w5">
             { term ? <StudyTerm term={term}/> : <Settings/> }
         </div>
     } catch (e) {

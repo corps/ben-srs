@@ -8,9 +8,10 @@ from typing import (
     Any,
     Generator,
     ContextManager,
-    Callable,
-)
+    Callable, )
 
+import dropbox
+import flask
 from flask import Flask
 from flask.json.provider import DefaultJSONProvider
 from pydantic import BaseModel
@@ -71,6 +72,16 @@ class App(Flask):
         return (
             f"https://www.dropbox.com/oauth2/authorize?client_id={self.app_key}&"
             f"response_type=code&token_access_type=offline"
+        )
+
+    def oauth_flow(self, request: flask.Request, session: dict, csrf: str):
+        return dropbox.DropboxOAuth2Flow(
+            consumer_key=self.app_key,
+            consumer_secret=self.app_secret,
+            redirect_uri=request.host_url + "authorize",
+            session=session,
+            csrf_token_session_key=csrf,
+            token_access_type="offline"
         )
 
     @contextlib.contextmanager
