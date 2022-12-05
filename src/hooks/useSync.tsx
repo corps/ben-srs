@@ -1,9 +1,9 @@
 import {useFileStorage, useNotesIndex, useSession, useTriggerSync} from "./contexts";
-import {useAsync} from "../cancellable";
 import {syncFiles} from "../services/sync";
 import {Dispatch, useCallback, useEffect, useState} from "react";
 import {Maybe} from "../utils/maybe";
 import {useNoteLoader} from "./useNoteLoader";
+import {useAsync} from "./useWithContext";
 
 export function useSync(onProgress: Dispatch<number>): [Maybe<any>, Maybe<any>] {
     const session = useSession();

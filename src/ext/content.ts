@@ -1,126 +1,99 @@
 import 'regenerator-runtime';
-import {listen, Message, Subscription} from "./utils";
+import {escapeRegExp, listen, Message, runInAnimationFrames, runInPromises, send, Subscription} from "./utils";
 
 const hiliteBlue = "bensrshiliteblue";
 const hiliteRed = "bensrshilitered";
 const hiliteYellow = "bensrshiliteyellow";
 const hilites = [hiliteBlue, hiliteYellow, hiliteRed];
 
-
-const sub = new Subscription();
-sub.add(listen(async (message: Message, sender: any, sendResponse: (resp: Message) => void) => {
+const subscription = new Subscription();
+subscription.add(listen(async (message: Message, sender: any, sendResponse) => {
     if (message.type == "cancel-work") {
-        sub.close();
-        await sub.closed;
+        subscription.close();
+    } else {
+        return;
     }
-
-    sendResponse({ type: "acknowledge" })
-})).closeAfter(sub.run(async () => {
-    addHighlightCss();
-
-    const items = ["abc", "def", "oh", "bc", "a"];
-    const itemsByLength: Record<string, string[]> = {};
-    let longest = 0;
-
-    items.forEach(item => {
-        (itemsByLength[item.length] = itemsByLength[item.length] || []).push(item);
-        longest = Math.max(longest, item.length);
-    });
-
-
-    function* searchText(text: Text): Generator<void, Node, void> {
-        let {textContent} = text;
-
-        for (let i = longest; i > 0; --i) {
-            while (textContent) {
-                const re = new RegExp((itemsByLength[i] || []).join("|"))
-                const match = textContent.match(re);
-                if (match && match.index) {
-                    const wordSpan = text.splitText(match.index);
-                    text = wordSpan.splitText(match[0].length);
-                    const newSpan = document.createElement("span");
-                    newSpan.className = hiliteYellow;
-                    newSpan.innerText = match[0];
-                    newSpan.onclick = (e) => {
-                        e.preventDefault();
-                    }
-                    wordSpan.replaceWith(newSpan)
-                    textContent = text.textContent;
-                    yield;
-                } else {
-                    break;
-                }
-            }
-
-            yield;
-        }
-
-        return text;
-    }
-
-    function* searchNodes(): Generator<void, void, void> {
-        let node: Node = document.body;
-        while (true) {
-            while (node.hasChildNodes()) {
-                if (
-                    node instanceof HTMLScriptElement
-                    || node instanceof HTMLIFrameElement
-                    || node instanceof HTMLStyleElement
-                    || node instanceof HTMLDataElement
-                ) {
-                    break;
-                }
-
-                if (node instanceof HTMLElement) {
-                    if (hilites.includes(node.className)) {
-                        break;
-                    }
-                }
-
-                node = node.childNodes[0];
-            }
-
-            if (node instanceof Text) {
-                node = yield* searchText(node);
-            }
-
-
-            while (!node.nextSibling && node.parentNode) {
-               node = node.parentNode;
-                if (node == document.body) {
-                    return;
-                }
-            }
-            if (node.nextSibling) {
-                node = node.nextSibling;
-            }
-        }
-    }
-
-    const gen = searchNodes();
-    console.log('starting search');
-    await new Promise((resolve, reject) => {
-        try {
-            requestAnimationFrame(step);
-
-            function step() {
-                try {
-                    const {done} = gen.next();
-                    if (!done && !sub._closed) requestAnimationFrame(step);
-                    else {
-                        resolve(null);
-                    }
-                } catch (e: any) {
-                    reject(e);
-                }
-            }
-        } catch (e) {
-            reject(e);
-        }
-    })
-    console.log('finished with search')
 }));
 
+subscription.add(runInPromises(function *() {
+    try {
+        const terms: string[] = yield send({type: "request-terms"});
+        subscription.add(runInAnimationFrames(function *() {
+            yield* searchNodes(terms);
+        }))
+    } finally {
+        subscription.close();
+    }
+}));
+
+function* searchText(text: Text, matches: RegExp): Generator<void, Node, void> {
+    let {textContent} = text;
+
+    while (textContent) {
+        const match = textContent.match(matches);
+        if (match && match.index) {
+            const wordSpan = text.splitText(match.index);
+            text = wordSpan.splitText(match[0].length);
+            const newSpan = document.createElement("span");
+            newSpan.className = hiliteYellow;
+            newSpan.innerText = match[0];
+            newSpan.onclick = (e) => {
+                send({ type: "select-term", term: (e.target as HTMLElement).innerText })
+                e.preventDefault();
+            }
+            wordSpan.replaceWith(newSpan)
+            textContent = text.textContent;
+            yield;
+        } else {
+            break;
+        }
+    }
+
+    return text;
+}
+
+function* searchNodes(terms: string[]): Generator<void, void, void> {
+    terms.sort((a, b) => a.length - b.length);
+    const matches = new RegExp(terms.map(term => escapeRegExp(term)).join("|"));
+
+    let node: Node = document.body;
+    while (true) {
+        while (node.hasChildNodes()) {
+            if (
+                node instanceof HTMLScriptElement
+                || node instanceof HTMLIFrameElement
+                || node instanceof HTMLStyleElement
+                || node instanceof HTMLDataElement
+            ) {
+                break;
+            }
+
+            if (node instanceof HTMLElement) {
+                if (hilites.includes(node.className)) {
+                    break;
+                }
+            }
+
+            node = node.childNodes[0];
+        }
+
+        if (node instanceof Text) {
+            node = yield* searchText(node, matches);
+        }
+
+
+        while (!node.nextSibling && node.parentNode) {
+            node = node.parentNode;
+            if (node == document.body) {
+                send({ type: "finished-scan" });
+                return;
+            }
+        }
+        if (node.nextSibling) {
+            node = node.nextSibling;
+        }
+    }
+}
 
 
 function addHighlightCss() {

@@ -1,11 +1,12 @@
 import 'regenerator-runtime';
+import {Cancellable} from "../cancellable";
 
 type Listener = (request: any, sender: any, sendResponse: (data: any) => void) =>  void;
 
 let selfListener: Listener | null = null;
 let otherListener: Listener | null = null;
 
-export class Cancelled extends Error {}
+export class Cancelled extends Error {};
 
 export function listen(listener: Listener, asOther = false): Subscription {
     if (typeof browser != "undefined" && !otherListener) {
@@ -49,34 +50,23 @@ export function send(data: Message): Promise<any> {
     });
 }
 
-export type Message = StartHighlight | CancelWork | Acknowledge;
+export type Message = StartHighlight | StartSync | StartWork | CancelWork | SelectTerm | Acknowledge | RequestTerms |  RequestLanguages | FinishedScan;
+export type StartSync = { type: "start-sync" };
 export type StartHighlight = { type: "start-highlight" };
+export type StartWork = { type: "start-work" };
 export type CancelWork = { type: "cancel-work" };
 export type Acknowledge = { type: "acknowledge" };
+export type RequestTerms = { type: "request-terms" };
+export type RequestLanguages = { type: "request-languages" };
+export type SelectTerm = { type: "select-term", term: string };
+export type FinishedScan = { type: "finished-scan" };
 
 export class Subscription {
-    _closed = false;
-    shutdown: Function[] = [];
-    _resolveClosed: Function = () => null;
-    closed: Promise<void>;
-
-    constructor() {
-        this.closed = new Promise((resolve) => {
-            this._resolveClosed = resolve;
-        }).then(() => {
-            this._closed = true;
-            this.shutdown.forEach(f => {
-                try {
-                    f();
-                } catch(e) {
-                    console.error(e);
-                }
-            })
-        });
-    }
+    closed = false;
+    private shutdown: Function[] = [];
 
     add(f: Function | Subscription) {
-        if (this._closed) throw new Error("Cannot add to a closed subscription!")
+        if (this.closed) throw new Error("Cannot add to a closed subscription!")
         if (f instanceof Subscription) {
             this.shutdown.push(() => this.close());
         } else {
@@ -86,29 +76,46 @@ export class Subscription {
         return this;
     }
 
-    closeAfter(work: Promise<any>) {
-        work.finally(() => this.close());
+    close() {
+        const {shutdown} = this;
+        this.shutdown = [];
+        this.closed = true;
+        shutdown.forEach(f => {
+            try {
+                f();
+            } catch(e) {
+                console.error(e);
+            }
+        })
     }
+}
 
-    async run<T>(work: (() => Promise<T>) | Promise<T>): Promise<T | null> {
+export function runInPromises(f: () => Generator<any, any, any>): Subscription {
+    const cancellable = new Cancellable();
+    cancellable.run<any, any>(f());
+    return new Subscription().add(() => cancellable.cancel());
+}
+
+export function runInAnimationFrames(f: () => Generator<any, any, any>): Subscription {
+    const g = f();
+
+    let handle: number;
+    function step() {
         try {
-            console.log('running', this._closed);
-            if (this._closed) return null;
-            let result: T;
-            if (work instanceof Function)  result = await work();
-            else result = await work;
-            if (this._closed) return null;
-            return result;
+            const {done} = g.next();
+            if (!done) {
+                handle = requestAnimationFrame(step);
+            }
         } catch (e: any) {
-            console.error(e)
-            throw e;
+            console.error(e);
         }
     }
 
-    close() {
-        this._resolveClosed();
-        return new Subscription();
-    }
+    handle = requestAnimationFrame(step);
+    return new Subscription().add(() => {
+        cancelAnimationFrame(handle);
+        g.throw(new Cancelled());
+    })
 }
 
 export function escapeRegExp(string: string) {

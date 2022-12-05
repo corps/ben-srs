@@ -1,6 +1,5 @@
 import {
   Cloze,
-  ClozeAnswer,
   ClozeType,
   defaultNoteTree,
   findNoteTree,
@@ -13,7 +12,7 @@ import {
   NoteTree,
   Term, TermsRelatableStore
 } from "./notes";
-import {applySome, bindSome, mapSome, Maybe, some, toVoid} from "./utils/maybe";
+import {bindSome, mapSome, Maybe, some, toVoid} from "./utils/maybe";
 import {concatIndexIterators, filterIndexIterator, Indexer} from "./utils/indexable";
 
 export interface StudyDetails {
@@ -168,7 +167,6 @@ export function findNextStudyCloze(language: string,
     function zip<A>(a: Maybe<A>, b: Maybe<A>, f: (a: A, b: A) => A): Maybe<A> {
       if (a) {
         if (b) {
-          console.log({a, b});
           return some(f(a[0], b[0]));
         }
 

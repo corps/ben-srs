@@ -1,8 +1,9 @@
 import {Maybe, some} from "../utils/maybe";
 import {useFileStorage} from "./contexts";
 import {useState} from "react";
-import {runPromise, useAsync} from "../cancellable";
+import {runPromise} from "../cancellable";
 import {normalizeBlob, readDataUrl} from "../services/storage";
+import {useAsync} from "./useWithContext";
 
 export function useDataUrl(audioFileId: string | null | undefined): Maybe<string> {
   const store = useFileStorage();

@@ -1,62 +1,10 @@
 import 'regenerator-runtime'
-import {useState, useEffect, useRef, useCallback} from 'react';
-import {isSome, mapSome, Maybe, some} from "./utils/maybe";
-import {UnbufferedChannel, Trigger} from "./utils/semaphore";
+import {isSome, Maybe, some} from "./utils/maybe";
+import {UnbufferedChannel} from "./utils/semaphore";
 
-export function useWithContext(fn: (context: Cancellable) => void, deps: any[] = []) {
-  useEffect(() => {
-    const cancellable = new Cancellable();
-    fn(cancellable);
-    return () => cancellable.cancel();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-}
-
-export function useAsync<Result>(fn: () => AsyncGenerator<Result, any>, deps: any[] = [], cleanup: () => void = () => null): [Maybe<Result>, Maybe<any>] {
-  const [result, setResult] = useState(null as Maybe<Result>);
-  const [error, setError] = useState(null as Maybe<any>);
-
-  useWithContext((context) => {
-    setError(null);
-    setResult(null);
-    context.run(fn()).then(setResult, (v) => setError(some(v))).finally(cleanup);
-  }, deps);
-
-  return [result, error];
-}
-
-export function useAsyncCallback<P extends any[], R>(fn: (...p: P) => AsyncGenerator<R, any>): [
-  (...p: P) => Promise<Maybe<R>>,
-  () => Cancellable,
-] {
-  const context = useRef(null as Maybe<Cancellable>);
-
-  const cancel = useCallback(() => {
-    const newCancellable = new Cancellable();
-    mapSome(context.current, c => c.cancel());
-    context.current = some(newCancellable);
-    return newCancellable;
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      cancel();
-    }
-  }, [cancel])
-
-  const state = useCallback((...p: P) => {
-    const next = cancel();
-    return next.run(fn(...p));
-  }, [cancel, fn])
-
-  return [state, cancel];
-}
-
-
-export type AsyncGenerator<Result, P> = Generator<Promise<P>, Result, P>;
+export type AsyncGenerator<Result, P> = Generator<Promise<P> | P, Result, P>;
 
 export class Cancellable {
-  public cancelled = false;
   public cancel: () => void = () => {};
   private cancelledPromise: Promise<null> = new Promise((resolve, reject) => {
     this.cancel = () => resolve(null);
@@ -67,6 +15,12 @@ export class Cancellable {
       promise.then(some),
       this.cancelledPromise,
     ]);
+  }
+
+  static start(gen: AsyncGenerator<any, any>): Cancellable {
+    const cancellable = new Cancellable();
+    cancellable.run(gen);
+    return cancellable;
   }
 
   async run<Result, P>(gen: AsyncGenerator<Result, P>): Promise<Maybe<Result>> {
@@ -103,7 +57,7 @@ export class Cancellable {
       await self.race(pullChannel.receive());
       let next: P = null as any;
       let error: Maybe<any> = null;
-      let deferred: Promise<P> | Result;
+      let deferred: Promise<P> | P | Result;
 
       try {
         while (!pullChannel.closed) {
@@ -118,7 +72,7 @@ export class Cancellable {
           }
 
           try {
-            const nextValue = await self.race<P>(deferred as Promise<P>);
+            const nextValue = await self.race<P>(Promise.resolve<P>(deferred as P));
             if (isSome(nextValue)) {
               yieldChannel.send(nextValue);
               next = nextValue[0]

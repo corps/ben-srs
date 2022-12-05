@@ -581,3 +581,14 @@ export function findNoteTree(indexes: NoteIndexes, id: string): Maybe<NoteTree> 
       return {note, terms, clozes, clozeAnswers};
   });
 }
+
+export function getLanguagesOfNotes(notes: NotesStore) {
+  const languages: string[] = [];
+  for (let i = 0; i < notes.byLanguageAndStudyGuide[1].length;) {
+    const {attributes: {language}} = notes.byLanguageAndStudyGuide[1][i];
+    languages.push(language);
+    const {endIdx} = Indexer.getRangeFrom(notes.byLanguageAndStudyGuide, [language], endKeyMatchingWithin([language]));
+    i = endIdx;
+  }
+  return languages;
+}

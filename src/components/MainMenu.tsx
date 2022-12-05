@@ -1,7 +1,6 @@
 import React, {SetStateAction, useCallback, useEffect, useMemo, useState} from 'react';
 import {useFileStorage, useNotesIndex, useRoute, useSession, useStudyContext} from "../hooks/contexts";
 import {SelectSingle} from "./SelectSingle";
-import {endKeyMatchingWithin, Indexer} from "../utils/indexable";
 import {useToggle} from "../hooks/useToggle";
 import {useTime} from "../hooks/useTime";
 import {useStudyData} from "../hooks/useStudyData";
@@ -15,6 +14,7 @@ import {createId} from "../services/storage";
 import {Search} from "./Search";
 import {TagsSelector, useAllTags} from "./TagsSelector";
 import {useStoredState} from "../hooks/useStoredState";
+import {getLanguagesOfNotes} from "../notes";
 
 const targets = [
   "7 Days",
@@ -34,14 +34,8 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const [studyContext, setStudyContext] = useStudyContext();
 
   const languages = useMemo(() => {
-    const languages: string[] = [];
-    for (let i = 0; i < notesIndex.notes.byLanguageAndStudyGuide[1].length;) {
-      const {attributes: {language}} = notesIndex.notes.byLanguageAndStudyGuide[1][i];
-      languages.push(language);
-      const {endIdx} = Indexer.getRangeFrom(notesIndex.notes.byLanguageAndStudyGuide, [language], endKeyMatchingWithin([language]));
-      i = endIdx;
-    }
-    return languages;
+    notesIndex.notes.byLanguageAndStudyGuide
+    return getLanguagesOfNotes(notesIndex.notes);
   }, [notesIndex.notes.byLanguageAndStudyGuide]);
 
   const language = languages.includes(selectedLanguage) ? selectedLanguage : "";

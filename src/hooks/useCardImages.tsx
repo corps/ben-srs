@@ -1,7 +1,8 @@
 import {useState} from "react";
-import {runPromise, useAsync} from "../cancellable";
+import {runPromise} from "../cancellable";
 import {normalizeBlob, readDataUrl} from "../services/storage";
 import {useFileStorage} from "./contexts";
+import {useAsync} from "./useWithContext";
 
 export function useCardImages(imageFilePaths: string[] | null | undefined) {
   const store = useFileStorage();
