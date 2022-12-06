@@ -37,7 +37,7 @@ listen((msg: Message, sender, sendResponse) => {
                 const terms: string[] = [];
                 for (let next = iterator(); next; next = iterator()) {
                     const r = next[0].inner.reference;
-                    terms.push(r);
+                    if (!next[0].inner.attributes.schedule.delayIntervalMinutes) terms.push(r);
                 }
                 sendResponse(terms);
                 return false;

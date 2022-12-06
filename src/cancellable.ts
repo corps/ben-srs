@@ -23,11 +23,12 @@ export class Cancellable {
   async run<Result, P>(gen: AsyncGenerator<Result, P>): Promise<Maybe<Result>> {
     let value: any = undefined;
     let result: any;
-    for (result = gen.next(); !result.done && !this.cancelled; result = gen.next(value)) {
+    for (result = gen.next(); !result.done && !this.cancelled; ) {
       try {
         value = await this.race(Promise.resolve(result.value));
         if (value) value = value[0];
         else return null;
+        result = gen.next(value);
       } catch (e: any) {
         console.error(e);
         result = gen.throw(e);

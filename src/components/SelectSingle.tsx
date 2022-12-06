@@ -24,7 +24,7 @@ export function SelectSingle(props: SelectSingleProps & { className?: string }) 
   }, [changeCb, values]);
 
   let valueIdx = -1;
-  if (value) {
+  if (value && values) {
     valueIdx = values.indexOf(value);
   }
 

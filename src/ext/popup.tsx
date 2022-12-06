@@ -41,7 +41,7 @@ function ExtPopup() {
 
 function StudyTerm({term}: {term: string}) {
     return <div>
-
+        Term: {term}
     </div>
 }
 
@@ -102,20 +102,24 @@ function Settings() {
             try {
                 setScanning(true);
                 send({ type: "cancel-work" });
-                const client = new BensrsClient(hostName)
-                const result = yield* runPromise(client.callJson(
-                    BensrsClient.LoginEndpoint,
-                    { authorization_code: authorizationCode }
-                ))
-                if (!result.success) return;
-                yield* runPromise(send({
-                    type: "load-blobs",
-                }));
-                yield* runPromise(send({
-                    type: "start-sync",
-                    auth: result.access_token || "",
-                    app_key: result.app_key || ""
-                }));
+                try {
+                    const client = new BensrsClient(hostName)
+                    const result = yield* runPromise(client.callJson(
+                        BensrsClient.LoginEndpoint,
+                        {authorization_code: authorizationCode}
+                    ))
+                    if (!result.success) return;
+                    yield send({
+                        type: "load-blobs",
+                    });
+                    yield send({
+                        type: "start-sync",
+                        auth: result.access_token || "",
+                        app_key: result.app_key || ""
+                    });
+                } catch (e) {
+                    console.error(e);
+                }
                 const languages = yield* runPromise(send({ type: "request-languages" }));
                 setLanguages(languages);
                 yield* runPromise(send({ type: "start-highlight", language }));

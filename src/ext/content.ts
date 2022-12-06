@@ -54,6 +54,8 @@ function* searchText(text: Text, matches: RegExp): Generator<void, Node, void> {
 
 function* searchNodes(terms: string[]): Generator<void, void, void> {
     terms.sort((a, b) => -a.length + b.length);
+    console.log({terms})
+    addHighlightCss();
     const matches = new RegExp(terms.map(term => escapeRegExp(term)).join("|"));
 
     let node: Node = document.body;
