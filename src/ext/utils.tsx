@@ -50,15 +50,16 @@ export function send(data: Message): Promise<any> {
     });
 }
 
-export type Message = StartHighlight | StartSync | StartWork | CancelWork | SelectTerm | Acknowledge | RequestTerms |  RequestLanguages | FinishedScan;
-export type StartSync = { type: "start-sync" };
-export type StartHighlight = { type: "start-highlight" };
+export type Message = StartHighlight | StartSync | StartWork | CancelWork | SelectTerm | Acknowledge | RequestTerms |  RequestLanguages | FinishedScan | LoadBlobs;
+export type StartSync = { type: "start-sync", auth: string, app_key: string };
+export type StartHighlight = { type: "start-highlight", language: string };
 export type StartWork = { type: "start-work" };
 export type CancelWork = { type: "cancel-work" };
 export type Acknowledge = { type: "acknowledge" };
 export type RequestTerms = { type: "request-terms" };
 export type RequestLanguages = { type: "request-languages" };
 export type SelectTerm = { type: "select-term", term: string };
+export type LoadBlobs = { type: "load-blobs" };
 export type FinishedScan = { type: "finished-scan" };
 
 export class Subscription {

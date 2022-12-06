@@ -14,6 +14,7 @@ import dropbox
 import flask
 from flask import Flask
 from flask.json.provider import DefaultJSONProvider
+from flask_cors import CORS
 from pydantic import BaseModel
 from pydantic.json import pydantic_encoder
 
@@ -135,3 +136,4 @@ class State(threading.local):
 state = State()
 
 app: App = App()
+CORS(app, resources={r"/login": {"origins": "*"}}, supports_credentials=True)

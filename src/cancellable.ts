@@ -29,6 +29,7 @@ export class Cancellable {
         if (value) value = value[0];
         else return null;
       } catch (e: any) {
+        console.error(e);
         result = gen.throw(e);
       }
     }

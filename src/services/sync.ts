@@ -100,9 +100,26 @@ export function* syncFiles(
         const deletePaths: string[] = [];
         const updatedReferences: FileMetadata[] = [];
         delta.forEach(({updated, deleted}) => {
-            mapSome(updated, fm => updatedReferences.push(fm));
+            mapSome(updated, fm => {
+                if(withDefault(getExt(fm.path), '') !== 'txt') {
+                    if (ignoreBin) return;
+                }
+                updatedReferences.push(fm)
+            });
             mapSome(deleted, path => deletePaths.push(path));
-        })
+        });
+
+        yield Promise.all([...updatedReferences].map(async fm => {
+            const data = await storage.fetchBlob(fm.id);
+            if (data) {
+                if (data[0].rev === fm.rev) {
+                    updatedReferences.splice(
+                        updatedReferences.indexOf(data[0]),
+                        1
+                    );
+                }
+            }
+        }));
 
         updatePending(updatedReferences.length);
 

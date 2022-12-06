@@ -19,7 +19,8 @@
     },
 
     "host_permissions": [
-        "*://*"
+        "http://127.0.0.1:5000/",
+        "https://bensrs.kaihatsu.io/"
     ],
 
     "action": {
@@ -34,5 +35,5 @@
         }
     },
 
-    "permissions": [ "tabs", "scripting" ]
+    "permissions": [ "tabs", "scripting", "storage" ]
 }

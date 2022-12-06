@@ -45,6 +45,7 @@ const config = {
             // and not allow any straggling "old" SWs to hang around
             clientsClaim: true,
             skipWaiting: true,
+            cleanupOutdatedCaches: true,
             maximumFileSizeToCacheInBytes: 5 * 1024 * 1024
         }),
     ],

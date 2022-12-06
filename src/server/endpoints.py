@@ -49,6 +49,7 @@ class JsonEndpoint(BaseModel, Generic[T], abc.ABC):
 
 
 def user_dropbox() -> Tuple[User, Dropbox]:
+    print(session)
     if user_id := session.get("user_id"):
         if user := app.store.get(User, user_id):
             return user, Dropbox(
@@ -121,6 +122,10 @@ def start_endpoint():
     session['csrf'] = uuid.uuid4().hex
     oauth_flow = app.oauth_flow(request, cast(dict, session), session['csrf'])
     return redirect(oauth_flow.start())
+
+@app.route("/start_ext")
+def start_ext_endpoint():
+    return redirect(app.start_url)
 
 
 class OauthTokenResponse(BaseModel):

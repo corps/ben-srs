@@ -31,15 +31,38 @@ export class BensrsClient {
     }
 
     callJson<path extends string, Req, Res>(endpoint: Endpoint<path, Req, Res>, req: Req): Promise<Res | {success: false}>  {
-        return this._openXhr("POST", "/login", xhr => {
-            xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
-            xhr.send(JSON.stringify(req))
-            xhr.responseType = "json"
-        }).then<Res, {success: false}>(xhr => xhr.response, xhr => {
-            if (xhr.status == 401) {
+        if (typeof XMLHttpRequest != "undefined") {
+            return this._openXhr("POST", endpoint[0], xhr => {
+                xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
+                xhr.send(JSON.stringify(req))
+                xhr.responseType = "json"
+            }).then<Res, { success: false }>(xhr => xhr.response, xhr => {
+                if (xhr.status == 401) {
+                    return Promise.resolve({success: false});
+                }
+                return Promise.reject(xhr);
+            })
+        }
+
+        return fetch(this.host + endpoint[0], {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(req),
+            credentials: "include",
+        }).then<Res | { success: false }>(response => {
+            if (response.status >= 200 && response.status < 300) {
+                const v = response.body;
+                console.log({v});
+                return response.json();
+            }
+
+            if (response.status == 401) {
                 return Promise.resolve({success: false});
             }
-            return Promise.reject(xhr);
+
+            return Promise.reject(response);
         })
     }
 

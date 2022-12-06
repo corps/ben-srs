@@ -1,6 +1,5 @@
 import 'regenerator-runtime';
-import {listen, Message, runInPromises, send, Subscription} from "./utils";
-import {BensrsClient} from "../services/bensrs";
+import {listen, Message, runInPromises, Subscription} from "./utils";
 import {runPromise} from "../cancellable";
 import {syncFiles} from "../services/sync";
 import {Dropbox, DropboxAuth} from "dropbox";
@@ -11,41 +10,50 @@ import {denormalizedNote, getLanguagesOfNotes, indexesInitialState, parseNote, u
 import {Indexer} from "../utils/indexable";
 
 let syncSub = new Subscription();
+let loadSub = new Subscription();
 const filestore = new FileStore(new Dexie("bensrs"))
-let indexesState = {...indexesInitialState};
+const indexesState = {...indexesInitialState};
 let lastAccessToken = "";
+let curLanguage = "";
 
-listen(async (msg: Message, sender, sendResponse) => {
+listen((msg: Message, sender, sendResponse) => {
     console.log("got message", msg)
     try {
         switch (msg.type) {
             case "start-sync":
-                restartSync(sendResponse);
-                return;
+                restartSync(sendResponse, msg.auth, msg.app_key);
+                return true;
             case "request-languages":
                 sendResponse(getLanguagesOfNotes(indexesState.notes))
-                return;
+                return false;
+            case "load-blobs":
+                console.log('received, true now')
+                restartLoad(sendResponse);
+                return true;
             case "request-terms":
                 const iterator = Indexer.iterator(indexesState.taggedClozes.byTagSpokenAndNextDue,
-                    [localStorage.getItem("language"), false, false, 0],
-                            [localStorage.getItem("language"), false, false, Date.now() / 1000 / 60])
+                    [curLanguage, false, false, 0],
+                            [curLanguage, false, false, Date.now() / 1000 / 60])
                 const terms: string[] = [];
                 for (let next = iterator(); next; next = iterator()) {
                     const r = next[0].inner.reference;
                     terms.push(r);
                 }
                 sendResponse(terms);
-                return;
+                return false;
             case "start-highlight":
-                const [tab] = await browser.tabs.query({active: true, lastFocusedWindow: true});
-                await browser.scripting.executeScript({
-                    files: ['content.js'],
-                    target: {
-                        tabId: tab.id,
-                    }
-                });
-                sendResponse({});
-                break;
+                curLanguage = msg.language;
+                (async () => {
+                    const [tab] = await browser.tabs.query({active: true, lastFocusedWindow: true});
+                    await browser.scripting.executeScript({
+                        files: ['content.js'],
+                        target: {
+                            tabId: tab.id,
+                        }
+                    });
+                    sendResponse({});
+                })();
+                return true;
             default:
                 break;
         }
@@ -55,55 +63,55 @@ listen(async (msg: Message, sender, sendResponse) => {
     } finally {
         console.log("completed handling event");
     }
+
+    return false;
 })
 
-function restartSync(sendResponse: Function) {
+function restartLoad(sendResponse: Function) {
+    loadSub.close();
+    loadSub = new Subscription();
+
+    loadSub.add(runInPromises(function* () {
+        try {
+            Object.assign(indexesState, {...indexesInitialState});
+            const noteBlobs = yield* runPromise(filestore.fetchBlobsByExt('txt'));
+            for (let {blob, id, rev, path} of noteBlobs) {
+                const contents = yield readText(normalizeBlob(blob));
+                const normalized = parseNote(contents);
+                const denormalized = denormalizedNote(normalized, id, path, rev);
+                updateNotes(indexesState, denormalized);
+            }
+            console.log('done loading blobs')
+        } finally {
+            sendResponse(true);
+        }
+    }));
+}
+
+function restartSync(sendResponse: Function, accessToken: string, clientId: string) {
     syncSub.close();
     syncSub = new Subscription();
 
     syncSub.add(runInPromises(function* () {
         try {
-            let host: string;
-            try {
-                host = JSON.parse(localStorage.getItem("host") || "");
-            } catch {
-                console.log("Sync stopped, no host configured.");
-                return;
-            }
-
-            const hasHostPerm = yield browser.permissions.contains({origins: [host + "/"]});
-            if (!hasHostPerm) {
-                yield browser.permissions.request({origins: [host + "/"]})
-            }
-            const client = new BensrsClient(host);
-            const results = yield* runPromise(client.callJson(BensrsClient.LoginEndpoint, {}));
-            if (!results.success) return;
-
-            if (results.access_token != lastAccessToken) {
-                lastAccessToken = results.access_token || "";
-                indexesState = {...indexesInitialState};
-                console.log('reading blobs');
-                const noteBlobs = yield* runPromise(filestore.fetchBlobsByExt('txt'));
-                for (let {blob, id, rev, path} of noteBlobs) {
-                    const contents = yield readText(normalizeBlob(blob));
-                    const normalized = parseNote(contents);
-                    const denormalized = denormalizedNote(normalized, id, path, rev);
-                    updateNotes(indexesState, denormalized);
-                }
-                console.log('done loading blobs');
-            }
+            lastAccessToken = accessToken;
 
             const auth = new DropboxAuth({
-                accessToken: results.access_token,
-                clientId: results.app_key,
+                accessToken,
+                clientId,
             });
-            const dropbox = new Dropbox({ auth });
+            const dropbox = new Dropbox({ auth, fetch: function() {
+                    return fetch.apply(self, arguments as any);
+                }});
+            console.log('syncing files')
             yield* syncFiles(
                 new DropboxSyncBackend(dropbox),
                 filestore,
                 () => null,
                 indexesState,
+                true
             )
+            console.log('finished syncing files')
 
             sendResponse(true);
         } finally {
