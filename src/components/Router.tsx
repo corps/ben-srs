@@ -1,10 +1,10 @@
-import React, {ReactElement, useCallback, useEffect, useState} from 'react';
+import React, {ReactElement, useEffect, useState} from 'react';
 import {RouteContext, useStudyContext} from "../hooks/contexts";
 import {MainMenu} from "./MainMenu";
 import {ProgressBar} from "./ProgressBar";
 import {useProgress} from "../hooks/useProgress";
 import {useSync} from "../hooks/useSync";
-import {Maybe, some, withDefault} from "../utils/maybe";
+import {Maybe, withDefault} from "../utils/maybe";
 import {useQuery} from "../hooks/useQuery";
 import {Search} from "./Search";
 import {EditNote} from "./EditNote";

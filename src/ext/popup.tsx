@@ -1,11 +1,18 @@
 import 'regenerator-runtime';
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import ReactDom from 'react-dom';
-import {Subscription, send, listen, runInPromises, Message, Acknowledge} from "./utils";
-import 'tachyons';
+import {Subscription, runInPromises, SendController} from "./utils";
 import {SelectSingle} from "../components/SelectSingle";
 import {runPromise} from "../cancellable";
 import {BensrsClient} from "../services/bensrs";
+import type {BackgroundServer, PublicState} from "./background";
+import {Maybe, some} from "../utils/maybe";
+import {NormalizedNote, Term} from "../notes";
+import {SearchList} from "../components/SearchList";
+import {asIterator, mapIndexIterator} from "../utils/indexable";
+import 'tachyons';
+import '../css/index.css';
+import {Answer} from "../scheduler";
 
 window.onload = () => {
     const newDiv = document.createElement("DIV");
@@ -13,25 +20,60 @@ window.onload = () => {
     ReactDom.render(<ExtPopup/>, newDiv);
 }
 
+class BackgroundSender extends SendController<"bg"> implements Pick<BackgroundServer, "awaitUpdate" | "startSync" | "startScan" | "clear" | "answerTerm"> {
+    constructor() {
+        super("bg");
+    }
+
+
+    awaitUpdate(this: BackgroundSender, cur: PublicState): Promise<PublicState> {
+        return this.sendController(this, "awaitUpdate", cur).then(p => p);
+    }
+
+    async startSync(this: BackgroundSender, accessToken: string, clientId: string): Promise<void> {
+        return this.sendController(this, "startSync", accessToken, clientId);
+    }
+
+    async startScan(this: BackgroundSender, language: string): Promise<void> {
+        console.log('sending startScan');
+        return this.sendController(this, "startScan", language);
+    }
+
+    async clear(this: BackgroundSender) {
+        await this.sendController(this, "clear");
+    }
+
+    async answerTerm(this: BackgroundSender, term: Term, answer: Answer) {
+        await this.sendController(this, "answerTerm", term, answer);
+    }
+}
+
+const backgroundSender = new BackgroundSender();
+
 function ExtPopup() {
     try {
-        const [term, setTerm] = useState(null as null | string);
+        const [state, setState] = useState<PublicState>({
+            curTerms: [] as Term[],
+            curLanguage: "",
+            loaded: false,
+            languages: [],
+            newNote: null as Maybe<NormalizedNote>,
+            selectBuffer: "",
+            version: 0,
+        });
+        const {curTerms, loaded} = state;
+
         useEffect(() => {
-            const subscription = listen((data: Message, sender, sendResponse) => {
-                switch (data.type) {
-                    case "select-term":
-                        setTerm(data.term);
-                        return;
-                    default:
-                        return;
-                }
+            const subscription = runInPromises(function* () {
+                const nextState = yield* runPromise(backgroundSender.awaitUpdate(state));
+                setState(nextState);
             });
-
             return () => subscription.close();
-        }, [])
+        }, [state])
 
-        return <div className="w5">
-            { term ? <StudyTerm term={term}/> : <Settings/> }
+        return <div className="w6 pa2">
+            {loaded ? curTerms.length ? <StudyTerm terms={curTerms}/> : <Settings state={state}/> :
+                <div className="ma3">Loading....</div>}
         </div>
     } catch (e) {
         console.error(e);
@@ -39,17 +81,79 @@ function ExtPopup() {
     }
 }
 
-function StudyTerm({term}: {term: string}) {
+function ShowTerm({term}: { term: Term }) {
+    const edit = useCallback(async () => {
+        const {host} = await browser.storage.local.get("host");
+        window.open(
+            `${host}/?v=edit&n=${term.noteId}&r=${term.attributes.reference}&m=${term.attributes.marker}`,
+            "_blank"
+        )
+    }, [term])
+
+    const ok = useCallback(() => {
+        backgroundSender.clear();
+        backgroundSender.answerTerm(term, [Date.now() / 1000 / 60, ["f", 2.0]]);
+    }, [term])
+
+    const skip = useCallback(() => {
+        backgroundSender.clear();
+        backgroundSender.answerTerm(term, [Date.now() / 1000 / 60, ["d", 0.6, 0.2]]);
+    }, [term])
+
+    const miss = useCallback(() => {
+        backgroundSender.clear();
+        backgroundSender.answerTerm(term, [Date.now() / 1000 / 60, ["f", 0.6]]);
+    }, [term])
+
     return <div>
-        Term: {term}
+        <div className="pa1 b--black bb">
+            {term.attributes.definition}
+        </div>
+
+        <div className="f5 mt2 tc">
+            <button className="mh1 pa1 br2" onClick={ok}>
+                OK!
+            </button>
+
+            <button className="mh1 pa1 br2" onClick={skip}>
+                スキップ
+            </button>
+
+            <button className="mh1 pa1 br2" onClick={miss}>
+                間違えた！
+            </button>
+
+            <button className="mh1 pa1 br2" onClick={edit}>
+                編集
+            </button>
+        </div>
     </div>
 }
 
-function Settings() {
+function StudyTerm({terms}: { terms: Term[] }) {
+    const [selectedTerm, setSelectedTerm] = useState(null as Maybe<Term>);
+    const onReturn = useCallback(() => {
+        backgroundSender.clear();
+    }, []);
+
+    const iter = useMemo(() => {
+        return mapIndexIterator(asIterator(terms), term => <div onClick={() => setSelectedTerm(some(term))}>
+            <b>{term.attributes.reference}</b> {term.attributes.definition}
+        </div>)
+    }, [terms]);
+
+    return <div>
+        <SearchList iterator={iter} onReturn={onReturn}>
+            {selectedTerm ? <ShowTerm term={selectedTerm[0]} /> : null}
+        </SearchList>
+    </div>
+}
+
+function Settings({state: {languages}}: { state: PublicState }) {
     const [hostName, setHostName] = useState("");
-    const [languages, setLanguages] = useState([] as string[]);
     const [language, setLanguage] = useState("");
     const [authorizationCode, setAuthorizationCode] = useState("");
+    const [scanning, setScanning] = useState(false);
 
     useEffect(() => {
         if (hostName != "") {
@@ -66,17 +170,7 @@ function Settings() {
     useEffect(() => {
         const subscription = new Subscription();
 
-        subscription.add(runInPromises(function *() {
-            console.log('loading blobs')
-            yield* runPromise(send({
-                type: "load-blobs",
-            }));
-            const languages = yield* runPromise(send({ type: "request-languages" }));
-            console.log({languages});
-            setLanguages(languages);
-        }))
-
-        subscription.add(runInPromises(function *() {
+        subscription.add(runInPromises(function* () {
             const {language} = yield* runPromise(browser.storage.local.get("language"));
             const {host} = yield* runPromise(browser.storage.local.get("host"));
             if (language) setLanguage(language);
@@ -86,22 +180,13 @@ function Settings() {
         return () => subscription.close();
     }, []);
 
-    const [scanning, setScanning] = useState(false);
 
     const startScan = useCallback(() => {
         const sub = new Subscription();
-        const promise = new Promise<void>((resolve, reject) => {
-            sub.add(listen((message: Message) => {
-                if (message.type === "finished-scan") {
-                    console.log('received finish scan...')
-                    resolve();
-                }
-            }));
-        })
-        sub.add(runInPromises(function * () {
+        sub.add(() => setScanning(false));
+        sub.add(runInPromises(function* () {
             try {
                 setScanning(true);
-                send({ type: "cancel-work" });
                 try {
                     const client = new BensrsClient(hostName)
                     const result = yield* runPromise(client.callJson(
@@ -109,27 +194,16 @@ function Settings() {
                         {authorization_code: authorizationCode}
                     ))
                     if (!result.success) return;
-                    yield send({
-                        type: "load-blobs",
-                    });
-                    yield send({
-                        type: "start-sync",
-                        auth: result.access_token || "",
-                        app_key: result.app_key || ""
-                    });
+                    yield backgroundSender.startSync(result.access_token || "", result.app_key || "");
                 } catch (e) {
                     console.error(e);
                 }
-                const languages = yield* runPromise(send({ type: "request-languages" }));
-                setLanguages(languages);
-                yield* runPromise(send({ type: "start-highlight", language }));
-                yield* runPromise(promise);
+                yield* runPromise(backgroundSender.startScan(language));
             } finally {
                 console.log('closing the sub....')
                 sub.close();
             }
         }));
-        sub.add(() => setScanning(false));
     }, [hostName, authorizationCode, language]);
 
     return <div>
@@ -140,13 +214,13 @@ function Settings() {
             <label className="db fw4 lh-copy f6">Host</label>
             <input className="pa2 input-reset ba bg-transparent w-100 measure" type="text"
                    value={hostName}
-                   onChange={(e) => setHostName(e.target.value)} />
+                   onChange={(e) => setHostName(e.target.value)}/>
         </div>
         <div className="mt3">
             <label className="db fw4 lh-copy f6">Authorize (<a href={`${hostName}/start_ext`} target="_blank">Start</a>)</label>
             <input className="pa2 input-reset ba bg-transparent w-100 measure" type="text"
                    value={authorizationCode}
-                   onChange={(e) => setAuthorizationCode(e.target.value)} />
+                   onChange={(e) => setAuthorizationCode(e.target.value)}/>
         </div>
         <div className="mt3 mb2">
             <label className="db fw4 lh-copy f6">Language</label>

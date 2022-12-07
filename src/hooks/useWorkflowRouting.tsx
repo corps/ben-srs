@@ -27,7 +27,9 @@ export function useWorkflowRouting<P extends {}, Apply extends any[], SourceProp
         try {
           // Swap the route immediately, allow the apply function to resolve in the background.
           const update = apply(...args);
-          setRoute(() => some(<Source {...(updated(...args))}/>))
+          const source = Source(updated(...args));
+          if (source) setRoute(() => some(source));
+          else setRoute(() => null);
           await update;
         } catch (e) {
           console.error(e);

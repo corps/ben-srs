@@ -6,65 +6,83 @@ type Listener = (request: any, sender: any, sendResponse: (data: any) => void) =
 let selfListener: Listener | null = null;
 let otherListener: Listener | null = null;
 
-export class Cancelled extends Error {};
+export class Cancelled extends Error {}
 
-export function listen(listener: Listener, asOther = false): Subscription {
-    if (typeof browser != "undefined" && !otherListener) {
-        browser.runtime.onMessage.addListener(listener);
-    } else {
-        if (asOther) {
-            otherListener = listener;
-        } else {
-            selfListener = listener;
-        }
+export class ListenController<Target extends string> {
+    subscription = listen((msg: any, sender: any, sendResponse: Function) => {
+        return this.dispatch(msg, sender, sendResponse);
+    })
+
+    constructor(public targetName: Target) {
+        console.log('coming online', targetName);
     }
 
+    dispatch(msg: any, sender: any, sendResponse: Function): boolean {
+        const {target, method, args} = msg;
+        console.log({target, method, args});
+        if (this.targetName !== target) return false;
+        console.log('handling');
+        try {
+            const me = this as any;
+            const f = me[method] as Function;
+            const result = f.apply(this, args);
+            Promise.resolve(result).then((result) => sendResponse({result}), (error) => {
+                console.error(error);
+                sendResponse({error: "" + error});
+            });
+        } catch (e) {
+            setTimeout(() => sendResponse({error: e + ""}), 1);
+            return true;
+        }
+        return true;
+    }
+}
+
+export class SendController<Target extends string> {
+    constructor(public targetName: Target) {
+    }
+
+    sendController<
+        T extends SendController<any>,
+        MN extends keyof T,
+    >(
+        k: T,
+        method: MN,
+        ...args: T[MN] extends (...p: infer P) => any ? P : never
+    ): Promise<T[MN] extends (...p: any[]) => infer R ? R : never> {
+        return send({target: this.targetName, method, args}).then(({result, error}) => {
+            if (error) {
+                throw new Error(error);
+            }
+            return result as any;
+        }, (e) => {
+            console.error("in sendController", e);
+            throw e;
+        });
+    }
+}
+
+
+function listen(listener: Listener): Subscription {
+    browser.runtime.onMessage.addListener(listener);
     return new Subscription().add(() => disconnect(listener));
 }
 
-export function disconnect(listener: Listener, asOther = false) {
-    if (typeof browser != "undefined" && !otherListener) {
-        browser.runtime.onMessage.removeListener(listener);
-    } else {
-        if (asOther) {
-            if (otherListener == listener) otherListener = null;
-        } else if (selfListener == listener) {
-            selfListener = null;
-        }
-    }
+function disconnect(listener: Listener) {
+    browser.runtime.onMessage.removeListener(listener);
 }
 
-export function send(data: Message): Promise<any> {
-    if (typeof browser != "undefined") {
-        return browser.runtime.sendMessage(data);
-    }
-
-    return new Promise((resolve) => {
-        try {
-            if (otherListener) {
-                otherListener(data, {}, resolve);
-            }
-        } catch {
-            return;
-        }
-    });
+function send(data: any): Promise<any> {
+    return browser.runtime.sendMessage(data);
 }
-
-export type Message = StartHighlight | StartSync | StartWork | CancelWork | SelectTerm | Acknowledge | RequestTerms |  RequestLanguages | FinishedScan | LoadBlobs;
-export type StartSync = { type: "start-sync", auth: string, app_key: string };
-export type StartHighlight = { type: "start-highlight", language: string };
-export type StartWork = { type: "start-work" };
-export type CancelWork = { type: "cancel-work" };
-export type Acknowledge = { type: "acknowledge" };
-export type RequestTerms = { type: "request-terms" };
-export type RequestLanguages = { type: "request-languages" };
-export type SelectTerm = { type: "select-term", term: string };
-export type LoadBlobs = { type: "load-blobs" };
-export type FinishedScan = { type: "finished-scan" };
 
 export class Subscription {
     closed = false;
     private shutdown: Function[] = [];
+    promise = new Promise<void>((resolve) => {
+        if (this.closed) resolve();
+        else { this.add(resolve); }
+    })
 
     add(f: Function | Subscription) {
         if (this.closed) throw new Error("Cannot add to a closed subscription!")
@@ -85,11 +103,13 @@ export class Subscription {
             try {
                 f();
             } catch(e) {
-                console.error(e);
+                console.error("in subscription closer", e);
             }
         })
     }
 }
+
+type Runner = (f: () => Generator<any, any, any>) => Subscription;
 
 export function runInPromises(f: () => Generator<any, any, any>): Subscription {
     const cancellable = new Cancellable();
@@ -123,3 +143,31 @@ export function escapeRegExp(string: string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
+export function restartable<P extends any[]>(f: (...args: P) => Generator<any, any, any>, runner: Runner = runInPromises) {
+    let curSub = new Subscription();
+
+    function start(...args: P): Subscription {
+        curSub.close();
+        curSub = new Subscription();
+        curSub.add(runner(function* () {
+            try {
+                return yield* f(...args);
+            } finally {
+                curSub.close();
+            }
+        }))
+        return curSub;
+    }
+
+    return start;
+}
+
+export function deferred<T>(): [Promise<T>, (t: T) => void, (e: any) => void] {
+    let _resolve: any;
+    let _reject: any;
+    const promise = new Promise<T>((resolve, reject) => {
+        _resolve = resolve;
+        _reject = reject;
+    })
+    return [promise, _resolve, _reject];
+}

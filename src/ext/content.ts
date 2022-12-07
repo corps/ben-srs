@@ -1,44 +1,58 @@
 import 'regenerator-runtime';
-import {escapeRegExp, listen, Message, runInAnimationFrames, runInPromises, send, Subscription} from "./utils";
+import {
+    escapeRegExp, runInAnimationFrames, SendController,
+} from "./utils";
+import type {BackgroundServer} from "./background";
 
 const hiliteBlue = "bensrshiliteblue";
 const hiliteRed = "bensrshilitered";
 const hiliteYellow = "bensrshiliteyellow";
 const hilites = [hiliteBlue, hiliteYellow, hiliteRed];
 
-const subscription = new Subscription();
-subscription.add(listen(async (message: Message, sender: any, sendResponse) => {
-    if (message.type == "cancel-work") {
-        subscription.close();
-    } else {
-        return;
-    }
-}));
 
-subscription.add(runInPromises(function *() {
-    try {
-        const terms: string[] = yield send({type: "request-terms"});
-        subscription.add(runInAnimationFrames(function *() {
-            yield* searchNodes(terms);
-        }))
-    } finally {
-        subscription.close();
+class BackgroundSender extends SendController<"bg"> implements Pick<BackgroundServer, "selectTerm" | "getTerms" | "finishScanning"> {
+    constructor() {
+        super("bg");
     }
-}));
+
+    async selectTerm(this: BackgroundSender, term: string): Promise<void> {
+        await this.sendController(
+            this,
+            "selectTerm",
+            term
+        );
+    }
+
+    async getTerms(this: BackgroundSender): Promise<string[]> {
+        return this.sendController(
+            this,
+            "getTerms"
+        )
+    }
+
+    async finishScanning(this: BackgroundSender) {
+        await this.sendController(
+            this,
+            "finishScanning"
+        )
+    }
+}
+
+const sender = new BackgroundSender();
 
 function* searchText(text: Text, matches: RegExp): Generator<void, Node, void> {
     let {textContent} = text;
 
     while (textContent) {
         const match = textContent.match(matches);
-        if (match && match.index) {
+        if (match && match.index != null) {
             const wordSpan = text.splitText(match.index);
             text = wordSpan.splitText(match[0].length);
             const newSpan = document.createElement("span");
             newSpan.className = hiliteYellow;
             newSpan.innerText = match[0];
             newSpan.onclick = (e) => {
-                send({ type: "select-term", term: (e.target as HTMLElement).innerText })
+                sender.selectTerm((e.target as HTMLElement).innerText);
                 e.preventDefault();
             }
             wordSpan.replaceWith(newSpan)
@@ -54,7 +68,6 @@ function* searchText(text: Text, matches: RegExp): Generator<void, Node, void> {
 
 function* searchNodes(terms: string[]): Generator<void, void, void> {
     terms.sort((a, b) => -a.length + b.length);
-    console.log({terms})
     addHighlightCss();
     const matches = new RegExp(terms.map(term => escapeRegExp(term)).join("|"));
 
@@ -87,7 +100,6 @@ function* searchNodes(terms: string[]): Generator<void, void, void> {
         while (!node.nextSibling && node.parentNode) {
             node = node.parentNode;
             if (node == document.body) {
-                send({ type: "finished-scan" });
                 return;
             }
         }
@@ -127,3 +139,14 @@ function addHighlightCss() {
     ].join("\n");
     document.head.appendChild(styleSheet)
 }
+
+
+(async () => {
+    const terms = await sender.getTerms();
+
+    runInAnimationFrames(function* () {
+        console.log('starting scan with', terms.length);
+        yield* searchNodes(terms);
+        console.log('done with scan');
+    }).add(() => sender.finishScanning())
+})();

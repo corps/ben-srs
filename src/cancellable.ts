@@ -35,6 +35,7 @@ export class Cancellable {
       }
     }
 
+    if (this.cancelled) return Promise.resolve(null);
     return Promise.resolve(result.value).then(some);
   }
 }

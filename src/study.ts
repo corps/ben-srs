@@ -1,5 +1,5 @@
 import {
-  Cloze,
+  Cloze, ClozeAnswer,
   ClozeType,
   defaultNoteTree,
   findNoteTree,
@@ -14,6 +14,7 @@ import {
 } from "./notes";
 import {bindSome, mapSome, Maybe, some, toVoid} from "./utils/maybe";
 import {concatIndexIterators, filterIndexIterator, Indexer} from "./utils/indexable";
+import {Answer, isWrongAnswer, scheduledBy} from "./scheduler";
 
 export interface StudyDetails {
   noteTree: NoteTree;
@@ -497,4 +498,56 @@ export function okAnswerFactor(timeToAnswer: number, type: ClozeType) {
   }
 
   return 1;
+}
+
+export function answerStudy(cloze: Cloze, answer: Answer, noteIndexes: NoteIndexes): Maybe<[NoteTree, NormalizedNote]> {
+  return bindSome(findNoteTree(noteIndexes, cloze.noteId), tree => {
+    let normalized = normalizedNote(tree);
+    const answers = Indexer.getAllMatching(noteIndexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx, [
+      normalized.id,
+      cloze.reference,
+      cloze.marker,
+      cloze.clozeIdx,
+    ])
+
+
+    if (isWrongAnswer(answer[1])) {
+      const wrongStreakLength = answers.reduce((acc: number, next: ClozeAnswer) => isWrongAnswer(next.answer[1]) ?
+          acc + 1 :
+          0, 0);
+
+      if (wrongStreakLength >= 2) {
+        answer[1] = ["d", 0.6, 2.0];
+      }
+    }
+
+
+    const schedule = scheduledBy(cloze.attributes.schedule, answer);
+
+
+    return mapSome(findTermInNormalizedNote(normalized, cloze.reference, cloze.marker), term => {
+      if (cloze.clozeIdx > term.attributes.clozes.length) return [tree, normalized];
+
+      const termIdx = normalized.attributes.terms.indexOf(term);
+      term = {...term};
+
+      normalized = {...normalized};
+      normalized.attributes = {...normalized.attributes};
+      normalized.attributes.terms = normalized.attributes.terms.slice();
+      normalized.attributes.terms.splice(termIdx, 1, term);
+
+      term.attributes = {...term.attributes};
+      term.attributes.clozes = term.attributes.clozes.slice();
+
+      let updatingCloze = term.attributes.clozes[cloze.clozeIdx];
+      updatingCloze = term.attributes.clozes[cloze.clozeIdx] = {
+        ...updatingCloze,
+      };
+      updatingCloze.attributes = {...updatingCloze.attributes};
+      updatingCloze.attributes.schedule = schedule;
+      updatingCloze.attributes.answers = updatingCloze.attributes.answers.concat([answer]);
+
+      return [tree, normalized];
+    });
+  });
 }

@@ -5,7 +5,7 @@ import {useToggle} from "../hooks/useToggle";
 import {useTime} from "../hooks/useTime";
 import {useStudyData} from "../hooks/useStudyData";
 import {CircleButton} from "./CircleButton";
-import {Maybe, some} from "../utils/maybe";
+import {mapSome, Maybe, some, withDefault} from "../utils/maybe";
 import {Study} from "./Study";
 import {useUpdateNote} from "../hooks/useUpdateNote";
 import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
@@ -14,7 +14,8 @@ import {createId} from "../services/storage";
 import {Search} from "./Search";
 import {TagsSelector, useAllTags} from "./TagsSelector";
 import {useStoredState} from "../hooks/useStoredState";
-import {getLanguagesOfNotes} from "../notes";
+import {findNoteTree, getLanguagesOfNotes, newNormalizedNote, normalizedNote} from "../notes";
+import {EditTerm} from "./EditTerm";
 
 const targets = [
   "7 Days",
@@ -32,6 +33,26 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [selectedLanguage, setLanguage] = useStoredState(localStorage, "lastLanguage", "");
   const [studyContext, setStudyContext] = useStudyContext();
+  const updateNoteAndConfirmEditsFinished = useUpdateNote(true);
+  const editTermRouting = useWorkflowRouting(EditTerm, () => null, updateNoteAndConfirmEditsFinished);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("v")) {
+      switch (params.get("v")) {
+        case "edit":
+          const noteId = params.get("n") || "";
+          const reference = params.get("r") || "";
+          const marker = params.get("m") || "";
+          history.replaceState({}, '', window.location.protocol + "//" + window.location.host + window.location.pathname);
+          const normalized = withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote),
+              {...newNormalizedNote}
+          );
+          editTermRouting({noteId, reference, marker, normalized}, {}, () => ({}))
+          break;
+      }
+    }
+  }, [window.location.search])
 
   const languages = useMemo(() => {
     notesIndex.notes.byLanguageAndStudyGuide
