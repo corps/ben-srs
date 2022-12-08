@@ -10,6 +10,7 @@ COPY package.json /app/
 COPY package-lock.json /app/
 RUN npm install
 
+ENV HOST_PROTO=https
 COPY src /app/src
 COPY babel.config.js /app/
 COPY webpack.config.js /app/

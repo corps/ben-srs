@@ -17,6 +17,7 @@ from flask.json.provider import DefaultJSONProvider
 from flask_cors import CORS
 from pydantic import BaseModel
 from pydantic.json import pydantic_encoder
+from werkzeug.sansio.utils import get_current_url
 
 from .datasource import Store
 
@@ -75,11 +76,18 @@ class App(Flask):
             f"response_type=code&token_access_type=offline"
         )
 
+    proto = os.environ.get("HOST_PROTO")
+
+    def oauth_redirect_url(self, request: Any):
+        if self.proto:
+            return get_current_url(scheme=self.proto, host=request.host) + "authorize"
+        return request.host_url + "authorize"
+
     def oauth_flow(self, request: flask.Request, session: dict, csrf: str):
         return dropbox.DropboxOAuth2Flow(
             consumer_key=self.app_key,
             consumer_secret=self.app_secret,
-            redirect_uri=request.host_url + "authorize",
+            redirect_uri=self.oauth_redirect_url(request),
             session=session,
             csrf_token_session_key=csrf,
             token_access_type="offline"
