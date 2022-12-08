@@ -5,14 +5,15 @@ import {Subscription, runInPromises, SendController} from "./utils";
 import {SelectSingle} from "../components/SelectSingle";
 import {runPromise} from "../cancellable";
 import {BensrsClient} from "../services/bensrs";
-import type {BackgroundServer, PublicState} from "./background";
+import type {BackgroundServer} from "./background";
 import {Maybe, some} from "../utils/maybe";
-import {NormalizedNote, Term} from "../notes";
+import {Term} from "../notes";
 import {SearchList} from "../components/SearchList";
 import {asIterator, mapIndexIterator} from "../utils/indexable";
 import 'tachyons';
 import '../css/index.css';
 import {Answer} from "../scheduler";
+import {defaultState, SessionState} from "./state";
 
 window.onload = () => {
     const newDiv = document.createElement("DIV");
@@ -20,22 +21,17 @@ window.onload = () => {
     ReactDom.render(<ExtPopup/>, newDiv);
 }
 
-class BackgroundSender extends SendController<"bg"> implements Pick<BackgroundServer, "awaitUpdate" | "startSync" | "startScan" | "clear" | "answerTerm"> {
+class BackgroundSender extends SendController<"bg"> implements Pick<BackgroundServer, "startSync" | "startScan" | "clear" | "answerTerm"> {
     constructor() {
         super("bg");
     }
 
-
-    awaitUpdate(this: BackgroundSender, cur: PublicState): Promise<PublicState> {
-        return this.sendController(this, "awaitUpdate", cur).then(p => p);
-    }
 
     async startSync(this: BackgroundSender, accessToken: string, clientId: string): Promise<void> {
         return this.sendController(this, "startSync", accessToken, clientId);
     }
 
     async startScan(this: BackgroundSender, language: string): Promise<void> {
-        console.log('sending startScan');
         return this.sendController(this, "startScan", language);
     }
 
@@ -52,28 +48,27 @@ const backgroundSender = new BackgroundSender();
 
 function ExtPopup() {
     try {
-        const [state, setState] = useState<PublicState>({
-            curTerms: [] as Term[],
-            curLanguage: "",
-            loaded: false,
-            languages: [],
-            newNote: null as Maybe<NormalizedNote>,
-            selectBuffer: "",
-            version: 0,
-        });
-        const {curTerms, loaded} = state;
+        const [state, setState] = useState<SessionState>(defaultState);
+        const {curTerms} = state;
+
 
         useEffect(() => {
-            const subscription = runInPromises(function* () {
-                const nextState = yield* runPromise(backgroundSender.awaitUpdate(state));
-                setState(nextState);
+            const sub = runInPromises(function *() {
+               const {state} = yield* runPromise(browser.storage.local.get("state"));
+               if (state) setState({...defaultState, ...state});
             });
-            return () => subscription.close();
-        }, [state])
+
+            function onSessionUpdate({state}: any) {
+                setState({...defaultState, ...state});
+            }
+
+            browser.storage.local.onChanged.addListener(onSessionUpdate);
+            sub.add(() => browser.storage.local.onChanged.removeListener(onSessionUpdate));
+            return () => sub.close();
+        }, [])
 
         return <div className="w6 pa2">
-            {loaded ? curTerms.length ? <StudyTerm terms={curTerms}/> : <Settings state={state}/> :
-                <div className="ma3">Loading....</div>}
+            {curTerms.length ? <StudyTerm terms={curTerms}/> : <Settings state={state}/>}
         </div>
     } catch (e) {
         console.error(e);
@@ -149,7 +144,7 @@ function StudyTerm({terms}: { terms: Term[] }) {
     </div>
 }
 
-function Settings({state: {languages}}: { state: PublicState }) {
+function Settings({state: {languages}}: { state: SessionState }) {
     const [hostName, setHostName] = useState("");
     const [language, setLanguage] = useState("");
     const [authorizationCode, setAuthorizationCode] = useState("");
@@ -191,7 +186,7 @@ function Settings({state: {languages}}: { state: PublicState }) {
                     const client = new BensrsClient(hostName)
                     const result = yield* runPromise(client.callJson(
                         BensrsClient.LoginEndpoint,
-                        {authorization_code: authorizationCode}
+                        authorizationCode ? {authorization_code: authorizationCode} : {}
                     ))
                     if (!result.success) return;
                     yield backgroundSender.startSync(result.access_token || "", result.app_key || "");
@@ -200,7 +195,6 @@ function Settings({state: {languages}}: { state: PublicState }) {
                 }
                 yield* runPromise(backgroundSender.startScan(language));
             } finally {
-                console.log('closing the sub....')
                 sub.close();
             }
         }));

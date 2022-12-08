@@ -1,39 +1,19 @@
 import 'regenerator-runtime';
-import {deferred, ListenController, restartable, SendController, Subscription} from "./utils";
-import {runPromise} from "../cancellable";
+import {ListenController, restartable, SendController, Subscription} from "./utils";
 import {syncFiles} from "../services/sync";
 import {Dropbox, DropboxAuth} from "dropbox";
 import {DropboxSyncBackend} from "../services/dropbox";
-import {FileStore, normalizeBlob, readText} from "../services/storage";
 import {Dexie} from "dexie";
-import {
-    denormalizedNote,
-    getLanguagesOfNotes,
-    indexesInitialState,
-    NormalizedNote,
-    parseNote, stringifyNote, Term,
-    updateNotes
-} from "../notes";
+import {stringifyNote, Term} from "../notes";
 import {Indexer} from "../utils/indexable";
-import {mapSome, mapSomeAsync, Maybe} from "../utils/maybe";
+import {mapSome, mapSomeAsync} from "../utils/maybe";
 import {Answer} from "../scheduler";
 import {answerStudy} from "../study";
 import {BensrsClient} from "../services/bensrs";
+import {ExFileStore} from "./exFileStore";
+import {defaultState, SessionState} from "./state";
 
-
-const state = {
-    curTerms: [] as Term[],
-    curLanguage: "",
-    loaded: false,
-    languages: [] as string[],
-    newNote: null as Maybe<NormalizedNote>,
-    selectBuffer: "",
-    version: 0,
-}
-const indexesState = {...indexesInitialState};
-const filestore = new FileStore(new Dexie("bensrs"))
-
-export type PublicState = typeof state;
+const filestore = new ExFileStore(new Dexie("bensrs"))
 
 const restartSync = restartable(function* (accessToken: string, clientId: string) {
     const auth = new DropboxAuth({
@@ -48,43 +28,29 @@ const restartSync = restartable(function* (accessToken: string, clientId: string
         new DropboxSyncBackend(dropbox),
         filestore,
         () => null,
-        indexesState,
+        null,
         true
     )
     console.log('finished syncing files')
 })
 
-
-const restartLoad = restartable(function* () {
-    Object.assign(indexesState, {...indexesInitialState});
-    const noteBlobs = yield* runPromise(filestore.fetchBlobsByExt('txt'));
-    for (let {blob, id, rev, path} of noteBlobs) {
-        const contents = yield readText(normalizeBlob(blob));
-        const normalized = parseNote(contents);
-        const denormalized = denormalizedNote(normalized, id, path, rev);
-        updateNotes(indexesState, denormalized);
-    }
-    console.log('done loading blobs')
-});
-
 export class BackgroundServer extends ListenController<"bg"> {
-    updateSub = new Subscription();
     scanSub = new Subscription();
 
     constructor() {
         super("bg");
-        restartLoad().add(() => {
-            state.loaded = true;
-            state.languages = getLanguagesOfNotes(indexesState.notes);
-            this._fireUpdate();
-        })
     }
 
-    _fireUpdate() {
-        state.version += 1;
-        const {updateSub} = this;
-        this.updateSub = new Subscription();
-        updateSub.close();
+    async _getState(): Promise<SessionState> {
+        const {state} = await browser.storage.local.get("state");
+        return {...defaultState, ...state};
+    }
+
+    async _updateState(f: (cur: SessionState) => SessionState): Promise<SessionState> {
+        let {state} = await browser.storage.local.get("state");
+        state = f({...defaultState, ...state});
+        await browser.storage.local.set({ state });
+        return state;
     }
 
     async finishScanning()  {
@@ -92,27 +58,25 @@ export class BackgroundServer extends ListenController<"bg"> {
     }
 
     async clear() {
-        state.curTerms = [];
-        state.selectBuffer = "";
-        this._fireUpdate();
-    }
-
-    async setSelectBuffer() {
-        state.selectBuffer = "";
-        this._fireUpdate();
-    }
-
-    async awaitUpdate(cur: PublicState): Promise<PublicState> {
-        if (cur.version == state.version){
-            const [promise, resolve] = deferred<PublicState>()
-            this.updateSub.add(() => resolve({...state}));
-            return promise;
-        } else {
-            return Promise.resolve({...state});
-        }
+        const {curTabId, curTerm} = await this._getState();
+        console.log({curTerm, curTabId})
+        await browser.scripting.executeScript({
+          target: {tabId: curTabId},
+          func: (term: string) => {
+              console.log('clearing', term);
+              const elements = document.getElementsByClassName(`term-${term.replace(/ /g, "-")}`);
+              for (let i = 0; i < elements.length; ++i) {
+                  console.log('replacing...');
+                  elements[i].replaceWith(document.createTextNode(term));
+              }
+          },
+          args: [curTerm],
+        });
+        await this._updateState(cur => ({...cur, curTerm: "", curTerms: [], selectBuffer: ""}));
     }
 
     async answerTerm(term: Term, answer: Answer) {
+        const indexesState = await filestore.getNotesIndex(term.noteId);
         const cloze = Indexer.getFirstMatching(indexesState.clozes.byNoteIdReferenceMarkerAndClozeIdx, [term.noteId, term.attributes.reference, term.attributes.marker])
         await mapSomeAsync(cloze, async cloze => {
             await mapSomeAsync(answerStudy(cloze, answer, indexesState), async ([tree, updated]) => {
@@ -129,20 +93,10 @@ export class BackgroundServer extends ListenController<"bg"> {
         })
     }
 
-    async selectTerm(termString: string) {
+    async selectTerm(curTerm: string) {
         browser.action.openPopup();
-        state.curTerms = [];
-        const termIter = Indexer.iterator(indexesState.terms.byReference, [termString], [termString, Infinity])
-        for (let term = termIter(); term; term = termIter()) {
-            state.curTerms.push(term[0]);
-        }
-
-        const taggedTermIter = Indexer.iterator(indexesState.taggedTerms.byTag, [termString], [termString, Infinity]);
-        for (let term = taggedTermIter(); term; term = taggedTermIter()) {
-            state.curTerms.push(term[0].inner);
-        }
-
-        this._fireUpdate();
+        const curTerms = await filestore.getReferencedTerms(curTerm);
+        await this._updateState(cur => ({...cur, curTerms, curTerm}))
     }
 
     async startSync(accessToken = "", clientId = "") {
@@ -159,17 +113,16 @@ export class BackgroundServer extends ListenController<"bg"> {
         }
 
         try {
-            await restartSync(accessToken, clientId);
+            console.log('starting sync....');
+            await restartSync(accessToken, clientId).promise;
+            console.log('sync complete');
         } finally {
-            state.languages = getLanguagesOfNotes(indexesState.notes);
-            this._fireUpdate();
+            const languages = await filestore.getLanguages();
+            await this._updateState(cur => ({...cur, languages }));
         }
     }
 
     async getTerms() {
-        const iterator = Indexer.iterator(indexesState.taggedClozes.byTagSpokenAndNextDue,
-            [state.curLanguage, false, true],
-            [state.curLanguage, false, true, Date.now() / 1000 / 60])
         const terms: string[] = [];
         const v: Record<string, boolean> = {};
         const dedup = (r: string) => {
@@ -178,8 +131,11 @@ export class BackgroundServer extends ListenController<"bg"> {
             return false
         }
 
-        for (let next = iterator(); !!next; next = iterator()) {
-            const cloze = next[0].inner;
+        const {curLanguage} = await this._getState();
+        const scheduledClozes = await filestore.searchSchedule(curLanguage, false, false, 0, Date.now() / 1000 / 60, false);
+        const indexesState = await filestore.getTermsIndex(scheduledClozes.map(({noteId}) => noteId));
+
+        for (let cloze of scheduledClozes) {
             if (cloze.attributes.type != "recognize") continue;
             const r = cloze.reference;
             if (dedup(`${cloze.noteId}-${cloze.reference}-${cloze.marker}`)) continue;
@@ -199,11 +155,9 @@ export class BackgroundServer extends ListenController<"bg"> {
         return terms;
     }
 
-    async startScan(language: string) {
-        state.curLanguage = language;
-        this._fireUpdate();
-
+    async startScan(curLanguage: string) {
         const [tab] = await browser.tabs.query({active: true, lastFocusedWindow: true});
+        await this._updateState(cur => ({...cur, curLanguage, curTabId: tab.id}));
         console.log('starting scan....')
 
         const {scanSub} = this;

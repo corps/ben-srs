@@ -36,9 +36,9 @@ export function useWorkflowRouting<P extends {}, Apply extends any[], SourceProp
         }
       },
       onReturn() {
-        setRoute(() => some(
-          <Source {...props}/>
-        ))
+        const source = Source(props);
+        if (source) setRoute(() => some(source));
+        else setRoute(() => null);
       }
     };
 

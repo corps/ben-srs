@@ -131,15 +131,19 @@ export class FileStore {
   dirtyIndex = dirtyStoreIndexer.empty();
   metaLoaded: Promise<void>;
 
-  constructor(private db: Dexie) {
+  constructor(protected db: Dexie) {
+    this.makeSchema();
+
+    this.metaLoaded = this.db.table('blobs').where('dirty').above(0).toArray().then(media => {
+      this.dirtyIndex = dirtyStoreIndexer.update(this.dirtyIndex, media);
+    });
+  }
+
+  makeSchema() {
     this.db.version(2).stores({
       'cursors': '&backend',
       'metadata': '&id,path,dirty,ext',
       'blobs': '&id,path,ext,dirty',
-    });
-
-    this.metaLoaded = this.db.table('blobs').where('dirty').above(0).toArray().then(media => {
-      this.dirtyIndex = dirtyStoreIndexer.update(this.dirtyIndex, media);
     });
   }
 

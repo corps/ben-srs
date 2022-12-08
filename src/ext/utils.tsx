@@ -50,7 +50,11 @@ export class SendController<Target extends string> {
         method: MN,
         ...args: T[MN] extends (...p: infer P) => any ? P : never
     ): Promise<T[MN] extends (...p: any[]) => infer R ? R : never> {
-        return send({target: this.targetName, method, args}).then(({result, error}) => {
+        return send({target: this.targetName, method, args}).then(v => {
+            if (!v) {
+                v = {error: "No receiver"};
+            }
+            const {result, error} = v
             if (error) {
                 throw new Error(error);
             }
@@ -129,6 +133,14 @@ export function runInAnimationFrames(f: () => Generator<any, any, any>): Subscri
             }
         } catch (e: any) {
             console.error(e);
+            try {
+                const {done} = g.throw(e);
+                if (!done) {
+                    handle = requestAnimationFrame(step);
+                }
+            } catch (e: any) {
+                console.error(e);
+            }
         }
     }
 

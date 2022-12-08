@@ -39,7 +39,7 @@ export function* syncFiles(
     backend: SyncBackend,
     storage: FileStore,
     onSetPending: (v: number) => void = () => null,
-    notesIndex: NoteIndexes,
+    notesIndex: NoteIndexes | null,
     ignoreBin = false
 ) {
     let pending = 0;
@@ -70,7 +70,7 @@ export function* syncFiles(
             const conflicted = yield* handleConflict(backend.deleteFile(d), d);
             if (!conflicted) {
                 yield storage.deleteId(d.id);
-                removeNotesByPath(notesIndex, d.path);
+                if (notesIndex) removeNotesByPath(notesIndex, d.path);
             }
         } else {
             for (let work of backend.uploadFile(d)) {
@@ -89,7 +89,7 @@ export function* syncFiles(
             if (!d.rev) {
               // Remove the local copy, force sync to hand back a copy with updated id.
               yield storage.deleteId(d.id);
-              removeNotesByPath(notesIndex, d.path);
+              if (notesIndex) removeNotesByPath(notesIndex, d.path);
             }
         }
 
@@ -130,7 +130,7 @@ export function* syncFiles(
                     if (withDefault(getExt(md.path), '') === 'txt') {
                         const contents = await readText(blob);
                         const note = denormalizedNote(parseNote(contents), md.id, md.path, md.rev);
-                        updateNotes(notesIndex, note);
+                        if (notesIndex) updateNotes(notesIndex, note);
                     }
 
                     try {
@@ -156,7 +156,7 @@ export function* syncFiles(
 
         updatePending(deletePaths.length);
         for (let path of deletePaths) {
-            removeNotesByPath(notesIndex, path);
+            if (notesIndex) removeNotesByPath(notesIndex, path);
             yield storage.deletePath(path);
             updatePending(-1);
         }

@@ -9,7 +9,6 @@ const hiliteRed = "bensrshilitered";
 const hiliteYellow = "bensrshiliteyellow";
 const hilites = [hiliteBlue, hiliteYellow, hiliteRed];
 
-
 class BackgroundSender extends SendController<"bg"> implements Pick<BackgroundServer, "selectTerm" | "getTerms" | "finishScanning"> {
     constructor() {
         super("bg");
@@ -49,7 +48,8 @@ function* searchText(text: Text, matches: RegExp): Generator<void, Node, void> {
             const wordSpan = text.splitText(match.index);
             text = wordSpan.splitText(match[0].length);
             const newSpan = document.createElement("span");
-            newSpan.className = hiliteYellow;
+            newSpan.className = `term-${match[0].replace(/ /g, "-")}`;
+            newSpan.className += " " + hiliteYellow;
             newSpan.innerText = match[0];
             newSpan.onclick = (e) => {
                 sender.selectTerm((e.target as HTMLElement).innerText);
@@ -140,13 +140,17 @@ function addHighlightCss() {
     document.head.appendChild(styleSheet)
 }
 
-
 (async () => {
     const terms = await sender.getTerms();
 
     runInAnimationFrames(function* () {
         console.log('starting scan with', terms.length);
-        yield* searchNodes(terms);
-        console.log('done with scan');
+        try {
+            yield* searchNodes(terms);
+        } catch(e) {
+            console.error(e)
+        } finally {
+            console.log('done with scan');
+        }
     }).add(() => sender.finishScanning())
 })();

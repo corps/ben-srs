@@ -36,23 +36,26 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const updateNoteAndConfirmEditsFinished = useUpdateNote(true);
   const editTermRouting = useWorkflowRouting(EditTerm, () => null, updateNoteAndConfirmEditsFinished);
 
-  useEffect(() => {
+  const visitParams = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.has("v")) {
-      switch (params.get("v")) {
-        case "edit":
-          const noteId = params.get("n") || "";
-          const reference = params.get("r") || "";
-          const marker = params.get("m") || "";
-          history.replaceState({}, '', window.location.protocol + "//" + window.location.host + window.location.pathname);
-          const normalized = withDefault(mapSome(findNoteTree(notesIndex, noteId), normalizedNote),
-              {...newNormalizedNote}
-          );
-          editTermRouting({noteId, reference, marker, normalized}, {}, () => ({}))
-          break;
-      }
+      const noteId = params.get("n") || "";
+      const reference = params.get("r") || "";
+      const marker = params.get("m") || "";
+      return mapSome(mapSome(findNoteTree(notesIndex, noteId), normalizedNote), normalized => {
+        return {noteId, reference, marker, normalized};
+      })
     }
-  }, [window.location.search])
+
+    return null;
+  }, [window.location.search, notesIndex.notes])
+
+  useEffect(() => {
+      mapSome(visitParams, ({noteId, reference, marker, normalized}) => {
+        history.replaceState({}, '', window.location.protocol + "//" + window.location.host + window.location.pathname);
+        editTermRouting({noteId, reference, marker, normalized}, {}, () => ({}))
+      })
+  }, [visitParams])
 
   const languages = useMemo(() => {
     notesIndex.notes.byLanguageAndStudyGuide
