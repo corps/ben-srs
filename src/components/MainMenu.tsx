@@ -34,7 +34,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const [selectedLanguage, setLanguage] = useStoredState(localStorage, "lastLanguage", "");
   const [studyContext, setStudyContext] = useStudyContext();
   const updateNoteAndConfirmEditsFinished = useUpdateNote(true);
-  const editTermRouting = useWorkflowRouting(EditTerm, () => null, updateNoteAndConfirmEditsFinished);
+  const editTermRouting = useWorkflowRouting(EditTerm, null, updateNoteAndConfirmEditsFinished);
 
   const visitParams = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
