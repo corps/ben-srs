@@ -50,6 +50,7 @@ export class SendController<Target extends string> {
         method: MN,
         ...args: T[MN] extends (...p: infer P) => any ? P : never
     ): Promise<T[MN] extends (...p: any[]) => infer R ? R : never> {
+        console.log('sending', this.targetName, method, args);
         return send({target: this.targetName, method, args}).then(v => {
             if (!v) {
                 v = {error: "No receiver"};

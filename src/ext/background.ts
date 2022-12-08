@@ -101,6 +101,7 @@ export class BackgroundServer extends ListenController<"bg"> {
 
     async startSync(accessToken = "", clientId = "") {
         if (!accessToken || !clientId) {
+            console.log('retrieving token')
             const {host} = await browser.storage.local.get("host");
             const client = new BensrsClient(host)
             const result = await client.callJson(
@@ -108,6 +109,7 @@ export class BackgroundServer extends ListenController<"bg"> {
                 {}
             );
             if (!result.success) return;
+            console.log('token acquired');
             accessToken = result.access_token || "";
             clientId = result.app_key || "";
         }

@@ -183,12 +183,14 @@ function Settings({state: {languages}}: { state: SessionState }) {
             try {
                 setScanning(true);
                 try {
+                    console.log('starting to get token')
                     const client = new BensrsClient(hostName)
                     const result = yield* runPromise(client.callJson(
                         BensrsClient.LoginEndpoint,
                         authorizationCode ? {authorization_code: authorizationCode} : {}
                     ))
                     if (!result.success) return;
+                    console.log('starting sync');
                     yield backgroundSender.startSync(result.access_token || "", result.app_key || "");
                 } catch (e) {
                     console.error(e);
