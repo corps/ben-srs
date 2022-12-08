@@ -94,7 +94,11 @@ export class BackgroundServer extends ListenController<"bg"> {
     }
 
     async selectTerm(curTerm: string) {
-        browser.action.openPopup();
+        try {
+            browser.action.openPopup();
+        } catch (e: any) {
+            console.error(e);
+        }
         const curTerms = await filestore.getReferencedTerms(curTerm);
         await this._updateState(cur => ({...cur, curTerms, curTerm}))
     }
