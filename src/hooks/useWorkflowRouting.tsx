@@ -13,7 +13,7 @@ export type WorkflowComponent<P extends {}, Apply extends any[]> = (p: WithWorkf
 
 export function useWorkflowRouting<P extends {}, Apply extends any[], SourceProps extends {}>(
   Destination: WorkflowComponent<P, Apply>,
-  Source: (props: SourceProps) => ReactElement<any, any> | null,
+  Source: ((props: SourceProps) => ReactElement<any, any> | null) | null,
   apply: (...args: Apply) => Promise<void> = () => Promise.resolve(),
 ) {
   const setRoute = useRoute();
@@ -27,8 +27,7 @@ export function useWorkflowRouting<P extends {}, Apply extends any[], SourceProp
         try {
           // Swap the route immediately, allow the apply function to resolve in the background.
           const update = apply(...args);
-          const source = Source(updated(...args));
-          if (source) setRoute(() => some(source));
+          if (Source) setRoute(() => some(<Source {...updated(...args)}/>));
           else setRoute(() => null);
           await update;
         } catch (e) {
@@ -36,8 +35,7 @@ export function useWorkflowRouting<P extends {}, Apply extends any[], SourceProp
         }
       },
       onReturn() {
-        const source = Source(props);
-        if (source) setRoute(() => some(source));
+        if (Source) setRoute(() => some(<Source {...props}/>));
         else setRoute(() => null);
       }
     };

@@ -12,7 +12,6 @@ import {
 import {FileStore, getExt, normalizeBlob, readText} from "../services/storage";
 import {mapSomeAsync, withDefault} from "../utils/maybe";
 import {FileMetadata} from "../services/sync";
-import {Indexer} from "../utils/indexable";
 
 interface StoredNote {
     note: Note,
