@@ -38,6 +38,7 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.has("t") && !studyContext.isSyncing) {
+      window.history.pushState({}, '', window.location.href.split('?')[0])
       studyRouting({reference: params.get("t") || ""}, {});
     }
   }, [window.location.search, studyContext.isSyncing])
