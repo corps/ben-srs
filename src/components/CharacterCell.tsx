@@ -4,12 +4,14 @@ import {classNamesGeneratorFor, PropsWithChildrenAndClassName} from "../utils/cl
 const classNames = classNamesGeneratorFor<CharacterCellProps>(add => {
   add("selected", <div className="bg-light-green fw5"/>);
   add("isTerm", <div className="bg-orange"/>);
+  add("isStudy", <div className="bg-light-blue"/>);
   add("onClick", <div className="pointer"/>);
 }, <div className="w1 pv1 dib tc"/>);
 
 export interface CharacterCellProps {
   selected?: boolean
   isTerm?: boolean
+  isStudy?: boolean
   onClick?: React.MouseEventHandler<any>
 }
 

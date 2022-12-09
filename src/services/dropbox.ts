@@ -7,7 +7,7 @@ import {withRetries} from "../utils/retryable";
 import {DynamicRateLimitQueue, GatingException} from "../utils/rate-limiting";
 import {normalizeBlob, StoredMedia} from "./storage";
 import {BensrsClient} from "./bensrs";
-import {delay, never} from "../utils/delay";
+import {never} from "../utils/delay";
 
 export class DropboxSession implements Session {
   constructor(private auth: DropboxAuth,

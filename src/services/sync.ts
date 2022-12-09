@@ -58,6 +58,7 @@ export function* syncFiles(
     function* handleConflict(work: Promise<Maybe<"conflict">>, d: any) {
         const uploadConflict = yield* runPromise(work);
         if (uploadConflict && uploadConflict[0] === "conflict") {
+            console.log("storing conflict")
             yield storage.storeBlob(new Blob([]), d, 2);
             return true;
         }
@@ -108,18 +109,6 @@ export function* syncFiles(
             });
             mapSome(deleted, path => deletePaths.push(path));
         });
-
-        yield Promise.all([...updatedReferences].map(async fm => {
-            const data = await storage.fetchBlob(fm.id);
-            if (data) {
-                if (data[0].rev === fm.rev) {
-                    updatedReferences.splice(
-                        updatedReferences.indexOf(data[0]),
-                        1
-                    );
-                }
-            }
-        }));
 
         updatePending(updatedReferences.length);
 

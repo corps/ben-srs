@@ -59,25 +59,19 @@ export class ExFileStore extends FileStore {
     }
 
     async getReferencedTerms(term: string): Promise<Term[]> {
-        const byReference: StoredTerm[] = await this.db.table('terms').where('reference').equals(term).toArray();
         const byRelated: StoredTerm[] = await this.db.table('terms').where('related').equals(term).toArray();
-        const result: Term[] = [];
-        const seen: Record<string, boolean> = {};
+        const termReferences: string[]  = [term, ...byRelated.map(({term}) => term.attributes.reference)]
+        const clozes: StoredCloze[] =  await this.db.table('clozes').where('reference').anyOf(termReferences).toArray();
 
-        for (let {term} of byReference) {
-            const key = `${term.noteId}-${term.attributes.reference}-${term.attributes.marker}`;
-            seen[key] = true;
-            result.push(term);
+        const finalReferences: Record<string, boolean> = {};
+        for (let {cloze} of clozes) {
+            if (cloze.attributes.schedule.delayIntervalMinutes) continue;
+            if (cloze.attributes.schedule.nextDueMinutes > Date.now() / 1000 / 60) continue;
+            finalReferences[cloze.reference] = true;
         }
 
-        for (let {term} of byRelated) {
-            const key = `${term.noteId}-${term.attributes.reference}-${term.attributes.marker}`;
-            if (key in seen) continue;
-            seen[key] = true;
-            result.push(term);
-        }
-
-        return result;
+        const byReference: StoredTerm[] = await this.db.table('terms').where('reference').anyOf(Object.keys(finalReferences)).toArray();
+        return byReference.map(({term}) => term);
     }
 
     async searchSchedule(language: string, spoken: boolean, delayed: boolean, startTime:number, endTime: number, reverse: boolean): Promise<Cloze[]> {
