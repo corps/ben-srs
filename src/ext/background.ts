@@ -1,14 +1,11 @@
 import 'regenerator-runtime';
-import {ListenController, restartable, SendController, Subscription} from "./utils";
+import {ListenController, restartable, Subscription} from "./utils";
 import {syncFiles} from "../services/sync";
 import {Dropbox, DropboxAuth} from "dropbox";
 import {DropboxSyncBackend} from "../services/dropbox";
 import {Dexie} from "dexie";
-import {stringifyNote, Term} from "../notes";
 import {Indexer} from "../utils/indexable";
-import {mapSome, mapSomeAsync} from "../utils/maybe";
-import {Answer} from "../scheduler";
-import {answerStudy} from "../study";
+import {mapSome} from "../utils/maybe";
 import {BensrsClient} from "../services/bensrs";
 import {ExFileStore} from "./exFileStore";
 import {defaultState, SessionState} from "./state";
@@ -55,52 +52,6 @@ export class BackgroundServer extends ListenController<"bg"> {
 
     async finishScanning()  {
         this.scanSub.close();
-    }
-
-    async clear() {
-        const {curTabId, curTerm} = await this._getState();
-        console.log({curTerm, curTabId})
-        await browser.scripting.executeScript({
-          target: {tabId: curTabId},
-          func: (term: string) => {
-              console.log('clearing', term);
-              const elements = document.getElementsByClassName(`term-${term.replace(/ /g, "-")}`);
-              for (let i = 0; i < elements.length; ++i) {
-                  console.log('replacing...');
-                  elements[i].replaceWith(document.createTextNode(term));
-              }
-          },
-          args: [curTerm],
-        });
-        await this._updateState(cur => ({...cur, curTerm: "", curTerms: [], selectBuffer: ""}));
-    }
-
-    async answerTerm(term: Term, answer: Answer) {
-        const indexesState = await filestore.getNotesIndex(term.noteId);
-        const cloze = Indexer.getFirstMatching(indexesState.clozes.byNoteIdReferenceMarkerAndClozeIdx, [term.noteId, term.attributes.reference, term.attributes.marker])
-        await mapSomeAsync(cloze, async cloze => {
-            await mapSomeAsync(answerStudy(cloze, answer, indexesState), async ([tree, updated]) => {
-                const blob = new Blob([stringifyNote(updated)]);
-                await filestore.storeBlob(blob, {
-                    path: tree.note.path,
-                    id: tree.note.id,
-                    rev: tree.note.version,
-                    size: blob.size,
-                }, true);
-
-                await this.startSync();
-            });
-        })
-    }
-
-    async selectTerm(curTerm: string) {
-        try {
-            browser.action.openPopup();
-        } catch (e: any) {
-            console.error(e);
-        }
-        const curTerms = await filestore.getReferencedTerms(curTerm);
-        await this._updateState(cur => ({...cur, curTerms, curTerm}))
     }
 
     async startSync(accessToken = "", clientId = "") {
@@ -176,6 +127,11 @@ export class BackgroundServer extends ListenController<"bg"> {
             }
         });
         await this.scanSub.promise;
+    }
+
+    async getHost(): Promise<string> {
+        const {host} = await browser.storage.local.get("host");
+        return host;
     }
 }
 

@@ -80,6 +80,25 @@ export function Study(props: Props) {
       return null;
     }
 
+    if (reference) {
+      let next = Indexer.iterator(notesIndex.taggedClozes.byTagSpokenReferenceAndNextDue, [language, false, reference])();
+      if (!next && audioStudy) {
+        Indexer.iterator(notesIndex.taggedClozes.byTagSpokenReferenceAndNextDue, [language, true, reference])()
+      }
+
+      if (next) {
+        if (next[0].inner.attributes.schedule.nextDueMinutes > nowMinutes && seenRelated) {
+          onReturn();
+          return null;
+        }
+
+        return bindSome(next, next => studyDetailsForCloze(next.inner, notesIndex));
+      }
+
+      onReturn();
+      return null;
+    }
+
     return findNextStudyDetails(language, nowMinutes, notesIndex, audioStudy);
   }, [noteId, reference, marker, language, nowMinutes, notesIndex, audioStudy, onReturn, seenRelated]);
 

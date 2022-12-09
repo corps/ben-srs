@@ -1,18 +1,13 @@
 import 'regenerator-runtime';
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import ReactDom from 'react-dom';
 import {Subscription, runInPromises, SendController} from "./utils";
 import {SelectSingle} from "../components/SelectSingle";
 import {runPromise} from "../cancellable";
 import {BensrsClient} from "../services/bensrs";
 import type {BackgroundServer} from "./background";
-import {Maybe, some} from "../utils/maybe";
-import {Term} from "../notes";
-import {SearchList} from "../components/SearchList";
-import {asIterator, mapIndexIterator} from "../utils/indexable";
 import 'tachyons';
 import '../css/index.css';
-import {Answer} from "../scheduler";
 import {defaultState, SessionState} from "./state";
 
 window.onload = () => {
@@ -21,7 +16,7 @@ window.onload = () => {
     ReactDom.render(<ExtPopup/>, newDiv);
 }
 
-class BackgroundSender extends SendController<"bg"> implements Pick<BackgroundServer, "startSync" | "startScan" | "clear" | "answerTerm"> {
+class BackgroundSender extends SendController<"bg"> implements Pick<BackgroundServer, "startSync" | "startScan"> {
     constructor() {
         super("bg");
     }
@@ -34,14 +29,6 @@ class BackgroundSender extends SendController<"bg"> implements Pick<BackgroundSe
     async startScan(this: BackgroundSender, language: string): Promise<void> {
         return this.sendController(this, "startScan", language);
     }
-
-    async clear(this: BackgroundSender) {
-        await this.sendController(this, "clear");
-    }
-
-    async answerTerm(this: BackgroundSender, term: Term, answer: Answer) {
-        await this.sendController(this, "answerTerm", term, answer);
-    }
 }
 
 const backgroundSender = new BackgroundSender();
@@ -49,8 +36,6 @@ const backgroundSender = new BackgroundSender();
 function ExtPopup() {
     try {
         const [state, setState] = useState<SessionState>(defaultState);
-        const {curTerms} = state;
-
 
         useEffect(() => {
             const sub = runInPromises(function *() {
@@ -68,80 +53,12 @@ function ExtPopup() {
         }, [])
 
         return <div className="w6 pa2">
-            {curTerms.length ? <StudyTerm terms={curTerms}/> : <Settings state={state}/>}
+            <Settings state={state}/>
         </div>
     } catch (e) {
         console.error(e);
         throw e;
     }
-}
-
-function ShowTerm({term}: { term: Term }) {
-    const edit = useCallback(async () => {
-        const {host} = await browser.storage.local.get("host");
-        window.open(
-            `${host}/?v=edit&n=${term.noteId}&r=${term.attributes.reference}&m=${term.attributes.marker}`,
-            "_blank"
-        )
-    }, [term])
-
-    const ok = useCallback(() => {
-        backgroundSender.clear();
-        backgroundSender.answerTerm(term, [Date.now() / 1000 / 60, ["f", 2.0]]);
-    }, [term])
-
-    const skip = useCallback(() => {
-        backgroundSender.clear();
-        backgroundSender.answerTerm(term, [Date.now() / 1000 / 60, ["d", 0.6, 0.2]]);
-    }, [term])
-
-    const miss = useCallback(() => {
-        backgroundSender.clear();
-        backgroundSender.answerTerm(term, [Date.now() / 1000 / 60, ["f", 0.6]]);
-    }, [term])
-
-    return <div>
-        <div className="pa1 b--black bb">
-            {term.attributes.definition}
-        </div>
-
-        <div className="f5 mt2 tc">
-            <button className="mh1 pa1 br2" onClick={ok}>
-                OK!
-            </button>
-
-            <button className="mh1 pa1 br2" onClick={skip}>
-                スキップ
-            </button>
-
-            <button className="mh1 pa1 br2" onClick={miss}>
-                間違えた！
-            </button>
-
-            <button className="mh1 pa1 br2" onClick={edit}>
-                編集
-            </button>
-        </div>
-    </div>
-}
-
-function StudyTerm({terms}: { terms: Term[] }) {
-    const [selectedTerm, setSelectedTerm] = useState(null as Maybe<Term>);
-    const onReturn = useCallback(() => {
-        backgroundSender.clear();
-    }, []);
-
-    const iter = useMemo(() => {
-        return mapIndexIterator(asIterator(terms), term => <div onClick={() => setSelectedTerm(some(term))}>
-            <b>{term.attributes.reference}</b> {term.attributes.definition}
-        </div>)
-    }, [terms]);
-
-    return <div>
-        <SearchList iterator={iter} onReturn={onReturn}>
-            {selectedTerm ? <ShowTerm term={selectedTerm[0]} /> : null}
-        </SearchList>
-    </div>
 }
 
 function Settings({state: {languages}}: { state: SessionState }) {

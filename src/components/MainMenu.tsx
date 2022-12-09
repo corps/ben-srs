@@ -33,29 +33,14 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [selectedLanguage, setLanguage] = useStoredState(localStorage, "lastLanguage", "");
   const [studyContext, setStudyContext] = useStudyContext();
-  const updateNoteAndConfirmEditsFinished = useUpdateNote(true);
-  const editTermRouting = useWorkflowRouting(EditTerm, null, updateNoteAndConfirmEditsFinished);
-
-  const visitParams = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("v")) {
-      const noteId = params.get("n") || "";
-      const reference = params.get("r") || "";
-      const marker = params.get("m") || "";
-      return mapSome(mapSome(findNoteTree(notesIndex, noteId), normalizedNote), normalized => {
-        return {noteId, reference, marker, normalized};
-      })
-    }
-
-    return null;
-  }, [window.location.search, notesIndex.notes])
+  const studyRouting = useWorkflowRouting(Study, null);
 
   useEffect(() => {
-      mapSome(visitParams, ({noteId, reference, marker, normalized}) => {
-        history.replaceState({}, '', window.location.protocol + "//" + window.location.host + window.location.pathname);
-        editTermRouting({noteId, reference, marker, normalized}, {}, () => ({}))
-      })
-  }, [visitParams])
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("t") && !studyContext.isSyncing) {
+      studyRouting({reference: params.get("t") || ""}, {});
+    }
+  }, [window.location.search, studyContext.isSyncing])
 
   const languages = useMemo(() => {
     notesIndex.notes.byLanguageAndStudyGuide

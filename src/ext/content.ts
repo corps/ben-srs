@@ -9,23 +9,22 @@ const hiliteRed = "bensrshilitered";
 const hiliteYellow = "bensrshiliteyellow";
 const hilites = [hiliteBlue, hiliteYellow, hiliteRed];
 
-class BackgroundSender extends SendController<"bg"> implements Pick<BackgroundServer, "selectTerm" | "getTerms" | "finishScanning"> {
+class BackgroundSender extends SendController<"bg"> implements Pick<BackgroundServer, "getTerms" | "finishScanning" | "getHost"> {
     constructor() {
         super("bg");
-    }
-
-    async selectTerm(this: BackgroundSender, term: string): Promise<void> {
-        await this.sendController(
-            this,
-            "selectTerm",
-            term
-        );
     }
 
     async getTerms(this: BackgroundSender): Promise<string[]> {
         return this.sendController(
             this,
             "getTerms"
+        )
+    }
+
+    async getHost(this: BackgroundSender): Promise<string> {
+        return this.sendController(
+            this,
+            "getHost"
         )
     }
 
@@ -39,7 +38,7 @@ class BackgroundSender extends SendController<"bg"> implements Pick<BackgroundSe
 
 const sender = new BackgroundSender();
 
-function* searchText(text: Text, matches: RegExp): Generator<void, Node, void> {
+function* searchText(text: Text, matches: RegExp, host: string): Generator<void, Node, void> {
     let {textContent} = text;
 
     while (textContent) {
@@ -52,7 +51,8 @@ function* searchText(text: Text, matches: RegExp): Generator<void, Node, void> {
             newSpan.className += " " + hiliteYellow;
             newSpan.innerText = match[0];
             newSpan.onclick = (e) => {
-                sender.selectTerm((e.target as HTMLElement).innerText);
+                const term = (e.target as HTMLElement).innerText;
+                window.open(`${host}?t=${encodeURIComponent(term)}`, "_blank")
                 e.preventDefault();
             }
             wordSpan.replaceWith(newSpan)
@@ -66,7 +66,7 @@ function* searchText(text: Text, matches: RegExp): Generator<void, Node, void> {
     return text;
 }
 
-function* searchNodes(terms: string[]): Generator<void, void, void> {
+function* searchNodes(terms: string[], host: string): Generator<void, void, void> {
     terms.sort((a, b) => -a.length + b.length);
     addHighlightCss();
     const matches = new RegExp(terms.map(term => escapeRegExp(term)).join("|"));
@@ -93,7 +93,7 @@ function* searchNodes(terms: string[]): Generator<void, void, void> {
         }
 
         if (node instanceof Text) {
-            node = yield* searchText(node, matches);
+            node = yield* searchText(node, matches, host);
         }
 
 
@@ -142,11 +142,12 @@ function addHighlightCss() {
 
 (async () => {
     const terms = await sender.getTerms();
+    const host = await sender.getHost();
 
     runInAnimationFrames(function* () {
         console.log('starting scan with', terms.length);
         try {
-            yield* searchNodes(terms);
+            yield* searchNodes(terms, host);
         } catch(e) {
             console.error(e)
         } finally {

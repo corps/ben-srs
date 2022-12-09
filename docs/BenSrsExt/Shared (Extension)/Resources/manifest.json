@@ -23,8 +23,9 @@
         "https://bensrs.kaihatsu.io/"
     ],
 
-    "actifon": {
+    "action": {
         "default_popup": "popup.html",
+        "popup_title": "bensrs",
         "default_icon": {
             "16": "images/toolbar-icon-16.png",
             "19": "images/toolbar-icon-19.png",
