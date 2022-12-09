@@ -183,8 +183,12 @@ function useSearchResults(mode: string, search: string, lastSync: number, onRetu
     }
   }, [store]);
 
-  const selectTermRouting = useWorkflowRouting(SelectTerm, ({onReturn}: Props) => <Search onReturn={onReturn} defaultSearch={search} defaultMode={mode}/>, updateNoteAndConfirmEditsFinished);
-  const editTermRouting = useWorkflowRouting(EditTerm, ({onReturn}: Props) => <Search onReturn={onReturn} defaultSearch={search} defaultMode={mode}/>, updateNoteAndConfirmEditsFinished);
+  const selectTermRouting = useWorkflowRouting(SelectTerm,
+      ({onReturn}: Props) => <Search onReturn={onReturn} defaultSearch={search} defaultMode={mode}/>,
+      updateNoteAndConfirmEditsFinished);
+  const editTermRouting = useWorkflowRouting(EditTerm,
+      ({onReturn}: Props) => <Search onReturn={onReturn} defaultSearch={search} defaultMode={mode}/>,
+      updateNoteAndConfirmEditsFinished);
 
   const visitNote = useCallback((note: Note) => {
     const normalized = withDefault(mapSome(findNoteTree(notesIndex, note.id), normalizedNote),

@@ -15,6 +15,7 @@ import {useTime} from "../hooks/useTime";
 import {minutesOfTime} from "../utils/time";
 import {Study} from "./Study";
 import {useToggle} from "../hooks/useToggle";
+import {useSpeechAndAudio} from "../hooks/useSpeechAndAudio";
 
 interface Props {
   onReturn?: () => void,
@@ -51,6 +52,15 @@ export function SelectTerm(props: Props) {
   const onApply = useCallback(async () => {
     await props.onApply(findNoteTree(notesIndex, noteId), normalized);
   }, [normalized, noteId, notesIndex, props])
+
+  const {speakInScope} = useSpeechAndAudio();
+  const testSpeech = useCallback(() => {
+    speakInScope(normalized.attributes.language, normalized.attributes.content)
+  }, [
+    normalized.attributes.language,
+    normalized.attributes.content,
+    speakInScope
+  ])
 
   const dueClozes = useMemo(() => {
     if (!showStudy) return [];
@@ -176,6 +186,7 @@ export function SelectTerm(props: Props) {
 
   const [EditWrapper] = useWithKeybinding('e', editContent);
   const [StudyWrapper] = useWithKeybinding('s', toggleShowStudy);
+  const [SpeakWrapper] = useWithKeybinding('j', testSpeech);
 
   return <div className="mt2">
     <div className="tc">
@@ -189,6 +200,11 @@ export function SelectTerm(props: Props) {
           訓練モード <input type="checkbox" onChange={toggleShowStudy} checked={showStudy}/>
         </StudyWrapper>
       </span>
+      <SimpleNavLink onClick={testSpeech}>
+        <SpeakWrapper>
+          読み上げ
+        </SpeakWrapper>
+      </SimpleNavLink>
 
       <WorkflowLinks onReturn={onReturn} onApply={onApply}/>
     </div>

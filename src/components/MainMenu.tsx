@@ -14,8 +14,9 @@ import {createId} from "../services/storage";
 import {Search} from "./Search";
 import {TagsSelector, useAllTags} from "./TagsSelector";
 import {useStoredState} from "../hooks/useStoredState";
-import {findNoteTree, getLanguagesOfNotes, newNormalizedNote, normalizedNote} from "../notes";
+import {findNoteTree, getLanguagesOfNotes, newNormalizedNote, NormalizedNote, normalizedNote, NoteTree} from "../notes";
 import {EditTerm} from "./EditTerm";
+import {SelectTerm} from "./SelectTerm";
 
 const targets = [
   "7 Days",
@@ -94,13 +95,15 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
   const targetString = target ? `${target[0]} Day${target[0] == 1 ? '' : 's'}` : "Slow";
 
 
-  const updateNote = useUpdateNote();
-  const newNoteRouting = useWorkflowRouting(EditNote, MainMenu, updateNote);
+  const updateNote = useUpdateNote(true);
+  const selectTermRouting = useWorkflowRouting(SelectTerm, null, updateNote);
   const visitNewNote = useCallback(() => {
-    newNoteRouting({
-      noteId: createId(),
-    }, {syncFailed}, undefined)
-  }, [newNoteRouting, syncFailed]);
+    const noteId = createId();
+
+    const onFinishEditNote = async (tree: Maybe<NoteTree>, normalized: NormalizedNote) =>
+        selectTermRouting({ noteId, normalized }, {});
+    setRoute(() => some(<EditNote onApply={onFinishEditNote} noteId={noteId}/>));
+  }, [selectTermRouting, setRoute]);
 
   const studyData = useStudyData();
 

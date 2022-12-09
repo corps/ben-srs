@@ -109,7 +109,6 @@ export function EditNote(props: Props) {
     mapSome(audioDataUrl, (dataUrl) => playAudioInScope(dataUrl, null, null));
   }, [audioDataUrl])
 
-  const [CaptureWrapper] = useWithKeybinding('o', playAudioPath)
   const [PlayWrapper] = useWithKeybinding('j', playAudioPath)
   const [DeleteWrapper] = useWithKeybinding('Delete', deleteNote);
 
