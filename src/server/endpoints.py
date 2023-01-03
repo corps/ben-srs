@@ -6,12 +6,10 @@ import dataclasses
 import json
 import os.path
 import time
-import urllib
 import uuid
+import warnings
 from typing import TypeVar, Generic, Type, Any, Callable, Optional, Tuple, List, Mapping, cast
-from urllib.parse import urlencode
 
-import dropbox
 import requests
 import vcr
 from dropbox import Dropbox
@@ -49,7 +47,6 @@ class JsonEndpoint(BaseModel, Generic[T], abc.ABC):
 
 
 def user_dropbox() -> Tuple[User, Dropbox]:
-    print(session)
     if user_id := session.get("user_id"):
         if user := app.store.get(User, user_id):
             return user, Dropbox(
@@ -57,6 +54,7 @@ def user_dropbox() -> Tuple[User, Dropbox]:
                 app_key=app.app_key,
                 oauth2_refresh_token=user.refresh_token,
             )
+        warnings.warn(f"User id {user_id} in session had no user associated with it.")
         session.pop("user_id")
 
     raise Unauthorized()
@@ -232,6 +230,7 @@ class Login(JsonEndpoint[LoginResponse]):
             )
 
         session["user_id"] = user_id
+        session.permanent = True
         return account, db
 
 
@@ -696,7 +695,8 @@ def test_terms(client: FlaskClient, logged_in_user: User):
 
 @app.route("/authorize")
 def authorize():
-    oauth_flow = app.oauth_flow(request, cast(dict, session), session['csrf'])
-    result: OAuth2FlowResult = oauth_flow.finish(request.args)
-    Login().login(result.refresh_token)
+    if 'csrf' in session:
+        oauth_flow = app.oauth_flow(request, cast(dict, session), session['csrf'])
+        result: OAuth2FlowResult = oauth_flow.finish(request.args)
+        Login().login(result.refresh_token)
     return redirect("/")

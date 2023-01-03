@@ -5,7 +5,7 @@ import {useToggle} from "../hooks/useToggle";
 import {useTime} from "../hooks/useTime";
 import {useStudyData} from "../hooks/useStudyData";
 import {CircleButton} from "./CircleButton";
-import {mapSome, Maybe, some, withDefault} from "../utils/maybe";
+import {Maybe, some} from "../utils/maybe";
 import {Study} from "./Study";
 import {useUpdateNote} from "../hooks/useUpdateNote";
 import {useWorkflowRouting} from "../hooks/useWorkflowRouting";
@@ -14,9 +14,9 @@ import {createId} from "../services/storage";
 import {Search} from "./Search";
 import {TagsSelector, useAllTags} from "./TagsSelector";
 import {useStoredState} from "../hooks/useStoredState";
-import {findNoteTree, getLanguagesOfNotes, newNormalizedNote, NormalizedNote, normalizedNote, NoteTree} from "../notes";
-import {EditTerm} from "./EditTerm";
+import {getLanguagesOfNotes, NormalizedNote, NoteTree} from "../notes";
 import {SelectTerm} from "./SelectTerm";
+import {NumberTraining} from "./NumberTraining";
 
 const targets = [
   "7 Days",
@@ -214,7 +214,11 @@ export function MainMenu({syncFailed}: { syncFailed: boolean }) {
           <br/>
           <span className="fw1">認</span>
           <span className="fw3">証</span>
-        </CircleButton> : null }
+        </CircleButton> : <CircleButton onClick={() => setRoute(() => some(<NumberTraining/>))} purple className="mh2 pointer dim">
+          <span className="fw5">聞き</span>
+          <br/>
+          <span className="fw1">取り</span>
+        </CircleButton>}
       </div>
 
       <div className="mv2">
