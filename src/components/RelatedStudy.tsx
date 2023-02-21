@@ -54,47 +54,61 @@ export function RelatedStudy(props: Props) {
     ), defaultStudyDetails)
   }, [clozeIdx, clozes.byNoteIdReferenceMarkerAndClozeIdx, indexes, marker, noteId, reference])
 
+  const relatedStudyDetails: StudyDetails[] = useMemo(() => {
+    const results: StudyDetails[] = [];
+    const seen: Record<string, boolean> = {};
+    for (let [_, r] of studyDetails.related) {
+      for (let rr of r) {
+        if (rr in seen) continue;
+        seen[rr] = true;
+
+        const relatedRange = rr.length > 1 ? [rr + String.fromCodePoint(0x10ffff)] :
+            [rr + String.fromCodePoint(0x01)];
+        const termsIter: IndexIterator<Term> = Indexer.iterator(terms.byReference,
+            [rr],
+            relatedRange
+        );
+
+        const clozeIter: IndexIterator<Cloze> = flattenIndexIterator(mapIndexIterator(termsIter,
+            term => Indexer.getFirstMatching(clozes.byNoteIdReferenceMarkerAndClozeIdx,
+                [term.noteId, term.attributes.reference, term.attributes.marker]
+            )
+        ));
+        for (let n = clozeIter(); n; n = clozeIter()) {
+          mapSome(studyDetailsForCloze(n[0], indexes), sd => results.push(sd));
+        }
+      }
+    }
+
+    return results.filter(({cloze: {noteId, attributes: {schedule: {lastAnsweredMinutes, nextDueMinutes}}}}) =>
+        !seenNoteIds.includes(noteId) && nextDueMinutes < minutes);
+  }, [
+    clozes.byNoteIdReferenceMarkerAndClozeIdx,
+    indexes,
+    minutes,
+    studyDetails.related,
+    terms.byReference,
+    seenNoteIds
+  ]);
+
+  const nextSeenNoteIds = useMemo(() => {
+    return seenNoteIds.concat(relatedStudyDetails.map(({cloze: {noteId}}) => noteId))
+  }, [seenNoteIds, relatedStudyDetails]);
+
   const startRelatedStudy = useCallback((sd: StudyDetails) => {
     selectTermRouting({
       reference: sd.cloze.reference,
       marker: sd.cloze.marker,
       noteId: sd.cloze.noteId,
-      seenNoteIds: [...seenNoteIds, noteId],
+      seenNoteIds: nextSeenNoteIds,
     }, {onReturn, noteId, marker, reference, clozeIdx, seenNoteIds})
-  }, [clozeIdx, marker, noteId, onReturn, reference, selectTermRouting, seenNoteIds]);
+  }, [clozeIdx, marker, noteId, onReturn, reference, selectTermRouting, seenNoteIds, nextSeenNoteIds]);
 
   const iterator = useMemo(() => {
-    const allRelated: IndexIterator<string> = flatMapIndexIterator(asIterator(studyDetails.related),
-      ([t, related]) => asIterator(related)
-    );
-    const sds: IndexIterator<StudyDetails> = filterIndexIterator(flattenIndexIterator(flatMapIndexIterator(allRelated, related => {
-      const relatedRange = related.length > 1 ? [related + String.fromCodePoint(0x10ffff)] :
-          [related + String.fromCodePoint(0x01)];
-
-        const termsIter: IndexIterator<Term> = Indexer.iterator(terms.byReference,
-          [related],
-          relatedRange
-        );
-        const clozeIter: IndexIterator<Cloze> = flattenIndexIterator(mapIndexIterator(termsIter,
-          term => Indexer.getFirstMatching(clozes.byNoteIdReferenceMarkerAndClozeIdx,
-            [term.noteId, term.attributes.reference, term.attributes.marker]
-          )
-        ));
-        return mapIndexIterator(clozeIter, cloze => studyDetailsForCloze(cloze, indexes));
-      }
-    )), ({cloze: {noteId, attributes: {schedule: {lastAnsweredMinutes, nextDueMinutes}}}}) =>
-      !seenNoteIds.includes(noteId) &&
-      (nextDueMinutes < minutes || minutes > (nextDueMinutes - lastAnsweredMinutes) * 0.25 + lastAnsweredMinutes));
-
-    return mapIndexIterator(sds, sd => <TermSearchResult studyDetails={sd} selectRow={startRelatedStudy}/>)
+    return mapIndexIterator(asIterator(relatedStudyDetails), sd => <TermSearchResult studyDetails={sd} selectRow={startRelatedStudy}/>)
   }, [
-    clozes.byNoteIdReferenceMarkerAndClozeIdx,
-    indexes,
-    minutes,
-    startRelatedStudy,
-    studyDetails.related,
-    terms.byReference,
-    seenNoteIds
+    relatedStudyDetails,
+      startRelatedStudy
   ]);
 
   const [hasSome, i] = useMemo(() => {
