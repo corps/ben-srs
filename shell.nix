@@ -1,19 +1,13 @@
 { pkgs ? import <nixpkgs> {} }:
+
+let
+    python_env = pkgs.callPackage ./python {};
+    node_env = pkgs.callPackage ./node {};
+in
 pkgs.mkShell {
-    # nativeBuildInputs is usually what you want -- tools you need to run
-    nativeBuildInputs = [ (import ./default.nix {}) ];
-    shellHook = ''
-        if ! [ -e ./venv ]; then
-            python -m venv venv
-        fi
-
-        source ./venv/bin/activate
-        if [ -e ./requirements.txt ]; then
-            pip install -r requirements.txt
-        fi
-        export PATH=$PWD/node_modules/.bin:$PATH
-
-        pip freeze | grep -v "file:" > requirements.txt
-        pydantic2ts --module ./src/server/endpoints.py --output ./src/server/types.ts
+    nativeBuildInputs = python_env.pkgs ++ node_env.pkgs ++ [ pkgs.bash-completion ];
+    shellHook = python_env.hook + ''
+    '' + node_env.hook + ''
+        cd ${builtins.toString ./.}
     '';
 }

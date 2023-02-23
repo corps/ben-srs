@@ -1,0 +1,5 @@
+flask_server/data
+.secret-key
+.test_cache
+.mypy_cache
+venv
