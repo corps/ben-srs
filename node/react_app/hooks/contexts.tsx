@@ -6,7 +6,6 @@ import {
   useContext,
   useMemo
 } from 'react';
-import { defaultSession } from '../services/backends';
 import { indexesInitialState, NoteIndexes } from '../notes';
 import { FileStore } from '../services/storage';
 import { Maybe, some } from '../utils/maybe';
@@ -19,7 +18,6 @@ export const defaultStudyContext = {
 };
 export type StudyContextData = typeof defaultStudyContext;
 
-export const SessionContext = createContext(defaultSession);
 export const NotesIndexContext = createContext({ ...indexesInitialState });
 export const FileStorageContext = createContext({} as FileStore);
 export const StudyContext = createContext([defaultStudyContext, () => null] as [
@@ -36,10 +34,6 @@ export const TriggerSyncContext = createContext([() => null, 0] as [
 
 export function useTriggerSync() {
   return useContext(TriggerSyncContext);
-}
-
-export function useSession() {
-  return useContext(SessionContext);
 }
 
 export function useFileStorage() {

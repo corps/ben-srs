@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dispatch, ReactElement, useCallback, useState } from 'react';
+import { ReactElement, useCallback } from 'react';
 import { useRoute } from './contexts';
 import { some } from '../utils/maybe';
 
@@ -33,7 +33,6 @@ export function useWorkflowRouting<
       const result = {
         async onApply(...args: Apply): Promise<void> {
           try {
-            // Swap the route immediately, allow the apply function to resolve in the background.
             const update = apply(...args);
             if (Source) setRoute(() => some(<Source {...updated(...args)} />));
             else setRoute(() => null);

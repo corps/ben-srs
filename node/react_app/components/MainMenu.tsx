@@ -9,7 +9,6 @@ import {
   useFileStorage,
   useNotesIndex,
   useRoute,
-  useSession,
   useStudyContext
 } from '../hooks/contexts';
 import { SelectSingle } from './SelectSingle';
@@ -29,11 +28,12 @@ import { useStoredState } from '../hooks/useStoredState';
 import { getLanguagesOfNotes, NormalizedNote, NoteTree } from '../notes';
 import { SelectTerm } from './SelectTerm';
 import { NumberTraining } from './NumberTraining';
+import {useSession} from "../session";
 
 const targets = ['7 Days', '30 Days', '90 Days', '1 Day', 'Slow'];
 
 export function MainMenu({ syncFailed }: { syncFailed: boolean }) {
-  const session = useSession();
+  const [session] = useSession();
   const storage = useFileStorage();
   const notesIndex = useNotesIndex();
   const setRoute = useRoute();

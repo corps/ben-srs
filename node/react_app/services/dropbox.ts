@@ -1,37 +1,10 @@
 import 'regenerator-runtime';
-import { Dropbox, DropboxAuth, files } from 'dropbox';
-import { defaultUser, Session, User } from './backends';
-import {
-  defaultFileDelta,
-  FileDelta,
-  FileListProgress,
-  FileMetadata,
-  SyncBackend
-} from './sync';
-import { Either, left, Maybe, right, some } from '../utils/maybe';
-import { withRetries } from '../utils/retryable';
-import { DynamicRateLimitQueue, GatingException } from '../utils/rate-limiting';
-import { normalizeBlob, StoredMedia } from './storage';
-import { BensrsClient } from './bensrs';
-import { never } from '../utils/delay';
-
-export class DropboxSession implements Session {
-  constructor(
-    private auth: DropboxAuth,
-    public user: User,
-    private storage: Storage,
-    public refresh: () => Promise<Session>
-  ) {}
-
-  logout(): Promise<void> {
-    this.storage.clear();
-    return Promise.resolve();
-  }
-
-  syncBackend(): SyncBackend {
-    return new DropboxSyncBackend(new Dropbox({ auth: this.auth }));
-  }
-}
+import {Dropbox, files} from 'dropbox';
+import {defaultFileDelta, FileDelta, FileListProgress, FileMetadata, SyncBackend} from './sync';
+import {Either, left, Maybe, right, some} from '../utils/maybe';
+import {withRetries} from '../utils/retryable';
+import {DynamicRateLimitQueue, GatingException} from '../utils/rate-limiting';
+import {normalizeBlob, StoredMedia} from './storage';
 
 export class DropboxSyncBackend implements SyncBackend {
   requestQ = new DynamicRateLimitQueue();
@@ -264,63 +237,4 @@ export function mapDropboxListResponse(
     }, [] as FileDelta[]),
     cursor: response.cursor
   };
-}
-
-export function loadDropboxSession() {
-  return async function loadDropboxSession(
-    storage: Storage,
-    force = false
-  ): Promise<Session> {
-    const auth = await getDropboxAuthOrLogin(storage, force);
-
-    let user = { ...defaultUser };
-    const existingUserName = storage.getItem('username');
-    if (existingUserName) {
-      user = { ...user, username: existingUserName };
-    } else {
-      return loadDropboxSession(storage, true);
-    }
-
-    return new DropboxSession(auth, user, storage, () =>
-      loadDropboxSession(storage, true)
-    );
-  };
-}
-
-export async function getDropboxAuthOrLogin(
-  storage: Storage,
-  force = false
-): Promise<DropboxAuth> {
-  const existingToken = storage.getItem('token');
-  const existingAppKey = storage.getItem('key');
-
-  const bensrs = new BensrsClient();
-
-  if (!force) {
-    try {
-      const { success, ...auth } = await bensrs.callJson(
-        BensrsClient.LoginEndpoint,
-        {}
-      );
-
-      if (success && 'access_token' in auth) {
-        storage.setItem('username', auth.email || '');
-        storage.setItem('token', auth.access_token || '');
-        storage.setItem('key', auth.app_key || '');
-        return new DropboxAuth({
-          accessToken: auth.access_token,
-          clientId: auth.app_key
-        });
-      }
-    } catch (e) {
-      return new DropboxAuth({
-        accessToken: existingToken || '',
-        clientId: existingAppKey || ''
-      });
-    }
-  }
-
-  window.location.href = bensrs.startUrl();
-  await never(); // prevents safari from going crazy, this really only exists to satisfy type system.
-  return new DropboxAuth();
 }

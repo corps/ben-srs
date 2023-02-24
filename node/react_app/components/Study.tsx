@@ -48,7 +48,7 @@ import { Answer, isWrongAnswer, scheduledBy } from '../../shared/scheduler';
 import { useKeypresses } from '../hooks/useKeypress';
 import { BackSide } from './BackSide';
 import { FrontSide } from './FrontSide';
-import { useNoteUpdateHistory, useUpdateNote } from '../hooks/useUpdateNote';
+import { useUpdateNote } from '../hooks/useUpdateNote';
 import { useWorkflowRouting } from '../hooks/useWorkflowRouting';
 import { SelectTerm } from './SelectTerm';
 import { useDataUrl } from '../hooks/useDataUrl';
@@ -74,7 +74,6 @@ export function Study(props: Props) {
   const setRoute = useRoute();
   const time = useTime(1000);
   const nowMinutes = minutesOfTime(time);
-  const { undo, hasUndo, redo, hasRedo } = useNoteUpdateHistory();
   const [{ tag: language, audioStudy }] = useStudyContext();
 
   const {
@@ -198,16 +197,6 @@ export function Study(props: Props) {
     [answerCloze, props, relatedStudyRouting, studyDetails, seenNoteIds]
   );
 
-  const doUndo = useCallback(async () => {
-    await undo();
-    prepareNext();
-  }, [prepareNext, undo]);
-
-  const doRedo = useCallback(async () => {
-    await redo();
-    prepareNext();
-  }, [prepareNext, redo]);
-
   const dueTime = withDefault(
     mapSome(studyDetails, (studyDetails) =>
       timeOfMinutes(studyDetails.cloze.attributes.schedule.nextDueMinutes)
@@ -258,18 +247,7 @@ export function Study(props: Props) {
                   {describeDuration(time - cardStartedAt)}
                 </span>
 
-                <WorkflowLinks onReturn={onReturn}>
-                  {hasUndo ? (
-                    <SimpleNavLink className="mh1 pa2 br2" onClick={doUndo}>
-                      Undo
-                    </SimpleNavLink>
-                  ) : null}
-                  {hasRedo ? (
-                    <SimpleNavLink className="mh1 pa2 br2" onClick={doRedo}>
-                      Redo
-                    </SimpleNavLink>
-                  ) : null}
-                </WorkflowLinks>
+                <WorkflowLinks onReturn={onReturn}/>
               </div>
 
               <div>

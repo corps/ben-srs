@@ -1,36 +1,27 @@
 import React, { useCallback, useState } from 'react';
 import 'tachyons';
 import '../css/index.css';
-import { useLogin } from '../hooks/useLogin';
 import { FileStore, withNamespace } from '../services/storage';
 import {
   defaultStudyContext,
   FileStorageContext,
   NotesIndexContext,
-  SessionContext,
   StudyContext,
   TriggerSyncContext
 } from '../hooks/contexts';
 import { Router } from './Router';
 import { indexesInitialState } from '../notes';
 import { createDexie } from '../services/dexie';
-import {
-  NoteUpdateHistory,
-  UpdateHistoryContext
-} from '../hooks/useUpdateNote';
-
-const loginStorage = withNamespace(localStorage, 'dropboxLogin');
+import {Inject, provide} from "../hooks/useInjected";
+import {useLogin, useSession} from "../session";
 
 export function App() {
-  const [session, error] = useLogin(loginStorage);
+  const sessionState = useSession();
+  const [session, error] = useLogin(sessionState);
   const [fileStorage] = useState(() => new FileStore(createDexie()));
   const [notesIndex] = useState(() => ({ ...indexesInitialState }));
   const [syncIdx, setSyncIdx] = useState(0);
   const triggerSync = useCallback(() => setSyncIdx((i) => i + 1), []);
-  const [updateHistory, setUpdateHistory] = useState<NoteUpdateHistory>([
-    null,
-    null
-  ]);
   const [studyContext, setStudyContext] = useState(defaultStudyContext);
 
   if (error) console.error(error);
@@ -41,10 +32,9 @@ export function App() {
 
   return (
     <div className="wf-mplus1p">
-      <UpdateHistoryContext.Provider
-        value={{ updateHistory, setUpdateHistory }}
-      >
-        <SessionContext.Provider value={session[0]}>
+      <Inject injections={[
+          provide(useSession, sessionState),
+      ]}>
           <FileStorageContext.Provider value={fileStorage}>
             <NotesIndexContext.Provider value={notesIndex}>
               <TriggerSyncContext.Provider value={[triggerSync, syncIdx]}>
@@ -54,8 +44,7 @@ export function App() {
               </TriggerSyncContext.Provider>
             </NotesIndexContext.Provider>
           </FileStorageContext.Provider>
-        </SessionContext.Provider>
-      </UpdateHistoryContext.Provider>
+      </Inject>
     </div>
   );
 }

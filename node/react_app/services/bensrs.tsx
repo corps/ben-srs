@@ -1,6 +1,6 @@
 import { Login, LoginResponse } from '../endpoints';
 
-type Endpoint<url, Request, Response> = [url, Request, Response];
+export type Endpoint<url, Request, Response> = [url, Request, Response];
 
 export class BensrsClient {
   constructor(
@@ -13,7 +13,7 @@ export class BensrsClient {
     {}
   ];
 
-  _openXhr(
+  private _openXhr(
     method: string,
     path: string,
     factory: (xhr: XMLHttpRequest) => void

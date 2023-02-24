@@ -1,19 +1,21 @@
 import {
   useFileStorage,
   useNotesIndex,
-  useSession,
   useTriggerSync
 } from './contexts';
 import { syncFiles } from '../services/sync';
-import { Dispatch, useCallback, useEffect, useState } from 'react';
+import { Dispatch, useEffect} from 'react';
 import { Maybe } from '../utils/maybe';
 import { useNoteLoader } from './useNoteLoader';
 import { useAsync } from './useWithContext';
+import {DropboxSyncBackend} from "../services/dropbox";
+import {useSession} from "../session";
+import {Dropbox} from "dropbox";
 
 export function useSync(
   onProgress: Dispatch<number>
 ): [Maybe<any>, Maybe<any>] {
-  const session = useSession();
+  const [session, _] = useSession();
   const storage = useFileStorage();
   const notesIndex = useNotesIndex();
   const [triggerSync, syncLastUpdate] = useTriggerSync();
@@ -32,8 +34,7 @@ export function useSync(
       onProgress(1);
       try {
         yield notesLoaded;
-        yield* syncFiles(
-          session.syncBackend(),
+        yield* syncFiles(new DropboxSyncBackend(new Dropbox({auth: session.auth })),
           storage,
           onProgress,
           notesIndex
