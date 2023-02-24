@@ -5,7 +5,7 @@ import { FC, PropsWithChildren, useCallback, useMemo } from 'react';
 export function useWithKeybinding(
   key: string,
   cb: ((wasKey?: boolean) => void) | null | undefined
-): [FC<PropsWithChildren<{}>>, ((wasKey?: boolean) => void)] {
+): [FC<PropsWithChildren<{}>>, (wasKey?: boolean) => void] {
   const keypressCb = useCallback(
     (k: string) => {
       if (k === key && cb) {

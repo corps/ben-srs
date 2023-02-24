@@ -1,10 +1,9 @@
 import { useNotesIndex, useStudyContext } from './contexts';
-import { endOfDay, minutesOfTime, startOfDay } from '../utils/time';
-import { useMemo, useEffect, useState } from 'react';
-import { Indexed, Indexer } from '../utils/indexable';
+import { minutesOfTime, startOfDay } from '../utils/time';
+import { useEffect, useState } from 'react';
+import { Indexer } from '../utils/indexable';
 import { Cloze, indexesInitialState, Tagged } from '../notes';
-import { Schedule } from '../scheduler';
-import { mapSome, Maybe, some, withDefault, zipSome } from '../utils/maybe';
+import { mapSome, Maybe, withDefault, zipSome } from '../utils/maybe';
 import { okAnswerFactor } from '../study';
 import { useTime } from './useTime';
 

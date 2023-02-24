@@ -44,7 +44,7 @@ import {
   VCenteringContainer
 } from './layout-utils';
 import { SimpleNavLink, WorkflowLinks } from './SimpleNavLink';
-import { Answer, isWrongAnswer, scheduledBy } from '../scheduler';
+import { Answer, isWrongAnswer, scheduledBy } from '../../shared/scheduler';
 import { useKeypresses } from '../hooks/useKeypress';
 import { BackSide } from './BackSide';
 import { FrontSide } from './FrontSide';

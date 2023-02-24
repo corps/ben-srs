@@ -45,6 +45,7 @@ const config = {
                 // Skip any files outside of your project's `src` directory
                 include: [
                     path.resolve(__dirname, 'react_app/'),
+                    path.resolve(__dirname, 'shared/'),
                 ],
 
                 // Only run `.js`, `.jsx`, `.ts`, and `.tsx` files through Babel

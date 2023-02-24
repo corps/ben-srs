@@ -1,4 +1,4 @@
-import { Answer, newSchedule } from './scheduler';
+import { Answer, newSchedule } from '../shared/scheduler';
 import { mapSome, Maybe } from './utils/maybe';
 import { endKeyMatchingWithin, Indexed, Indexer } from './utils/indexable';
 

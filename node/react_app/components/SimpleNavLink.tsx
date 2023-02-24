@@ -90,9 +90,7 @@ export function WorkflowLinks(props: PropsWithChildren<WorkflowLinksProps>) {
 
       {onReturn ? (
         <SimpleNavLink className="mh1 pa2 br2" onClick={onReturn}>
-          <ReturnWrapper>
-              戻る
-          </ReturnWrapper>
+          <ReturnWrapper>戻る</ReturnWrapper>
         </SimpleNavLink>
       ) : null}
 

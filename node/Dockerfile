@@ -11,6 +11,6 @@ RUN make installation
 ENV PATH=/app/node_modules/.bin:$PATH
 COPY . /app
 
-RUN tsc
+RUN tsc -b
 RUN webpack
 

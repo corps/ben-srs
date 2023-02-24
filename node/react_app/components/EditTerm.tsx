@@ -29,7 +29,7 @@ import {
 import { SimpleNavLink, WorkflowLinks } from './SimpleNavLink';
 import { useToggle } from '../hooks/useToggle';
 import { DictionaryLookup } from './DictionaryLookup';
-import { medianSchedule } from '../scheduler';
+import { medianSchedule } from '../../shared/scheduler';
 import { useDataUrl } from '../hooks/useDataUrl';
 import { useWorkflowRouting } from '../hooks/useWorkflowRouting';
 import { Search } from './Search';

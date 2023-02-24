@@ -20,7 +20,7 @@ import {
   filterIndexIterator,
   Indexer
 } from './utils/indexable';
-import { Answer, isWrongAnswer, scheduledBy } from './scheduler';
+import { Answer, isWrongAnswer, scheduledBy } from '../shared/scheduler';
 
 export interface StudyDetails {
   noteTree: NoteTree;

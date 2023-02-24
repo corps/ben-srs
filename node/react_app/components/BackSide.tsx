@@ -1,6 +1,6 @@
 import React, { PropsWithChildren, useCallback, useMemo } from 'react';
 import { StudyDetails } from '../study';
-import { Answer } from '../scheduler';
+import { Answer } from '../../shared/scheduler';
 import { answerMiss, answerOk, answerSkip } from './Study';
 import { useWithKeybinding } from '../hooks/useWithKeybinding';
 import { Images } from './Images';
