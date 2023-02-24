@@ -3,8 +3,6 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const WorkboxPlugin = require('workbox-webpack-plugin');
-
-const isProduction = process.env.NODE_ENV === 'production';
 const stylesHandler = 'style-loader';
 
 
@@ -14,6 +12,15 @@ const config = {
     },
     output: {
         path: path.resolve(__dirname, 'docs'),
+    },
+    resolve: {
+        extensions: [".ts", ".tsx", ".js"],
+        fallback: {
+            "util": require.resolve("util"),
+            "crypto": require.resolve("crypto-browserify"),
+            "buffer": require.resolve("buffer"),
+            "stream": require.resolve("stream-browserify"),
+        }
     },
     plugins: [
         new HtmlWebpackPlugin({
@@ -53,15 +60,6 @@ const config = {
                 type: 'asset',
             },
         ],
-    },
-    resolve: {
-        extensions: ['.tsx', '.ts', '.js'],
-        fallback: {
-            "util": require.resolve("util/"),
-            "crypto": require.resolve("crypto-browserify"),
-            "buffer": require.resolve("buffer/"),
-            "stream": require.resolve("stream-browserify"),
-        }
     },
 };
 

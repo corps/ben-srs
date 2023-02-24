@@ -53,7 +53,7 @@ export function WorkflowLinks(props: PropsWithChildren<WorkflowLinksProps>) {
   let [ReturnWrapper] = useWithKeybinding(
     'Escape',
     useCallback(
-      (wasKey) => {
+      (wasKey: boolean | undefined) => {
         if (
           !wasKey ||
           !hasEdits ||
@@ -69,7 +69,7 @@ export function WorkflowLinks(props: PropsWithChildren<WorkflowLinksProps>) {
   let [ApplyWrapper] = useWithKeybinding(
     'Enter',
     useCallback(
-      (wasKey) => {
+      (wasKey: boolean | undefined) => {
         if (!applyDisabled && onApply) onApply();
       },
       [applyDisabled, onApply]
@@ -90,7 +90,9 @@ export function WorkflowLinks(props: PropsWithChildren<WorkflowLinksProps>) {
 
       {onReturn ? (
         <SimpleNavLink className="mh1 pa2 br2" onClick={onReturn}>
-          <ReturnWrapper>戻る</ReturnWrapper>
+          <ReturnWrapper>
+              戻る
+          </ReturnWrapper>
         </SimpleNavLink>
       ) : null}
 

@@ -148,19 +148,19 @@ export function BackSide({
   return (
     <AnswerDetails studyDetails={studyDetails} readCard={readCard}>
       <div className="f5 mt2 tc">
-        <button className="mh1 pa1 br2" onClick={ok}>
+        <button className="mh1 pa1 br2" onClick={() => ok()}>
           <OkWrapper>OK!</OkWrapper>
         </button>
 
-        <button className="mh1 pa1 br2" onClick={skip}>
+        <button className="mh1 pa1 br2" onClick={() => skip()}>
           <SkipWrapper>スキップ</SkipWrapper>
         </button>
 
-        <button className="mh1 pa1 br2" onClick={miss}>
+        <button className="mh1 pa1 br2" onClick={() => miss()}>
           <MissWrapper>間違えた！</MissWrapper>
         </button>
 
-        <button className="mh1 pa1 br2" onClick={edit}>
+        <button className="mh1 pa1 br2" onClick={() => edit()}>
           <EditWrapper>編集</EditWrapper>
         </button>
       </div>
