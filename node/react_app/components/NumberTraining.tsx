@@ -1,9 +1,9 @@
 import React, { useCallback, useState } from 'react';
-import { useRoute, useStudyContext } from '../hooks/contexts';
 import { WorkflowLinks } from './SimpleNavLink';
 import { useWithKeybinding } from '../hooks/useWithKeybinding';
-import { useToggle } from '../hooks/useToggle';
-import { speak } from '../services/speechAndAudio';
+import { speak } from '../hooks/useSpeechAndAudio';
+import { useStudyContext } from '../hooks/useStudyContext';
+import { useRoute } from '../hooks/useRoute';
 
 interface Props {
   onReturn?: () => void;
@@ -29,7 +29,7 @@ function pickNextNumber() {
 }
 
 export function NumberTraining(props: Props) {
-  const setRoute = useRoute();
+  const [_, setRoute] = useRoute();
   const { onReturn = () => setRoute(() => null) } = props;
   const [number, setNumber] = useState(pickNextNumber);
   const [showNumber, setShowNumber] = useState(false);

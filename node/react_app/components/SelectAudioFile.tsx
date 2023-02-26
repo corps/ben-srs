@@ -1,9 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import React, { ChangeEvent, useCallback, useMemo, useState } from 'react';
-import { useFileStorage } from '../hooks/contexts';
-import { audioContentTypes, StoredMetadata } from '../services/storage';
-import { Maybe, some } from '../utils/maybe';
+import React, { useCallback, useMemo } from 'react';
+import { useFileStorage } from '../hooks/useFileStorage';
+import { Maybe, some } from '../../shared/maybe';
 import { SelectSingle } from './SelectSingle';
+import { audioContentTypes } from '../../shared/files';
+import { StoredMetadata } from '../services/storage';
 
 interface Props {
   value: string; // audio file id

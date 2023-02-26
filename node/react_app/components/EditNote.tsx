@@ -5,12 +5,6 @@ import React, {
   useRef,
   useState
 } from 'react';
-import {
-  useFileStorage,
-  useNotesIndex,
-  useRoute,
-  useTriggerSync
-} from '../hooks/contexts';
 import { SelectSingle } from './SelectSingle';
 import {
   findNoteTree,
@@ -19,17 +13,10 @@ import {
   normalizedNote,
   NoteTree
 } from '../notes';
-import { mapSome, Maybe, withDefault } from '../utils/maybe';
+import { mapSome, Maybe, withDefault } from '../../shared/maybe';
 import { useLiveQuery } from 'dexie-react-hooks';
-import {
-  audioContentTypes,
-  createId,
-  getExt,
-  imageContentTypes,
-  normalizeBlob,
-  readDataUrl
-} from '../services/storage';
-import { Indexer } from '../utils/indexable';
+import { useFileStorage } from '../hooks/useFileStorage';
+import { Indexer } from '../../shared/indexable';
 import { useDataUrl } from '../hooks/useDataUrl';
 import { TagsSelector } from './TagsSelector';
 import { SimpleNavLink, WorkflowLinks } from './SimpleNavLink';
@@ -39,6 +26,15 @@ import { useCardImages } from '../hooks/useCardImages';
 import { Image, Images } from './Images';
 import { SelectAudioFile } from './SelectAudioFile';
 import { useSpeechAndAudio } from '../hooks/useSpeechAndAudio';
+import {
+  audioContentTypes,
+  getExt,
+  imageContentTypes
+} from '../../shared/files';
+import { createId } from '../services/storage';
+import { useNotesIndex } from '../hooks/useNotesIndex';
+import { useTriggerSync } from '../hooks/useTriggerSync';
+import { useRoute } from '../hooks/useRoute';
 interface Props {
   onReturn?: () => void;
   onApply: (tree: Maybe<NoteTree>, updated: NormalizedNote) => Promise<void>;
@@ -49,8 +45,8 @@ interface Props {
 
 const allLanguages = ['Japanese', 'Cantonese', 'English', 'Todos'];
 export function EditNote(props: Props) {
-  const notesIndex = useNotesIndex();
-  const setRoute = useRoute();
+  const [notesIndex] = useNotesIndex();
+  const [_, setRoute] = useRoute();
   const store = useFileStorage();
   const {
     onReturn = () => setRoute(() => null),
@@ -314,7 +310,7 @@ export function EditNote(props: Props) {
 
 function useUnusedAudioFiles() {
   const store = useFileStorage();
-  const { notes } = useNotesIndex();
+  const [{ notes }] = useNotesIndex();
   const audioMetadatas = useLiveQuery(
     async () => store.fetchMetadataByExts(Object.keys(audioContentTypes)),
     [],

@@ -4,9 +4,9 @@ import React, {
   useCallback,
   useMemo
 } from 'react';
-import { Indexer } from '../utils/indexable';
+import { Indexer } from '../../shared/indexable';
 import { SelectSingle } from './SelectSingle';
-import { useNotesIndex } from '../hooks/contexts';
+import { useNotesIndex } from '../hooks/useNotesIndex';
 
 interface Props {
   value: string[];
@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function useAllTags(language: string, singular?: boolean) {
-  const notesIndex = useNotesIndex();
+  const [notesIndex] = useNotesIndex();
 
   const tagsInIndex = useMemo(
     () =>

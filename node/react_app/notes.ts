@@ -1,6 +1,6 @@
 import { Answer, newSchedule } from '../shared/scheduler';
-import { mapSome, Maybe } from './utils/maybe';
-import { endKeyMatchingWithin, Indexed, Indexer } from './utils/indexable';
+import { mapSome, Maybe } from '../shared/maybe';
+import { endKeyMatchingWithin, Indexed, Indexer } from '../shared/indexable';
 
 export const newNote = {
   attributes: {
@@ -750,15 +750,3 @@ export function getLanguagesOfNotes(notes: NotesStore) {
   }
   return languages;
 }
-
-export const defaultLanguageSettings: { [k: string]: { codes: string[] } } = {
-  Japanese: {
-    codes: ['ja-JP']
-  },
-  Cantonese: {
-    codes: ['yue-Hant-HK', 'zh-HK']
-  },
-  English: {
-    codes: ['en-US']
-  }
-};

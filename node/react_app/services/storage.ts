@@ -1,9 +1,9 @@
-import 'regenerator-runtime';
 import { Dexie } from 'dexie';
+import { Indexed, Indexer } from '../../shared/indexable';
 import { FileMetadata } from './sync';
-import { bindSome, fromVoid, Maybe, some, withDefault } from '../utils/maybe';
-import { Semaphore } from '../utils/semaphore';
-import { Indexed, Indexer } from '../utils/indexable';
+import { Semaphore } from '../../shared/semaphore';
+import { fromVoid, Maybe, withDefault } from '../../shared/maybe';
+import { getExt, getMimeFromFileName } from '../../shared/files';
 
 export function withNamespace(storage: Storage, ns: string): Storage {
   return <Storage>{
@@ -66,53 +66,6 @@ export function withNamespace(storage: Storage, ns: string): Storage {
   };
 }
 
-export function getExt(name: string): Maybe<string> {
-  let parts = name.split('.');
-  if (parts.length > 0) {
-    return some(parts[parts.length - 1].toLowerCase());
-  }
-
-  return null;
-}
-
-export function getMimeFromFileName(name: string): Maybe<string> {
-  return bindSome(getExt(name), (ext) => fromVoid(allContentTypes[ext]));
-}
-
-export const imageContentTypes: { [k: string]: string } = {
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  png: 'image/png',
-  svg: 'image/svg+xml',
-  gif: 'image/gif',
-  bmp: 'image/bmp',
-  tiff: 'image/tiff',
-  ico: 'image/x-icon'
-};
-
-export const audioContentTypes: { [k: string]: string } = {
-  mp3: 'audio/mpeg',
-  ogg: 'audio/ogg',
-  wav: 'audio/wav',
-  opus: 'audio/opus'
-};
-
-export const videoContentTypes: { [k: string]: string } = {
-  mp4: 'video/mp4',
-  ogg: 'video/ogg'
-};
-
-export const noteContentTypes: { [k: string]: string } = {
-  text: 'text/plain; charset=UTF-8'
-};
-
-export const allContentTypes = {
-  ...audioContentTypes,
-  ...noteContentTypes,
-  ...videoContentTypes,
-  ...imageContentTypes
-};
-
 export interface StoredMetadata extends FileMetadata {
   ext: string;
   dirty: 0 | 1 | 2;
@@ -131,7 +84,6 @@ export interface ArrayBufferEnvelop {
 }
 
 export type StoredBlob = Blob | ArrayBufferEnvelop;
-
 export type DirtyStoreIndex = {
   byPath: Indexed<StoredMedia>;
   byId: Indexed<StoredMedia>;
@@ -206,8 +158,6 @@ export class FileStore {
     await this.metaLoaded;
     return Indexer.getAllMatching(this.dirtyIndex.byDirty, [1]);
   }
-
-  async updateRev(fd: FileMetadata) {}
 
   async fetchConflicted(): Promise<StoredMedia[]> {
     await this.metaLoaded;

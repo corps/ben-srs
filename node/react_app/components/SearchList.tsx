@@ -7,12 +7,12 @@ import React, {
   useRef,
   useState
 } from 'react';
-import { IndexIterator, mapIndexIterator } from '../utils/indexable';
+import { IndexIterator, mapIndexIterator } from '../../shared/indexable';
 import { usePagination } from '../hooks/usePagination';
 import { SimpleNavLink, WorkflowLinks } from './SimpleNavLink';
 import { useWithKeybinding } from '../hooks/useWithKeybinding';
 import { useKeypresses } from '../hooks/useKeypress';
-import { mapSome, Maybe, some, withDefault } from '../utils/maybe';
+import { mapSome, Maybe, some, withDefault } from '../../shared/maybe';
 
 interface Props {
   iterator: IndexIterator<ReactElement>;

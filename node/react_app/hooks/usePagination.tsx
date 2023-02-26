@@ -1,6 +1,6 @@
-import { IndexIterator } from '../utils/indexable';
+import { IndexIterator } from '../../shared/indexable';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Maybe } from '../utils/maybe';
+import { Maybe } from '../../shared/maybe';
 
 type State<V> = {
   page: number;

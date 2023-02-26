@@ -1,26 +1,16 @@
-import React, {
-  Dispatch,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState
-} from 'react';
-import { useNotesIndex, useRoute, useStudyContext } from '../hooks/contexts';
+import React, { Dispatch, useCallback, useEffect, useState } from 'react';
 import { useToggle } from '../hooks/useToggle';
 import { useTime } from '../hooks/useTime';
 import {
   answerStudy,
   findNextStudyClozeWithinTerm,
   findNextStudyDetails,
-  findTermInNormalizedNote,
   okAnswerFactor,
   StudyDetails,
   studyDetailsForCloze
 } from '../study';
 import { describeDuration, minutesOfTime, timeOfMinutes } from '../utils/time';
 import {
-  ClozeAnswer,
-  ClozeType,
   findNoteTree,
   newNormalizedNote,
   normalizedNote,
@@ -35,7 +25,7 @@ import {
   Maybe,
   some,
   withDefault
-} from '../utils/maybe';
+} from '../../shared/maybe';
 import { useStudyData } from '../hooks/useStudyData';
 import {
   FlexContainer,
@@ -52,10 +42,13 @@ import { useUpdateNote } from '../hooks/useUpdateNote';
 import { useWorkflowRouting } from '../hooks/useWorkflowRouting';
 import { SelectTerm } from './SelectTerm';
 import { useDataUrl } from '../hooks/useDataUrl';
-import { Indexer } from '../utils/indexable';
+import { Indexer } from '../../shared/indexable';
 import { RelatedStudy } from './RelatedStudy';
 import { HideIf } from './HideIf';
 import { useSpeechAndAudio } from '../hooks/useSpeechAndAudio';
+import { useNotesIndex } from '../hooks/useNotesIndex';
+import { useStudyContext } from '../hooks/useStudyContext';
+import { useRoute } from '../hooks/useRoute';
 
 interface Props {
   onReturn?: Dispatch<void>;
@@ -67,11 +60,11 @@ interface Props {
 }
 
 export function Study(props: Props) {
-  const notesIndex = useNotesIndex();
+  const [notesIndex] = useNotesIndex();
   const [showBack, setShowBack] = useState(false);
   const toggleShowBack = useToggle(setShowBack);
   const [cardStartedAt, setCardStartedAt] = useState(0);
-  const setRoute = useRoute();
+  const [_, setRoute] = useRoute();
   const time = useTime(1000);
   const nowMinutes = minutesOfTime(time);
   const [{ tag: language, audioStudy }] = useStudyContext();
@@ -247,7 +240,7 @@ export function Study(props: Props) {
                   {describeDuration(time - cardStartedAt)}
                 </span>
 
-                <WorkflowLinks onReturn={onReturn}/>
+                <WorkflowLinks onReturn={onReturn} />
               </div>
 
               <div>

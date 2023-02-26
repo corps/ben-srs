@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { mapSome, Maybe } from '../utils/maybe';
+import { mapSome, Maybe } from '../../shared/maybe';
 import {
   Cloze,
   findNoteTree,
@@ -8,11 +8,10 @@ import {
   NoteTree,
   Tagged
 } from '../notes';
-import { useNotesIndex, useRoute, useStudyContext } from '../hooks/contexts';
 import { addNewTerm, findTermRange } from '../study';
 import { EditNote } from './EditNote';
 import { SimpleNavLink, WorkflowLinks } from './SimpleNavLink';
-import { Indexer } from '../utils/indexable';
+import { Indexer } from '../../shared/indexable';
 import { CharacterCell } from './CharacterCell';
 import { EditTerm } from './EditTerm';
 import { useWorkflowRouting } from '../hooks/useWorkflowRouting';
@@ -23,6 +22,9 @@ import { minutesOfTime } from '../utils/time';
 import { Study } from './Study';
 import { useToggle } from '../hooks/useToggle';
 import { useSpeechAndAudio } from '../hooks/useSpeechAndAudio';
+import { useNotesIndex } from '../hooks/useNotesIndex';
+import { useStudyContext } from '../hooks/useStudyContext';
+import { useRoute } from '../hooks/useRoute';
 
 interface Props {
   onReturn?: () => void;
@@ -39,8 +41,8 @@ type Split =
   | { selection: string; range: Range };
 
 export function SelectTerm(props: Props) {
-  const notesIndex = useNotesIndex();
-  const setRoute = useRoute();
+  const [notesIndex] = useNotesIndex();
+  const [_, setRoute] = useRoute();
   const routeEdits = useWorkflowRouting(EditNote, SelectTerm);
   const routeEditTerms = useWorkflowRouting(EditTerm, SelectTerm);
   const routeStudy = useWorkflowRouting(Study, SelectTerm);

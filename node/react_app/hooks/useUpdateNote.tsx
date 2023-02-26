@@ -1,8 +1,5 @@
-import { useFileStorage, useNotesIndex, useTriggerSync } from './contexts';
-import {
-  useCallback,
-} from 'react';
-import { mapSome, Maybe, some, withDefault } from '../utils/maybe';
+import { useCallback } from 'react';
+import { mapSome, Maybe, some, withDefault } from '../../shared/maybe';
 import {
   denormalizedNote,
   NormalizedNote,
@@ -10,12 +7,14 @@ import {
   stringifyNote,
   updateNotes
 } from '../notes';
+import { useFileStorage } from './useFileStorage';
 import { createId } from '../services/storage';
-
+import { useNotesIndex } from './useNotesIndex';
+import { useTriggerSync } from './useTriggerSync';
 
 export function useUpdateNote(confirmEdit = false) {
   const storage = useFileStorage();
-  const notesIndex = useNotesIndex();
+  const [notesIndex] = useNotesIndex();
   const [triggerSync] = useTriggerSync();
 
   return useCallback(

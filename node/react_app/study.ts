@@ -14,12 +14,12 @@ import {
   Term,
   TermsRelatableStore
 } from './notes';
-import { bindSome, mapSome, Maybe, some, toVoid } from './utils/maybe';
+import { bindSome, mapSome, Maybe, some, toVoid } from '../shared/maybe';
 import {
   concatIndexIterators,
   filterIndexIterator,
   Indexer
-} from './utils/indexable';
+} from '../shared/indexable';
 import { Answer, isWrongAnswer, scheduledBy } from '../shared/scheduler';
 
 export interface StudyDetails {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { ReactElement, useCallback } from 'react';
-import { useRoute } from './contexts';
-import { some } from '../utils/maybe';
+import { some } from '../../shared/maybe';
+import { useRoute } from './useRoute';
 
 export type WorkflowParams<Apply extends any[]> = {
   onReturn?: () => void;
@@ -23,7 +23,7 @@ export function useWorkflowRouting<
   Source: ((props: SourceProps) => ReactElement<any, any> | null) | null,
   apply: (...args: Apply) => Promise<void> = () => Promise.resolve()
 ) {
-  const setRoute = useRoute();
+  const [_, setRoute] = useRoute();
 
   const routingParams = useCallback(
     (

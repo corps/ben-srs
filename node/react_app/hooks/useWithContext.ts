@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AsyncGenerator, Cancellable } from '../cancellable';
-import { Maybe, some } from '../utils/maybe';
+import { Maybe, some } from '../../shared/maybe';
 
 export function useWithContext(
   fn: (context: Cancellable) => void,

@@ -5,38 +5,36 @@ import React, {
   useMemo,
   useState
 } from 'react';
-import {
-  useFileStorage,
-  useNotesIndex,
-  useRoute,
-  useStudyContext
-} from '../hooks/contexts';
 import { SelectSingle } from './SelectSingle';
 import { useToggle } from '../hooks/useToggle';
 import { useTime } from '../hooks/useTime';
 import { useStudyData } from '../hooks/useStudyData';
 import { CircleButton } from './CircleButton';
-import { Maybe, some } from '../utils/maybe';
+import { Maybe, some } from '../../shared/maybe';
 import { Study } from './Study';
 import { useUpdateNote } from '../hooks/useUpdateNote';
 import { useWorkflowRouting } from '../hooks/useWorkflowRouting';
 import { EditNote } from './EditNote';
-import { createId } from '../services/storage';
+import { useFileStorage } from '../hooks/useFileStorage';
 import { Search } from './Search';
 import { TagsSelector, useAllTags } from './TagsSelector';
 import { useStoredState } from '../hooks/useStoredState';
 import { getLanguagesOfNotes, NormalizedNote, NoteTree } from '../notes';
 import { SelectTerm } from './SelectTerm';
 import { NumberTraining } from './NumberTraining';
-import {useSession} from "../session";
+import { useSession } from '../hooks/useSession';
+import { createId } from '../services/storage';
+import { useNotesIndex } from '../hooks/useNotesIndex';
+import { useStudyContext } from '../hooks/useStudyContext';
+import { useRoute } from '../hooks/useRoute';
 
 const targets = ['7 Days', '30 Days', '90 Days', '1 Day', 'Slow'];
 
 export function MainMenu({ syncFailed }: { syncFailed: boolean }) {
   const [session] = useSession();
   const storage = useFileStorage();
-  const notesIndex = useNotesIndex();
-  const setRoute = useRoute();
+  const [notesIndex] = useNotesIndex();
+  const [_, setRoute] = useRoute();
   const [loggingOut, setLoggingOut] = useState(false);
   const [selectedLanguage, setLanguage] = useStoredState(
     localStorage,

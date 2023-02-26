@@ -1,5 +1,5 @@
 import { delay } from './delay';
-import { Trigger } from './semaphore';
+import { Trigger } from '../../shared/semaphore';
 
 export class GatingException extends Error {
   constructor(public until: number, public original: any) {

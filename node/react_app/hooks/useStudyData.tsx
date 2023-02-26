@@ -1,11 +1,12 @@
-import { useNotesIndex, useStudyContext } from './contexts';
 import { minutesOfTime, startOfDay } from '../utils/time';
 import { useEffect, useState } from 'react';
-import { Indexer } from '../utils/indexable';
+import { Indexer } from '../../shared/indexable';
 import { Cloze, indexesInitialState, Tagged } from '../notes';
-import { mapSome, Maybe, withDefault, zipSome } from '../utils/maybe';
+import { mapSome, Maybe, withDefault, zipSome } from '../../shared/maybe';
 import { okAnswerFactor } from '../study';
 import { useTime } from './useTime';
+import { useNotesIndex } from './useNotesIndex';
+import { useStudyContext } from './useStudyContext';
 
 export const newStudyData = {
   studied: 0,
@@ -108,7 +109,7 @@ export function calculateAverageDailyIntake(
 }
 
 export function useStudyData() {
-  const notesIndex = useNotesIndex();
+  const [notesIndex] = useNotesIndex();
   const now = useTime();
   const minutesNow = minutesOfTime(now);
   const [{ tag, audioStudy, target, isSyncing }] = useStudyContext();

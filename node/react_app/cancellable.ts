@@ -1,5 +1,5 @@
 import 'regenerator-runtime';
-import { Maybe, some } from './utils/maybe';
+import { Maybe, some } from '../shared/maybe';
 
 export type AsyncGenerator<Result, P> = Generator<Promise<P> | P, Result, P>;
 

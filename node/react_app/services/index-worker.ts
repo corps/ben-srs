@@ -4,10 +4,10 @@ import {
   parseNote,
   updateNotes
 } from '../notes';
-import { FileStore, normalizeBlob, readText } from './storage';
-import { createDexie } from './dexie';
+import { normalizeBlob, readText } from './storage';
+import { createFileStore } from './services';
 
-const store = new FileStore(createDexie());
+const store = createFileStore();
 const worker = self;
 worker.onmessage = async () => {
   try {

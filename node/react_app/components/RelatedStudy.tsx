@@ -4,29 +4,28 @@ import {
   StudyDetails,
   studyDetailsForCloze
 } from '../study';
-import { useNotesIndex, useRoute } from '../hooks/contexts';
 import { SearchList } from './SearchList';
 import {
   asIterator,
   chainIndexIterators,
-  debugIterator,
   filterIndexIterator,
   flatMapIndexIterator,
   flattenIndexIterator,
   Indexer,
   IndexIterator,
   mapIndexIterator
-} from '../utils/indexable';
-import { Cloze, findNoteTree, normalizedNote, Term } from '../notes';
+} from '../../shared/indexable';
+import { Cloze, normalizedNote, Term } from '../notes';
 import { TermSearchResult } from './TermSearchResult';
 import { useWorkflowRouting } from '../hooks/useWorkflowRouting';
 import { Study } from './Study';
-import { bindSome, mapSome, some, withDefault } from '../utils/maybe';
+import { bindSome, some, withDefault } from '../../shared/maybe';
 import { useTime } from '../hooks/useTime';
 import { minutesOfTime } from '../utils/time';
 import { useUpdateNote } from '../hooks/useUpdateNote';
-import { SelectTerm } from './SelectTerm';
 import { EditTerm } from './EditTerm';
+import { useNotesIndex } from '../hooks/useNotesIndex';
+import { useRoute } from '../hooks/useRoute';
 
 interface Props {
   onReturn?: Dispatch<void>;
@@ -38,7 +37,7 @@ interface Props {
 }
 
 export function RelatedStudy(props: Props) {
-  const setRoute = useRoute();
+  const [_, setRoute] = useRoute();
   const defaultReturn = useCallback(() => setRoute(() => null), [setRoute]);
   const {
     onReturn = defaultReturn,
@@ -59,7 +58,7 @@ export function RelatedStudy(props: Props) {
     updateNoteAndConfirm
   );
 
-  const indexes = useNotesIndex();
+  const [indexes] = useNotesIndex();
   const { clozes, terms } = indexes;
   const selectTermRouting = useWorkflowRouting(Study, RelatedStudy);
   const studyDetails: StudyDetails = useMemo(() => {
@@ -71,7 +70,7 @@ export function RelatedStudy(props: Props) {
           marker,
           clozeIdx
         ]),
-        (cloze) => studyDetailsForCloze(cloze, indexes)
+        (cloze: Cloze) => studyDetailsForCloze(cloze, indexes)
       ),
       defaultStudyDetails
     );

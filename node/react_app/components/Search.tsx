@@ -6,12 +6,6 @@ import React, {
   useState
 } from 'react';
 import { saveAs } from 'file-saver';
-import {
-  useFileStorage,
-  useNotesIndex,
-  useRoute,
-  useTriggerSync
-} from '../hooks/contexts';
 import { SelectSingle } from './SelectSingle';
 import { SearchList } from './SearchList';
 import {
@@ -21,7 +15,7 @@ import {
   Indexer,
   IndexIterator,
   mapIndexIterator
-} from '../utils/indexable';
+} from '../../shared/indexable';
 import { useWorkflowRouting } from '../hooks/useWorkflowRouting';
 import { useUpdateNote } from '../hooks/useUpdateNote';
 import { StudyDetails, studyDetailsForCloze } from '../study';
@@ -31,7 +25,7 @@ import {
   mapSomeAsync,
   some,
   withDefault
-} from '../utils/maybe';
+} from '../../shared/maybe';
 import { SelectTerm } from './SelectTerm';
 import {
   findNoteTree,
@@ -40,20 +34,21 @@ import {
   Note,
   Term
 } from '../notes';
-import {
-  audioContentTypes,
-  createId,
-  getExt,
-  normalizeBlob,
-  StoredMetadata,
-  videoContentTypes,
-  withNamespace
-} from '../services/storage';
+import { createId, normalizeBlob, StoredMetadata } from '../services/storage';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { EditTerm } from './EditTerm';
 import { NoteSearchResult } from './NoteSearchResult';
 import { TermSearchResult } from './TermSearchResult';
 import { MediaSearchResult } from './MediaSearchResult';
+import {
+  audioContentTypes,
+  getExt,
+  videoContentTypes
+} from '../../shared/files';
+import { useFileStorage } from '../hooks/useFileStorage';
+import { useNotesIndex } from '../hooks/useNotesIndex';
+import { useTriggerSync } from '../hooks/useTriggerSync';
+import { useRoute } from '../hooks/useRoute';
 
 interface Props {
   onReturn?: () => void;
@@ -65,7 +60,7 @@ interface Props {
 const searchModes = ['notes', 'terms', 'media'];
 
 export function Search(props: Props) {
-  const setRoute = useRoute();
+  const [_, setRoute] = useRoute();
   const store = useFileStorage();
 
   const defaultOnReturn = useCallback(() => setRoute(() => null), [setRoute]);
@@ -152,7 +147,7 @@ export function Search(props: Props) {
 }
 
 function useNoteSearch(search: string): IndexIterator<Note> {
-  const notesIndex = useNotesIndex();
+  const [notesIndex] = useNotesIndex();
   const { notes } = notesIndex;
   let iter = Indexer.iterator(notes.byEditsComplete);
   if (search)
@@ -166,7 +161,7 @@ function useNoteSearch(search: string): IndexIterator<Note> {
 }
 
 function useTermSearch(search: string): IndexIterator<StudyDetails> {
-  const notesIndex = useNotesIndex();
+  const [notesIndex] = useNotesIndex();
   const { clozeAnswers, clozes, terms } = notesIndex;
 
   return useMemo(() => {
@@ -250,7 +245,7 @@ function useSearchResults(
   onReturn: () => void,
   onApply: ((studyDetails: StudyDetails) => Promise<void>) | undefined
 ): IndexIterator<ReactElement> {
-  const notesIndex = useNotesIndex();
+  const [notesIndex] = useNotesIndex();
   const updateNoteAndConfirmEditsFinished = useUpdateNote(true);
   const store = useFileStorage();
   const [triggerSync] = useTriggerSync();

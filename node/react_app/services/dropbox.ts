@@ -1,10 +1,16 @@
 import 'regenerator-runtime';
-import {Dropbox, files} from 'dropbox';
-import {defaultFileDelta, FileDelta, FileListProgress, FileMetadata, SyncBackend} from './sync';
-import {Either, left, Maybe, right, some} from '../utils/maybe';
-import {withRetries} from '../utils/retryable';
-import {DynamicRateLimitQueue, GatingException} from '../utils/rate-limiting';
-import {normalizeBlob, StoredMedia} from './storage';
+import { Dropbox, files } from 'dropbox';
+import {
+  defaultFileDelta,
+  FileDelta,
+  FileListProgress,
+  FileMetadata,
+  SyncBackend
+} from './sync';
+import { Either, left, Maybe, right, some } from '../../shared/maybe';
+import { withRetries } from '../utils/retryable';
+import { DynamicRateLimitQueue, GatingException } from '../utils/rate-limiting';
+import { normalizeBlob, StoredMedia } from './storage';
 
 export class DropboxSyncBackend implements SyncBackend {
   requestQ = new DynamicRateLimitQueue();

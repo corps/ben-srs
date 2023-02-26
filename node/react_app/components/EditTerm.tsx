@@ -7,7 +7,7 @@ import React, {
   useMemo,
   useState
 } from 'react';
-import { mapSome, Maybe, withDefault } from '../utils/maybe';
+import { mapSome, Maybe, withDefault } from '../../shared/maybe';
 import {
   ClozeType,
   findNoteTree,
@@ -18,7 +18,6 @@ import {
   NormalizedTerm,
   NoteTree
 } from '../notes';
-import { useNotesIndex, useRoute, useStudyContext } from '../hooks/contexts';
 import {
   findNextStudyClozeWithinTerm,
   findTermInNormalizedNote,
@@ -40,6 +39,9 @@ import { useWithKeybinding } from '../hooks/useWithKeybinding';
 import { useCardImages } from '../hooks/useCardImages';
 import { Images, Image } from './Images';
 import { useSpeechAndAudio } from '../hooks/useSpeechAndAudio';
+import { useNotesIndex } from '../hooks/useNotesIndex';
+import { useStudyContext } from '../hooks/useStudyContext';
+import { useRoute } from '../hooks/useRoute';
 
 interface Props {
   onReturn?: () => void;
@@ -65,8 +67,8 @@ function useTypeToggle(workingTerm: NormalizedTerm, type: ClozeType) {
 }
 
 export function EditTerm(props: Props) {
-  const setRoute = useRoute();
-  const notesIndex = useNotesIndex();
+  const [_, setRoute] = useRoute();
+  const [notesIndex] = useNotesIndex();
   const [{ audioStudy }] = useStudyContext();
 
   const {

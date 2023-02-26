@@ -1,5 +1,4 @@
-import React, { PropsWithChildren, useCallback, useRef } from 'react';
-import { readAsArrayBuffer } from '../services/storage';
+import React, { useCallback, useRef } from 'react';
 
 interface Props {
   className?: string;

@@ -5,16 +5,10 @@ import {
   mapSome,
   Maybe,
   withDefault
-} from '../utils/maybe';
+} from '../../shared/maybe';
 import { runPromise } from '../cancellable';
 import 'regenerator-runtime';
-import {
-  FileStore,
-  getExt,
-  normalizeBlob,
-  readText,
-  StoredMedia
-} from './storage';
+import { FileStore, normalizeBlob, readText, StoredMedia } from './storage';
 import {
   denormalizedNote,
   NoteIndexes,
@@ -22,6 +16,7 @@ import {
   removeNotesByPath,
   updateNotes
 } from '../notes';
+import { getExt } from '../../shared/files';
 
 export const defaultFileMetadata = {
   path: '/',
