@@ -1,6 +1,5 @@
 import { syncFiles } from '../services/sync';
-import { Dispatch, useEffect } from 'react';
-import { Maybe } from '../../shared/maybe';
+import {useCallback, useEffect, useState} from 'react';
 import { useNoteLoader } from './useNoteLoader';
 import { useAsync } from './useWithContext';
 import { DropboxSyncBackend } from '../services/dropbox';
@@ -8,15 +7,16 @@ import { useSession } from './useSession';
 import { Dropbox } from 'dropbox';
 import { useFileStorage } from './useFileStorage';
 import { useNotesIndex } from './useNotesIndex';
-import { useTriggerSync } from './useTriggerSync';
+import { useProgress} from "./useProgress";
+import {makeContextual} from "./makeContextual";
 
-export function useSync(
-  onProgress: Dispatch<number>
-): [Maybe<any>, Maybe<any>] {
+export const [useSync, SyncContext] = makeContextual(function useSync() {
   const [session, _] = useSession();
   const storage = useFileStorage();
+  const { pending, completed, onProgress } = useProgress();
+  const [syncId, setSyncId] = useState(0);
+  const triggerSync = useCallback(() => setSyncId((i) => i + 1), []);
   const [notesIndex] = useNotesIndex();
-  const [triggerSync, syncLastUpdate] = useTriggerSync();
 
   const notesLoaded = useNoteLoader();
 
@@ -26,7 +26,8 @@ export function useSync(
     return () => clearInterval(h);
   }, [triggerSync]);
 
-  return useAsync(
+  // Storage should clear and sync should restart if the store doesn't match the session we log into.
+  const [result, error] = useAsync(
     function* () {
       onProgress(0);
       onProgress(1);
@@ -42,16 +43,12 @@ export function useSync(
         console.error(e);
         throw e;
       }
+
+      return true;
     },
-    [
-      syncLastUpdate,
-      onProgress,
-      session,
-      storage,
-      onProgress,
-      notesIndex,
-      notesLoaded
-    ],
+    [ syncId ],
     () => onProgress(0)
   );
-}
+
+  return { pending, completed, triggerSync, error, isSyncing: !error && !result };
+});

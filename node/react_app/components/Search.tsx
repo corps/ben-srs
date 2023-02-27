@@ -47,8 +47,8 @@ import {
 } from '../../shared/files';
 import { useFileStorage } from '../hooks/useFileStorage';
 import { useNotesIndex } from '../hooks/useNotesIndex';
-import { useTriggerSync } from '../hooks/useTriggerSync';
 import { useRoute } from '../hooks/useRoute';
+import {useSync} from "../hooks/useSync";
 
 interface Props {
   onReturn?: () => void;
@@ -73,11 +73,10 @@ export function Search(props: Props) {
 
   const [search, setSearch] = useState(defaultSearch);
   const [mode, setMode] = useState(defaultMode);
-  const [triggerSync, lastSync] = useTriggerSync();
+  const {triggerSync} = useSync();
   const iterator = useSearchResults(
     mode,
     search,
-    lastSync,
     onReturn,
     props.onApply
   );
@@ -241,14 +240,13 @@ function useMediaSearch(search: string): IndexIterator<StoredMetadata> {
 function useSearchResults(
   mode: string,
   search: string,
-  lastSync: number,
   onReturn: () => void,
   onApply: ((studyDetails: StudyDetails) => Promise<void>) | undefined
 ): IndexIterator<ReactElement> {
   const [notesIndex] = useNotesIndex();
   const updateNoteAndConfirmEditsFinished = useUpdateNote(true);
   const store = useFileStorage();
-  const [triggerSync] = useTriggerSync();
+  const {triggerSync} = useSync();
 
   const deleteFile = useCallback(
     async ({ id }: StoredMetadata) => {

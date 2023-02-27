@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Trigger } from '../../shared/semaphore';
 import { NoteIndexes } from '../notes';
 import { useNotesIndex } from './useNotesIndex';
+import {makeContextual} from "./makeContextual";
 
-export function useNoteLoader() {
+export const [useNoteLoader, NoteLoaderContext] = makeContextual(function useNoteLoader() {
   const [index] = useNotesIndex();
   const [loadedTrigger] = useState(() => new Trigger<void>());
   const [fired, setFired] = useState(false);
@@ -27,4 +28,4 @@ export function useNoteLoader() {
   }, [fired, index, loadedTrigger, worker]);
 
   return loadedTrigger.promise;
-}
+});

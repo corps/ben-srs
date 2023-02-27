@@ -4,7 +4,7 @@ import { Tuple } from '../../shared/tuple';
 export type State<S> = Tuple<S, Dispatch<SetStateAction<S>>>;
 export type Rider<S> = (s: State<S>) => State<S>;
 
-export function makeRider<T>(rider: Dispatch<T>): Rider<T> {
+export function makeSink<T>(rider: Dispatch<T>): Rider<T> {
   return ([val, setVal]) => {
     const wrappedSetVal = useCallback(
       (v: any) => {

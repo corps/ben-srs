@@ -47,9 +47,6 @@ export function useWorkflowRouting<
         }
       };
 
-      // result.onApply.description =  applyString;
-      // result.onReturn.toString = () => returnString;
-
       return result;
     },
     [Source, apply, setRoute]

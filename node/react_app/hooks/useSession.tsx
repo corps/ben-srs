@@ -1,10 +1,11 @@
 import { makeContextual } from './makeContextual';
-import { useState } from 'react';
+import React, {PropsWithChildren, useState} from 'react';
 import { defaultUser, Session } from '../services/session';
 import { DropboxAuth } from 'dropbox';
-import { State } from './makeRider';
+import { State } from './useStateEx';
+import {useLogin} from "./useLogin";
 
-export const [useSession, SessionContext] = makeContextual<State<Session>>(
+export const [useSession, _SessionContext] = makeContextual<State<Session>>(
   function useSession() {
     const [v, setV] = useState(
       () =>
@@ -18,3 +19,21 @@ export const [useSession, SessionContext] = makeContextual<State<Session>>(
     return [v, setV];
   }
 );
+
+export function SessionContext({children}: PropsWithChildren<{}>) {
+    function WithContext() {
+        const sessionState = useSession();
+        const [session, error] = useLogin(sessionState);
+
+        if (error) console.error(error);
+        if (!session) return null;
+        if (error) {
+            return <div>{error}</div>;
+        }
+        return <>{children}</>;
+    }
+
+    return <_SessionContext>
+        <WithContext/>
+    </_SessionContext>
+}

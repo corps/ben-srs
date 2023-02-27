@@ -6,9 +6,7 @@ export const defaultStudyContext = {
   tag: '',
   audioStudy: false,
   target: some(30),
-  isSyncing: false
 };
-export type StudyContextData = typeof defaultStudyContext;
 
 export const [useStudyContext, StudyContext] = makeContextual(
   function useStudyContext() {

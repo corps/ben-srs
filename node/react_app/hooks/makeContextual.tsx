@@ -1,12 +1,9 @@
-import {
+import React, {
   createContext,
   FC,
   PropsWithChildren,
-  Provider,
-  ReactElement,
   useCallback,
   useContext,
-  useState
 } from 'react';
 import { Tuple } from '../../shared/tuple';
 

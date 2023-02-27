@@ -42,24 +42,11 @@ export function MainMenu({ syncFailed }: { syncFailed: boolean }) {
     ''
   );
   const [studyContext, setStudyContext] = useStudyContext();
-  const studyRouting = useWorkflowRouting(Study, null);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (
-      params.has('t') &&
-      !studyContext.isSyncing &&
-      notesIndex.notes.byId[0].length
-    ) {
-      window.history.pushState({}, '', window.location.href.split('?')[0]);
-      studyRouting({ reference: params.get('t') || '' }, {});
-    }
-  }, [window.location.search, studyContext.isSyncing]);
 
   const languages = useMemo(() => {
     notesIndex.notes.byLanguageAndStudyGuide;
     return getLanguagesOfNotes(notesIndex.notes);
-  }, [notesIndex.notes.byLanguageAndStudyGuide]);
+  }, [notesIndex.notes]);
 
   const language = languages.includes(selectedLanguage) ? selectedLanguage : '';
 
@@ -98,7 +85,6 @@ export function MainMenu({ syncFailed }: { syncFailed: boolean }) {
   const toggleAudioStudy = useToggle(setAudioStudy);
   const time = useTime();
 
-  // const nowMinutes = minutesOfTime(time);
   const setTarget = useCallback(
     (target: string) => {
       let result: Maybe<number> = null;

@@ -3,6 +3,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const WorkboxPlugin = require('workbox-webpack-plugin');
+const webpack = require('webpack');
 const stylesHandler = 'style-loader';
 
 
@@ -27,6 +28,11 @@ const config = {
             title: '弁SrS',
             chunks: ['main'],
             filename: 'index.html',
+        }),
+        new webpack.DefinePlugin({
+            "process.env.ACCESS_TOKEN": JSON.stringify(process.env.ACCESS_TOKEN),
+            "process.env.APP_KEY": JSON.stringify(process.env.APP_KEY),
+            "process.env.MOCKS": JSON.stringify(process.env.MOCKS),
         }),
         new WorkboxPlugin.GenerateSW({
             // these options encourage the ServiceWorkers to get in there fast
@@ -62,6 +68,11 @@ const config = {
             },
         ],
     },
+    devServer: {
+        client: {
+          overlay: false,
+        },
+      },
 };
 
 module.exports = () => {

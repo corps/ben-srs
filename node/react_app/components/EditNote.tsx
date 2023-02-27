@@ -33,8 +33,8 @@ import {
 } from '../../shared/files';
 import { createId } from '../services/storage';
 import { useNotesIndex } from '../hooks/useNotesIndex';
-import { useTriggerSync } from '../hooks/useTriggerSync';
 import { useRoute } from '../hooks/useRoute';
+import {useSync} from "../hooks/useSync";
 interface Props {
   onReturn?: () => void;
   onApply: (tree: Maybe<NoteTree>, updated: NormalizedNote) => Promise<void>;
@@ -72,7 +72,7 @@ export function EditNote(props: Props) {
     }
   });
 
-  const [triggerSync] = useTriggerSync();
+  const {triggerSync} = useSync();
   const deleteNote = useCallback(async () => {
     if (confirm('Delete?')) {
       setRoute(() => null);

@@ -64,8 +64,6 @@ export class BensrsClient {
       credentials: 'include'
     }).then<Res | { success: false }>((response) => {
       if (response.status >= 200 && response.status < 300) {
-        const v = response.body;
-        console.log({ v });
         return response.json();
       }
 

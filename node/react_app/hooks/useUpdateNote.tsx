@@ -10,12 +10,12 @@ import {
 import { useFileStorage } from './useFileStorage';
 import { createId } from '../services/storage';
 import { useNotesIndex } from './useNotesIndex';
-import { useTriggerSync } from './useTriggerSync';
+import {useSync} from "./useSync";
 
 export function useUpdateNote(confirmEdit = false) {
   const storage = useFileStorage();
   const [notesIndex] = useNotesIndex();
-  const [triggerSync] = useTriggerSync();
+  const {triggerSync} = useSync();
 
   return useCallback(
     async (

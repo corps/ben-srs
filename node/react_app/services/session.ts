@@ -45,6 +45,7 @@ async function getDropboxAuthOrLogin(
         storage.setItem('username', auth.email || '');
         storage.setItem('token', auth.access_token || '');
         storage.setItem('key', auth.app_key || '');
+
         return new DropboxAuth({
           accessToken: auth.access_token,
           clientId: auth.app_key

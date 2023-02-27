@@ -1,4 +1,4 @@
-import { FC, PropsWithChildren, ReactElement } from 'react';
+import React, { FC, PropsWithChildren, ReactElement } from 'react';
 
 export function joinContext(
   node: ReactElement,
