@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
 import { mapSome, Maybe, some, withDefault } from '../../shared/maybe';
 import {
-  denormalizedNote,
-  NormalizedNote,
+  expandedNote,
+  DenormalizedNote,
   NoteTree,
   stringifyNote,
   updateNotes
@@ -20,7 +20,7 @@ export function useUpdateNote(confirmEdit = false) {
   return useCallback(
     async (
       baseTree: Maybe<NoteTree>,
-      updated: NormalizedNote,
+      updated: DenormalizedNote,
       newNoteId = createId()
     ) => {
       const appliedTree = withDefault(
@@ -32,14 +32,14 @@ export function useUpdateNote(confirmEdit = false) {
               attributes: { ...updated.attributes, editsComplete }
             };
           }
-          return denormalizedNote(
+          return expandedNote(
             updated,
             tree.note.id,
             tree.note.path,
             tree.note.version
           );
         }),
-        denormalizedNote(updated, newNoteId, `/${newNoteId}.txt`, '')
+        expandedNote(updated, newNoteId, `/${newNoteId}.txt`, '')
       );
 
       updateNotes(notesIndex, appliedTree);

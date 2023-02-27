@@ -8,9 +8,9 @@ import React, {
 import { SelectSingle } from './SelectSingle';
 import {
   findNoteTree,
-  newNormalizedNote,
-  NormalizedNote,
-  normalizedNote,
+  newDenormalizedNote,
+  DenormalizedNote,
+  denormalizedNote,
   NoteTree
 } from '../notes';
 import { mapSome, Maybe, withDefault } from '../../shared/maybe';
@@ -37,10 +37,10 @@ import { useRoute } from '../hooks/useRoute';
 import {useSync} from "../hooks/useSync";
 interface Props {
   onReturn?: () => void;
-  onApply: (tree: Maybe<NoteTree>, updated: NormalizedNote) => Promise<void>;
+  onApply: (tree: Maybe<NoteTree>, updated: DenormalizedNote) => Promise<void>;
   newNoteContent?: string;
   noteId: string;
-  note?: NormalizedNote;
+  note?: DenormalizedNote;
 }
 
 const allLanguages = ['Japanese', 'Cantonese', 'English', 'Todos'];
@@ -60,11 +60,11 @@ export function EditNote(props: Props) {
       return note;
     } else {
       return withDefault(
-        mapSome(findNoteTree(notesIndex, noteId || ''), normalizedNote),
+        mapSome(findNoteTree(notesIndex, noteId || ''), denormalizedNote),
         {
-          ...newNormalizedNote,
+          ...newDenormalizedNote,
           attributes: {
-            ...newNormalizedNote.attributes,
+            ...newDenormalizedNote.attributes,
             content: newNoteContent || ''
           }
         }

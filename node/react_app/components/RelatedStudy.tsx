@@ -15,7 +15,7 @@ import {
   IndexIterator,
   mapIndexIterator
 } from '../../shared/indexable';
-import { Cloze, normalizedNote, Term } from '../notes';
+import { Cloze, denormalizedNote, Term } from '../notes';
 import { TermSearchResult } from './TermSearchResult';
 import { useWorkflowRouting } from '../hooks/useWorkflowRouting';
 import { Study } from './Study';
@@ -185,7 +185,7 @@ export function RelatedStudy(props: Props) {
 
   const removeRelated = useCallback(
     async (term: Term, allRelated: string[], toRemove: string) => {
-      const normalized = normalizedNote(studyDetails.noteTree);
+      const normalized = denormalizedNote(studyDetails.noteTree);
       const updatedAttributes = (normalized.attributes = {
         ...normalized.attributes
       });
@@ -227,7 +227,7 @@ export function RelatedStudy(props: Props) {
               editTermRouting(
                 {
                   ...studyDetails.cloze,
-                  normalized: normalizedNote(studyDetails.noteTree)
+                  normalized: denormalizedNote(studyDetails.noteTree)
                 },
                 props
               )

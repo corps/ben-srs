@@ -3,7 +3,7 @@ import { mapSome, Maybe } from '../../shared/maybe';
 import {
   Cloze,
   findNoteTree,
-  NormalizedNote,
+  DenormalizedNote,
   NormalizedTerm,
   NoteTree,
   Tagged
@@ -28,9 +28,9 @@ import { useRoute } from '../hooks/useRoute';
 
 interface Props {
   onReturn?: () => void;
-  onApply: (tree: Maybe<NoteTree>, updated: NormalizedNote) => Promise<void>;
+  onApply: (tree: Maybe<NoteTree>, updated: DenormalizedNote) => Promise<void>;
   noteId: string;
-  normalized: NormalizedNote;
+  normalized: DenormalizedNote;
 }
 
 type Range = [number, number];

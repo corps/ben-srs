@@ -12,8 +12,8 @@ import {
 import { describeDuration, minutesOfTime, timeOfMinutes } from '../utils/time';
 import {
   findNoteTree,
-  newNormalizedNote,
-  normalizedNote,
+  newDenormalizedNote,
+  denormalizedNote,
   NoteIndexes,
   Tagged,
   Term
@@ -88,8 +88,8 @@ export function Study(props: Props) {
   const editNote = useCallback(
     (editNoteId: string) => {
       const normalized = withDefault(
-        mapSome(findNoteTree(notesIndex, editNoteId), normalizedNote),
-        { ...newNormalizedNote }
+        mapSome(findNoteTree(notesIndex, editNoteId), denormalizedNote),
+        { ...newDenormalizedNote }
       );
       selectTermRouting(
         { noteId: editNoteId, normalized },

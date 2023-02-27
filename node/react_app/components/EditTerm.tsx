@@ -14,7 +14,7 @@ import {
   newNormalizeCloze,
   newNormalizedTerm,
   NormalizedCloze,
-  NormalizedNote,
+  DenormalizedNote,
   NormalizedTerm,
   NoteTree
 } from '../notes';
@@ -45,11 +45,11 @@ import { useRoute } from '../hooks/useRoute';
 
 interface Props {
   onReturn?: () => void;
-  onApply: (tree: Maybe<NoteTree>, updated: NormalizedNote) => Promise<void>;
+  onApply: (tree: Maybe<NoteTree>, updated: DenormalizedNote) => Promise<void>;
   noteId: string;
   reference: string;
   marker: string;
-  normalized: NormalizedNote;
+  normalized: DenormalizedNote;
 }
 
 function useTypeToggle(workingTerm: NormalizedTerm, type: ClozeType) {

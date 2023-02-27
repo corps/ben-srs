@@ -6,8 +6,8 @@ import {
   findNoteTree,
   newCloze,
   newNormalizedTerm,
-  NormalizedNote,
-  normalizedNote,
+  DenormalizedNote,
+  denormalizedNote,
   NormalizedTerm,
   NoteIndexes,
   NoteTree,
@@ -285,7 +285,7 @@ export function studyDetailsForCloze(
   const noteTree = toVoid(findNoteTree(indexes, cloze.noteId));
 
   if (term && note && noteTree) {
-    let normalized = normalizedNote(noteTree);
+    let normalized = denormalizedNote(noteTree);
     const termRanges = terms.map((t) =>
       findTermRange(t, normalized.attributes.content)
     );
@@ -453,10 +453,10 @@ export function findContentRange(
 }
 
 export function addNewTerm(
-  note: NormalizedNote,
+  note: DenormalizedNote,
   left: number,
   right: number
-): NormalizedNote {
+): DenormalizedNote {
   let content = note.attributes.content;
   let reference = content.slice(left, right);
   let marker = findNextUniqueMarker(content);
@@ -480,7 +480,7 @@ export function addNewTerm(
 }
 
 export function getTermFragment(
-  note: NormalizedNote,
+  note: DenormalizedNote,
   term: TermId,
   termRanges: [number, number][],
   termOverride = term.attributes.reference,
@@ -517,7 +517,7 @@ export function getTermFragment(
 }
 
 export function findTermInNormalizedNote(
-  note: NormalizedNote,
+  note: DenormalizedNote,
   reference: string,
   marker: string
 ): Maybe<NormalizedTerm> {
@@ -533,9 +533,9 @@ export function findTermInNormalizedNote(
 }
 
 export function updateTermInNormalizedNote(
-  note: NormalizedNote,
+  note: DenormalizedNote,
   update: NormalizedTerm
-): NormalizedNote {
+): DenormalizedNote {
   const updatedTerms = [...note.attributes.terms];
 
   for (let i = 0; i < updatedTerms.length; ++i) {
@@ -587,12 +587,12 @@ export function answerStudy(
   cloze: Cloze,
   answer: Answer,
   noteIndexes: NoteIndexes
-): Maybe<[NoteTree, NormalizedNote]> {
+): Maybe<[NoteTree, DenormalizedNote]> {
   return bindSome(findNoteTree(noteIndexes, cloze.noteId), (tree) => {
-    let normalized = normalizedNote(tree);
+    let denormalized = denormalizedNote(tree);
     const answers = Indexer.getAllMatching(
       noteIndexes.clozeAnswers.byNoteIdReferenceMarkerClozeIdxAndAnswerIdx,
-      [normalized.id, cloze.reference, cloze.marker, cloze.clozeIdx]
+      [denormalized.id, cloze.reference, cloze.marker, cloze.clozeIdx]
     );
 
     if (isWrongAnswer(answer[1])) {
@@ -610,18 +610,18 @@ export function answerStudy(
     const schedule = scheduledBy(cloze.attributes.schedule, answer);
 
     return mapSome(
-      findTermInNormalizedNote(normalized, cloze.reference, cloze.marker),
+      findTermInNormalizedNote(denormalized, cloze.reference, cloze.marker),
       (term) => {
         if (cloze.clozeIdx > term.attributes.clozes.length)
-          return [tree, normalized];
+          return [tree, denormalized];
 
-        const termIdx = normalized.attributes.terms.indexOf(term);
+        const termIdx = denormalized.attributes.terms.indexOf(term);
         term = { ...term };
 
-        normalized = { ...normalized };
-        normalized.attributes = { ...normalized.attributes };
-        normalized.attributes.terms = normalized.attributes.terms.slice();
-        normalized.attributes.terms.splice(termIdx, 1, term);
+        denormalized = { ...denormalized };
+        denormalized.attributes = { ...denormalized.attributes };
+        denormalized.attributes.terms = denormalized.attributes.terms.slice();
+        denormalized.attributes.terms.splice(termIdx, 1, term);
 
         term.attributes = { ...term.attributes };
         term.attributes.clozes = term.attributes.clozes.slice();
@@ -635,7 +635,7 @@ export function answerStudy(
         updatingCloze.attributes.answers =
           updatingCloze.attributes.answers.concat([answer]);
 
-        return [tree, normalized];
+        return [tree, denormalized];
       }
     );
   });

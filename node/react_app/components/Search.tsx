@@ -29,8 +29,8 @@ import {
 import { SelectTerm } from './SelectTerm';
 import {
   findNoteTree,
-  newNormalizedNote,
-  normalizedNote,
+  newDenormalizedNote,
+  denormalizedNote,
   Note,
   Term
 } from '../notes';
@@ -293,8 +293,8 @@ function useSearchResults(
   const visitNote = useCallback(
     (note: Note) => {
       const normalized = withDefault(
-        mapSome(findNoteTree(notesIndex, note.id), normalizedNote),
-        { ...newNormalizedNote }
+        mapSome(findNoteTree(notesIndex, note.id), denormalizedNote),
+        { ...newDenormalizedNote }
       );
       selectTermRouting({ noteId: note.id, normalized }, { onReturn }, () => ({
         onReturn
@@ -306,8 +306,8 @@ function useSearchResults(
   const visitTerm = useCallback(
     (sd: StudyDetails) => {
       const normalized = withDefault(
-        mapSome(findNoteTree(notesIndex, sd.cloze.noteId), normalizedNote),
-        { ...newNormalizedNote }
+        mapSome(findNoteTree(notesIndex, sd.cloze.noteId), denormalizedNote),
+        { ...newDenormalizedNote }
       );
       const { noteId, reference, marker } = sd.cloze;
       editTermRouting(

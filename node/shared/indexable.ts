@@ -7,6 +7,14 @@ export function arrayCmp(a: ReadonlyArray<any>, b: ReadonlyArray<any>): number {
     let bVal = b[i];
 
     if (aVal === bVal) continue;
+    if (Array.isArray(a)) {
+      if (Array.isArray(b)) {
+        return arrayCmp(a, b);
+      }
+      return 1;
+    } else if (Array.isArray(b)) {
+      return -1;
+    }
 
     if (bVal === Infinity) return -1;
     if (aVal === Infinity) return 1;
@@ -43,6 +51,9 @@ export function bisect<T, E>(
 
   return l;
 }
+
+
+
 
 export type Indexed<T> = [any[], T[]];
 export type IndexStore<T> = { [k: string]: Indexed<T> };

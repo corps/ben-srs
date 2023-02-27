@@ -1,5 +1,5 @@
 import {
-  denormalizedNote,
+  expandedNote,
   indexesInitialState,
   parseNote,
   updateNotes
@@ -17,7 +17,7 @@ worker.onmessage = async () => {
       noteBlobs.map(async ({ blob, id, rev, path }) => {
         const contents = await readText(normalizeBlob(blob));
         const normalized = parseNote(contents);
-        return denormalizedNote(normalized, id, path, rev);
+        return expandedNote(normalized, id, path, rev);
       })
     );
     updateNotes(indexes, ...trees);

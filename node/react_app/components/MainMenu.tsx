@@ -7,7 +7,6 @@ import React, {
 } from 'react';
 import { SelectSingle } from './SelectSingle';
 import { useToggle } from '../hooks/useToggle';
-import { useTime } from '../hooks/useTime';
 import { useStudyData } from '../hooks/useStudyData';
 import { CircleButton } from './CircleButton';
 import { Maybe, some } from '../../shared/maybe';
@@ -19,7 +18,7 @@ import { useFileStorage } from '../hooks/useFileStorage';
 import { Search } from './Search';
 import { TagsSelector, useAllTags } from './TagsSelector';
 import { useStoredState } from '../hooks/useStoredState';
-import { getLanguagesOfNotes, NormalizedNote, NoteTree } from '../notes';
+import { getLanguagesOfNotes, DenormalizedNote, NoteTree } from '../notes';
 import { SelectTerm } from './SelectTerm';
 import { NumberTraining } from './NumberTraining';
 import { useSession } from '../hooks/useSession';
@@ -83,7 +82,6 @@ export function MainMenu({ syncFailed }: { syncFailed: boolean }) {
     [setStudyContext]
   );
   const toggleAudioStudy = useToggle(setAudioStudy);
-  const time = useTime();
 
   const setTarget = useCallback(
     (target: string) => {
@@ -109,7 +107,7 @@ export function MainMenu({ syncFailed }: { syncFailed: boolean }) {
 
     const onFinishEditNote = async (
       tree: Maybe<NoteTree>,
-      normalized: NormalizedNote
+      normalized: DenormalizedNote
     ) => selectTermRouting({ noteId, normalized }, {});
     setRoute(() =>
       some(<EditNote onApply={onFinishEditNote} noteId={noteId} />)

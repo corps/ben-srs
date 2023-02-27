@@ -21,7 +21,7 @@ export const newNote = {
 };
 export type Note = typeof newNote;
 
-export const newNormalizedNote = {
+export const newDenormalizedNote = {
   ...newNote,
   attributes: {
     ...newNote.attributes,
@@ -32,7 +32,7 @@ export const newNormalizedNote = {
   version: undefined as void
 };
 
-export type NormalizedNote = typeof newNormalizedNote;
+export type DenormalizedNote = typeof newDenormalizedNote;
 
 export const newTerm = {
   noteId: '',
@@ -112,9 +112,9 @@ export const newNormalizeCloze = {
 export type NormalizedCloze = typeof newNormalizeCloze;
 
 const divisor = '\n===\n';
-export function parseNote(text: string): NormalizedNote {
-  let note = { ...newNormalizedNote };
-  note.attributes = { ...newNormalizedNote.attributes };
+export function parseNote(text: string): DenormalizedNote {
+  let note = { ...newDenormalizedNote };
+  note.attributes = { ...newDenormalizedNote.attributes };
 
   let divisorIdx = text.lastIndexOf(divisor);
 
@@ -131,7 +131,7 @@ export function parseNote(text: string): NormalizedNote {
   return note;
 }
 
-export function stringifyNote(note: NormalizedNote): string {
+export function stringifyNote(note: DenormalizedNote): string {
   return (
     note.attributes.content +
     divisor +
@@ -377,10 +377,10 @@ export const defaultNoteTree = {
 
 export type NoteTree = typeof defaultNoteTree;
 
-export function normalizedNote(noteTree: NoteTree): NormalizedNote {
+export function denormalizedNote(noteTree: NoteTree): DenormalizedNote {
   let { note, terms, clozes, clozeAnswers } = noteTree;
 
-  const normalizedNote: NormalizedNote = {
+  const denormalized: DenormalizedNote = {
     ...note,
     attributes: {
       ...note.attributes,
@@ -404,7 +404,7 @@ export function normalizedNote(noteTree: NoteTree): NormalizedNote {
       language: undefined as void
     };
 
-    normalizedNote.attributes.terms.push(normalizedTerm);
+    denormalized.attributes.terms.push(normalizedTerm);
 
     for (; idxOfClozes < clozes.length; ++idxOfClozes) {
       const cloze = clozes[idxOfClozes];
@@ -448,19 +448,19 @@ export function normalizedNote(noteTree: NoteTree): NormalizedNote {
     }
   }
 
-  return normalizedNote;
+  return denormalized;
 }
 
-export function denormalizedNote(
-  normalizedNote: NormalizedNote,
+export function expandedNote(
+  denormalizedNote: DenormalizedNote,
   id: string,
   path: string,
   version: string
 ): NoteTree {
   const note: Note = {
-    ...normalizedNote,
+    ...denormalizedNote,
     attributes: {
-      ...normalizedNote.attributes,
+      ...denormalizedNote.attributes,
       terms: undefined as void
     },
     id,
@@ -479,7 +479,7 @@ export function denormalizedNote(
     clozeAnswers
   };
 
-  for (let normalizedTerm of normalizedNote.attributes.terms) {
+  for (let normalizedTerm of denormalizedNote.attributes.terms) {
     const term: Term = {
       ...normalizedTerm,
       attributes: {

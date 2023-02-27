@@ -10,7 +10,7 @@ import { runPromise } from '../cancellable';
 import 'regenerator-runtime';
 import { FileStore, normalizeBlob, readText, StoredMedia } from './storage';
 import {
-  denormalizedNote,
+  expandedNote,
   NoteIndexes,
   parseNote,
   removeNotesByPath,
@@ -153,7 +153,7 @@ export function* syncFiles(
           download.then(async ([md, blob]) => {
             if (withDefault(getExt(md.path), '') === 'txt') {
               const contents = await readText(blob);
-              const note = denormalizedNote(
+              const note = expandedNote(
                 parseNote(contents),
                 md.id,
                 md.path,
