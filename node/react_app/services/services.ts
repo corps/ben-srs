@@ -4,7 +4,7 @@ import { FileStore } from './storage';
 import { LoginResponse } from '../endpoints';
 
 export function createBensrsClient() {
-  if (process.env['MOCKS'] === '1') {
+  if (process.env.MOCKS === '1') {
     return new FakeBensrsClient();
   }
   return new BensrsClient();

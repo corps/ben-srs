@@ -8,6 +8,7 @@ const stylesHandler = 'style-loader';
 
 
 const config = {
+    devtool: 'eval',
     entry: {
         main: './react_app/index.tsx',
     },

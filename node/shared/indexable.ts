@@ -7,12 +7,12 @@ export function arrayCmp(a: ReadonlyArray<any>, b: ReadonlyArray<any>): number {
     let bVal = b[i];
 
     if (aVal === bVal) continue;
-    if (Array.isArray(a)) {
-      if (Array.isArray(b)) {
-        return arrayCmp(a, b);
+    if (Array.isArray(aVal)) {
+      if (Array.isArray(bVal)) {
+        return arrayCmp(aVal, bVal);
       }
       return 1;
-    } else if (Array.isArray(b)) {
+    } else if (Array.isArray(bVal)) {
       return -1;
     }
 
