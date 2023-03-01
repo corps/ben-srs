@@ -7,7 +7,7 @@ import { okAnswerFactor } from '../study';
 import { useTime } from './useTime';
 import { useNotesIndex } from './useNotesIndex';
 import { useStudyContext } from './useStudyContext';
-import {useSync} from "./useSync";
+import { useSync } from './useSync';
 
 export const newStudyData = {
   studied: 0,
@@ -114,7 +114,7 @@ export function useStudyData() {
   const now = useTime();
   const minutesNow = minutesOfTime(now);
   const [{ tag, audioStudy, target }] = useStudyContext();
-  const {isSyncing} = useSync();
+  const { isSyncing } = useSync();
   const startOfCurDay = minutesOfTime(startOfDay(now));
 
   const [studyData, setStudyData] = useState(newStudyData);

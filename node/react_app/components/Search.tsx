@@ -48,7 +48,7 @@ import {
 import { useFileStorage } from '../hooks/useFileStorage';
 import { useNotesIndex } from '../hooks/useNotesIndex';
 import { useRoute } from '../hooks/useRoute';
-import {useSync} from "../hooks/useSync";
+import { useSync } from '../hooks/useSync';
 
 interface Props {
   onReturn?: () => void;
@@ -73,13 +73,8 @@ export function Search(props: Props) {
 
   const [search, setSearch] = useState(defaultSearch);
   const [mode, setMode] = useState(defaultMode);
-  const {triggerSync} = useSync();
-  const iterator = useSearchResults(
-    mode,
-    search,
-    onReturn,
-    props.onApply
-  );
+  const { triggerSync } = useSync();
+  const iterator = useSearchResults(mode, search, onReturn, props.onApply);
 
   const uploadFile = useCallback(
     async (e: ChangeEvent<HTMLInputElement>) => {
@@ -246,7 +241,7 @@ function useSearchResults(
   const [notesIndex] = useNotesIndex();
   const updateNoteAndConfirmEditsFinished = useUpdateNote(true);
   const store = useFileStorage();
-  const {triggerSync} = useSync();
+  const { triggerSync } = useSync();
 
   const deleteFile = useCallback(
     async ({ id }: StoredMetadata) => {

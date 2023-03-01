@@ -6,7 +6,7 @@ installation:
 
 .PHONY: image
 image:
-	docker build . --tag $(TAG)
+	docker build . --platform linux/amd64 --tag $(TAG)
 
 shell: image
 	docker run -it $(TAG) bash

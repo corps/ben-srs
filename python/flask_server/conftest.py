@@ -73,26 +73,6 @@ def enable_test_store():
         yield
 
 
-@pytest.fixture
-def cleaned_dropbox(refresh_token, secret_key, enable_test_app_key):
-    db = Dropbox(
-        oauth2_refresh_token=refresh_token, app_key=app.app_key, app_secret=secret_key
-    )
-    resp = db.files_list_folder("", recursive=False, limit=100)
-    while True:
-        for entry in resp.entries:
-            if isinstance(entry, FileMetadata):
-                db.files_delete_v2(entry.path_lower)
-            if isinstance(entry, FolderMetadata):
-                db.files_delete_v2(entry.path_lower)
-
-        if resp.has_more:
-            resp = db.files_list_folder_continue(cursor=resp.cursor)
-        else:
-            break
-    return db
-
-
 def get_value_from_cache_or_browser(
     label: str, url: str, exp: float = 1000000000
 ) -> str:

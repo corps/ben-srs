@@ -1,8 +1,10 @@
-import {Dispatch, useCallback, useState} from 'react';
+import { Dispatch, useCallback, useState } from 'react';
 
-export type ProgressState = { pending: number, completed: number };
+export type ProgressState = { pending: number; completed: number };
 
-export function useProgress(): ProgressState & { onProgress: Dispatch<number> } {
+export function useProgress(): ProgressState & {
+  onProgress: Dispatch<number>;
+} {
   const [[pending, completed], setProgress] = useState([0, 0] as [
     number,
     number

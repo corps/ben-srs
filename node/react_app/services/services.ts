@@ -17,15 +17,15 @@ export const createFileStore = () => {
 
 class FakeBensrsClient extends BensrsClient {
   async callJson<path extends string, Req, Res>(
-      endpoint: Endpoint<path, Req, Res>,
-      req: Req
+    endpoint: Endpoint<path, Req, Res>,
+    req: Req
   ): Promise<{ success: false } | Res> {
     if (endpoint === BensrsClient.LoginEndpoint) {
       const response: LoginResponse = {
         success: true,
         email: 'me@email',
         access_token: process.env.ACCESS_TOKEN,
-        app_key: process.env.APP_KEY,
+        app_key: process.env.APP_KEY
       };
       return response as Res;
     }

@@ -25,17 +25,13 @@ from .datasource import Store
 
 @contextlib.contextmanager
 def override(**options) -> Generator[None, None, None]:
-    old: dict[str, Any] = {}
+    old: dict[str, Any] = dict(**app.__dict__)
     for k, v in options.items():
-        old[k] = v
-        if not hasattr(app, k):
-            raise KeyError(f"Invalid app config {k}!")
         setattr(app, k, v)
     try:
         yield
     finally:
-        for k, v in old.items():
-            setattr(app, k, v)
+        app.__dict__ = old
 
 
 class PydanticJSONProvider(DefaultJSONProvider):
@@ -66,6 +62,7 @@ class App(Flask):
             if os.path.exists(path):
                 with open(path, "r") as f:
                     return f.read().rstrip()
+
         raise ValueError("Could not determine app secret!")
 
     @property

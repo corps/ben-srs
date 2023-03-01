@@ -8,21 +8,21 @@ import { joinContext } from '../utils/react-tools';
 import { NotesIndexContext } from '../hooks/useNotesIndex';
 import { StudyContext } from '../hooks/useStudyContext';
 import { RouteContext } from '../hooks/useRoute';
-import {NoteLoaderContext} from "../hooks/useNoteLoader";
-import {SyncContext} from "../hooks/useSync";
+import { NoteLoaderContext } from '../hooks/useNoteLoader';
+import { SyncContext } from '../hooks/useSync';
 
 export function App() {
   return (
     <div className="wf-mplus1p">
       {joinContext(
         <Router />,
-          StudyContext,
-          RouteContext,
-          SyncContext,
-          SessionContext,
-          NoteLoaderContext,
-          FileStorageContext,
-          NotesIndexContext,
+        StudyContext,
+        RouteContext,
+        SyncContext,
+        SessionContext,
+        NoteLoaderContext,
+        FileStorageContext,
+        NotesIndexContext
       )}
     </div>
   );

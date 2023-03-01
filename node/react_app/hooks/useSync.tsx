@@ -1,5 +1,5 @@
 import { syncFiles } from '../services/sync';
-import {useCallback, useEffect, useState} from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNoteLoader } from './useNoteLoader';
 import { useAsync } from './useWithContext';
 import { DropboxSyncBackend } from '../services/dropbox';
@@ -7,8 +7,8 @@ import { useSession } from './useSession';
 import { Dropbox } from 'dropbox';
 import { useFileStorage } from './useFileStorage';
 import { useNotesIndex } from './useNotesIndex';
-import { useProgress} from "./useProgress";
-import {makeContextual} from "./makeContextual";
+import { useProgress } from './useProgress';
+import { makeContextual } from './makeContextual';
 
 export const [useSync, SyncContext] = makeContextual(function useSync() {
   const [session, _] = useSession();
@@ -46,9 +46,15 @@ export const [useSync, SyncContext] = makeContextual(function useSync() {
 
       return true;
     },
-    [ syncId ],
+    [syncId],
     () => onProgress(0)
   );
 
-  return { pending, completed, triggerSync, error, isSyncing: !error && !result };
+  return {
+    pending,
+    completed,
+    triggerSync,
+    error,
+    isSyncing: !error && !result
+  };
 });

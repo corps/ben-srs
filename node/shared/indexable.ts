@@ -1,27 +1,136 @@
 import 'regenerator-runtime';
 import { mapSome, Maybe, some } from './maybe';
+import {Tuple} from "./tuple";
+
+
+export type KeyedNode<K, T> = [identity: K, value: T];
+export interface KeyedTree<K, T> extends Tuple<KeyedNode<K, T>, Tuple<Maybe<KeyedTree<K, T>>, Maybe<KeyedTree<K, T>>>> {}
+export function key<K, T>(values: T[], keyer: (v: T) => K): KeyedNode<K, T>[] {
+  const result = values.map(v => Tuple.from(keyer(v), v));
+  result.sort(cmpAny);
+  return result;
+}
+
+export function makeKeyedTree<K, T>(root: KeyedNode<K, T>, sortedNodes: KeyedNode<K, T>[]): KeyedTree<K, T> {
+  function _makeKeyedTree(i: number = Math.floor(sortedNodes.length / 2), l: number = 0, r: number = sortedNodes.length): Maybe<KeyedTree<K, T>> {
+    if (i >= r) return null;
+    return some(Tuple.from(sortedNodes[i], Tuple.from(_makeKeyedTree(Math.floor(i / 2), l, i), _makeKeyedTree(Math.floor(i + ((r - i) / 2)) + 1, i, r))));
+  }
+
+  const children = _makeKeyedTree();
+  if (children) {
+    const cmp = cmpAny(children[0][0], root[0]);
+    if (cmp < 0) {
+      return Tuple.from(root, Tuple.from(children, null))
+    }
+    if (cmp > 0) {
+      return Tuple.from(root, Tuple.from(null, children))
+    }
+
+    return children[0];
+  }
+
+  return Tuple.from(root, Tuple.from(null, null))
+}
+
+export function insertKeyedTree<K, T>(tree: KeyedTree<K, T>, node: KeyedNode<K, T>): KeyedTree<K, T> {
+  const [root, children] = tree;
+  const cmp = cmpAny(node[0], root[0]);
+  if (cmp === 0) return Tuple.from(node, children);
+  if (cmp < 0) {
+    return Tuple.from(root, Tuple.from(mapSome(children[0], left => insertKeyedTree(left, node)), children[1]));
+  }
+  return Tuple.from(root, Tuple.from(children[0], mapSome(children[1], right => insertKeyedTree(right, node))));
+}
+
+export function iterateKeyedTree<K, T>(tree: KeyedTree<K, T>, startKey: K, endKey: K): IndexIterator<KeyedNode<K, T>> {
+  const parents: KeyedTree<K, T>[] = [];
+  let foundStart = false;
+  let nextIter: IndexIterator<KeyedNode<K, T>> = findLeft;
+
+  function findLeft(): Maybe<KeyedNode<K, T>> {
+    while (true) {
+      let [node, children] = tree;
+      let cmp = foundStart ? -1 : cmpAny(startKey, node[0]);
+      const [left] = children;
+
+      if (cmp < 0) {
+        if (left) {
+          parents.push(tree)
+          tree = left[0];
+          continue;
+        }
+
+        foundStart = true;
+      }
+
+      cmp = cmpAny(node[0], endKey)
+      if (cmp < 0) {
+        nextIter = findRight;
+        return some(node);
+      }
+      nextIter = () => null;
+      return null;
+    }
+  }
+
+  function findRight(): Maybe<KeyedNode<K, T>> {
+    while (true) {
+      let [_, children] = tree;
+      const [__, right] = children;
+      if (right) {
+        tree = right[0];
+        const cmp = cmpAny(tree[0][0], endKey);
+        if (cmp < 0) nextIter = findLeft;
+        else nextIter = () => null;
+        return nextIter();
+      } else {
+        const parent = parents.pop();
+
+        if (parent) {
+          tree = parent;
+          continue;
+        }
+        nextIter = () => null;
+        return nextIter();
+      }
+    }
+  }
+
+  return () => {
+    return nextIter();
+  };
+}
+
+
+export function cmpAny(aVal: any, bVal: any) {
+  if (aVal === bVal) return 0;
+  if (bVal === Infinity) return -1;
+  if (aVal === Infinity) return 1;
+  if (aVal == null || aVal == -Infinity) return -1;
+  if (bVal == null || bVal == -Infinity) return 1;
+
+  if (Array.isArray(aVal)) {
+    if (Array.isArray(bVal)) {
+      return arrayCmp(aVal, bVal);
+    }
+    return -1;
+  } else if(Array.isArray(bVal)) {
+    return 1;
+  }
+
+  if (aVal < bVal) return -1;
+  return 1;
+}
 
 export function arrayCmp(a: ReadonlyArray<any>, b: ReadonlyArray<any>): number {
   for (let i = 0; i < a.length && i < b.length; ++i) {
     let aVal = a[i];
     let bVal = b[i];
 
-    if (aVal === bVal) continue;
-    if (Array.isArray(aVal)) {
-      if (Array.isArray(bVal)) {
-        return arrayCmp(aVal, bVal);
-      }
-      return 1;
-    } else if (Array.isArray(bVal)) {
-      return -1;
-    }
-
-    if (bVal === Infinity) return -1;
-    if (aVal === Infinity) return 1;
-    if (aVal == null) return -1;
-    if (bVal == null) return 1;
-    if (aVal < bVal) return -1;
-    return 1;
+    const cmp = cmpAny(aVal, bVal);
+    if (cmp === 0) continue;
+    return cmp;
   }
 
   if (a.length === b.length) return 0;
@@ -65,6 +174,7 @@ export type GroupReducer<V> = (
   reverseIter: IndexIterator<V>
 ) => Maybe<V>;
 export type Reducers<V> = { [k: string]: GroupReducer<V> };
+
 
 export function debugIterator<A>(
   label: string,
@@ -178,6 +288,19 @@ export function chainIndexIterators<A>(...iterators: IndexIterator<A>[]) {
 
     return null;
   };
+}
+
+export function indexIteratorToArray<A>(iterator: IndexIterator<A>): A[] {
+  const result: A[] = [];
+  for (let cur = iterator(); cur; cur = iterator()) {
+    result.push(cur[0]);
+  }
+  return result;
+}
+
+export const IndexIterator = {
+  toArray: indexIteratorToArray,
+  chain: chainIndexIterators, flatten: flattenIndexIterator, filter: filterIndexIterator, flatMap: flatMapIndexIterator, concat: concatIndexIterators, map: mapIndexIterator, from: asIterator
 }
 
 export class Indexer<V, I extends IndexStore<V>> {

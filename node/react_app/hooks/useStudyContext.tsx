@@ -5,7 +5,7 @@ import { some } from '../../shared/maybe';
 export const defaultStudyContext = {
   tag: '',
   audioStudy: false,
-  target: some(30),
+  target: some(30)
 };
 
 export const [useStudyContext, StudyContext] = makeContextual(

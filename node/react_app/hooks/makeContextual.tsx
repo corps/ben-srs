@@ -3,7 +3,7 @@ import React, {
   FC,
   PropsWithChildren,
   useCallback,
-  useContext,
+  useContext
 } from 'react';
 import { Tuple } from '../../shared/tuple';
 

@@ -12,7 +12,7 @@ import { useWorkflowRouting } from '../hooks/useWorkflowRouting';
 import { useRoute } from '../hooks/useRoute';
 
 export function Router() {
-  const {error: syncError, pending, completed} = useSync();
+  const { error: syncError, pending, completed } = useSync();
   const syncFailed = !!syncError;
 
   const [route] = useRoute();
@@ -27,10 +27,7 @@ export function Router() {
     if (query.s) {
       searchRouting({ defaultSearch: query.s }, {});
     } else if (query.c) {
-      newNoteRouting(
-        { noteId: createId(), newNoteContent: query.c },
-        {}
-      );
+      newNoteRouting({ noteId: createId(), newNoteContent: query.c }, {});
     }
   });
 

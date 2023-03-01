@@ -7,7 +7,7 @@ installation:
 .PHONY: image
 image:
 	make -C ../node image
-	docker build . --tag $(TAG)
+	docker build . --platform linux/amd64 --tag $(TAG)
 
 .PHONY: shell
 shell: image
