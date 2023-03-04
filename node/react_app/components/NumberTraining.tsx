@@ -33,7 +33,7 @@ export function NumberTraining(props: Props) {
   const { onReturn = () => setRoute(() => null) } = props;
   const [number, setNumber] = useState(pickNextNumber);
   const [showNumber, setShowNumber] = useState(false);
-  const [studyContext, setStudyContext] = useStudyContext();
+  const { tag } = useStudyContext();
 
   const next = useCallback(() => {
     setNumber(pickNextNumber);
@@ -41,8 +41,8 @@ export function NumberTraining(props: Props) {
   }, []);
 
   const speakIt = useCallback(() => {
-    speak(studyContext.tag, `${number}`);
-  }, [number, studyContext]);
+    speak(tag, `${number}`);
+  }, [number, tag]);
 
   const [NextWrapper] = useWithKeybinding('a', next);
   const [SpeakWrapper] = useWithKeybinding('j', speakIt);

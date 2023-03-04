@@ -9,14 +9,14 @@ import {
 import { runPromise } from '../cancellable';
 import 'regenerator-runtime';
 import { FileStore, normalizeBlob, readText, StoredMedia } from './storage';
+import { parseNote } from '../notes';
+import { getExt } from '../../shared/files';
 import {
   expandedNote,
   NoteIndexes,
-  parseNote,
   removeNotesByPath,
   updateNotes
-} from '../notes';
-import { getExt } from '../../shared/files';
+} from './indexes';
 
 export const defaultFileMetadata = {
   path: '/',

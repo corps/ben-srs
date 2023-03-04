@@ -1,4 +1,4 @@
-import { State } from './useStateEx';
+import { State } from './makeRider';
 import { loadDropboxSession, Session } from '../services/session';
 import { withNamespace } from '../services/storage';
 import { useMemo } from 'react';

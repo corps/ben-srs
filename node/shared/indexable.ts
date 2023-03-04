@@ -1,5 +1,5 @@
 import 'regenerator-runtime';
-import { mapSome, Maybe, some } from './maybe';
+import {mapSome, Maybe, some, withDefault} from './maybe';
 import {Tuple} from "./tuple";
 
 
@@ -12,9 +12,12 @@ export function key<K, T>(values: T[], keyer: (v: T) => K): KeyedNode<K, T>[] {
 }
 
 export function makeKeyedTree<K, T>(root: KeyedNode<K, T>, sortedNodes: KeyedNode<K, T>[]): KeyedTree<K, T> {
-  function _makeKeyedTree(i: number = Math.floor(sortedNodes.length / 2), l: number = 0, r: number = sortedNodes.length): Maybe<KeyedTree<K, T>> {
+  function _makeKeyedTree(l: number = 0, r: number = sortedNodes.length): Maybe<KeyedTree<K, T>> {
+    const i = (l + r) >>> 1;
     if (i >= r) return null;
-    return some(Tuple.from(sortedNodes[i], Tuple.from(_makeKeyedTree(Math.floor(i / 2), l, i), _makeKeyedTree(Math.floor(i + ((r - i) / 2)) + 1, i, r))));
+    const leftTree = _makeKeyedTree(l, i)
+    const rightTree = _makeKeyedTree(i + 1, r)
+    return some(Tuple.from(sortedNodes[i], Tuple.from(leftTree, rightTree)));
   }
 
   const children = _makeKeyedTree();
@@ -43,65 +46,120 @@ export function insertKeyedTree<K, T>(tree: KeyedTree<K, T>, node: KeyedNode<K, 
   return Tuple.from(root, Tuple.from(children[0], mapSome(children[1], right => insertKeyedTree(right, node))));
 }
 
-export function iterateKeyedTree<K, T>(tree: KeyedTree<K, T>, startKey: K, endKey: K): IndexIterator<KeyedNode<K, T>> {
-  const parents: KeyedTree<K, T>[] = [];
-  let foundStart = false;
-  let nextIter: IndexIterator<KeyedNode<K, T>> = findLeft;
-
-  function findLeft(): Maybe<KeyedNode<K, T>> {
-    while (true) {
-      let [node, children] = tree;
-      let cmp = foundStart ? -1 : cmpAny(startKey, node[0]);
-      const [left] = children;
-
-      if (cmp < 0) {
-        if (left) {
-          parents.push(tree)
-          tree = left[0];
-          continue;
-        }
-
-        foundStart = true;
-      }
-
-      cmp = cmpAny(node[0], endKey)
-      if (cmp < 0) {
-        nextIter = findRight;
-        return some(node);
-      }
-      nextIter = () => null;
-      return null;
-    }
-  }
-
-  function findRight(): Maybe<KeyedNode<K, T>> {
-    while (true) {
-      let [_, children] = tree;
-      const [__, right] = children;
-      if (right) {
-        tree = right[0];
-        const cmp = cmpAny(tree[0][0], endKey);
-        if (cmp < 0) nextIter = findLeft;
-        else nextIter = () => null;
-        return nextIter();
-      } else {
-        const parent = parents.pop();
-
-        if (parent) {
-          tree = parent;
-          continue;
-        }
-        nextIter = () => null;
-        return nextIter();
-      }
-    }
-  }
-
-  return () => {
-    return nextIter();
-  };
+function increasing<K, T>(tree: KeyedTree<K, T>): Tuple<Maybe<KeyedTree<K, T>>, Maybe<KeyedTree<K, T>>> {
+  return tree[1];
 }
 
+function decreasing<K, T>(tree: KeyedTree<K, T>): Tuple<Maybe<KeyedTree<K, T>>, Maybe<KeyedTree<K, T>>> {
+  const [l, r] = tree[1];
+  return [r, l];
+}
+
+function takeChildren<K, T>(c: Tuple<Maybe<KeyedTree<K, T>>, Maybe<KeyedTree<K, T>>>, reverse=false) {
+  if (reverse) {
+    return [c[1], c[0]];
+  }
+
+  return c;
+}
+
+// Find the smallest tree such that the next tree key is >= K
+export function bisectKeyedTree<K, T>(tree: KeyedTree<K, T>, key: K, reverse=false): Tuple<KeyedTree<K, T>[], KeyedTree<K, T>> {
+  const parents: KeyedTree<K, T>[] = [];
+  const cmpFactor = reverse ? -1 : 1;
+  while (true) {
+    const [_, children] = tree;
+    const [l, r] = takeChildren(children, reverse);
+
+
+    const cmpRoot = cmpAny(key, tree[0][0]) * cmpFactor;
+
+    if (r) {
+      if (cmpRoot > 0) {
+        parents.push(tree);
+        tree = r[0];
+        continue;
+      }
+    }
+    if (l) {
+      if (cmpRoot <= 0) {
+        parents.push(tree);
+        tree = l[0];
+        continue;
+      }
+    }
+
+    break;
+  }
+
+  return Tuple.from(parents, tree);
+}
+
+export function iterateKeyedTree<K, T>(tree: KeyedTree<K, T>, startKey: K = -Infinity as K, endKey: K = Infinity as K, reverse=false): IndexIterator<KeyedNode<K, T>> {
+  const cmpFactor = reverse ? -1 : 1;
+  let dead = false;
+  const [parents, treeStart] = bisectKeyedTree(tree, startKey, reverse);
+  const [_, treeEnd] = bisectKeyedTree(tree, endKey, reverse);
+  tree = treeStart;
+
+  if (cmpAny(treeEnd[0][0], endKey) * cmpFactor >= 0) return () => null;
+  if (cmpAny(treeStart[0][0], startKey) * cmpFactor < 0) {
+    iter();
+  }
+
+  return iter;
+
+  function iter() {
+    if (dead) return null;
+    const last = tree;
+    const n = findNext();
+    if (n) {
+      tree = n[0];
+    } else {
+      dead = true;
+    }
+
+    if (last == treeEnd) dead = true;
+    return some(last[0]);
+  }
+
+  function parent(): Maybe<KeyedTree<K, T>> {
+    if (parents.length) {
+      return some(parents[parents.length - 1]);
+    }
+    return null;
+  }
+
+  function findNext(): Maybe<KeyedTree<K, T>> {
+    let [_, children] = tree;
+    const [__, right] = takeChildren(children, reverse);
+    if (right) {
+      parents.push(tree);
+      tree = right[0];
+      return findLeft();
+    } else {
+      for (let p = parent(); p && withDefault(mapSome(takeChildren(p[0][1], reverse)[1], rightTree => rightTree === tree), false); p = parent()) {
+        parents.pop();
+        tree = p[0];
+      }
+
+      const n = parent();
+      if (n) {
+        parents.pop();
+        tree = n[0];
+      }
+      return n;
+    }
+  }
+
+  function findLeft(): Maybe<KeyedTree<K, T>> {
+    for (let left = takeChildren(tree[1], reverse)[0]; left; left = takeChildren(tree[1], reverse)[0]) {
+      parents.push(tree);
+      tree = left[0];
+    }
+    return some(tree);
+  }
+}
 
 export function cmpAny(aVal: any, bVal: any) {
   if (aVal === bVal) return 0;
@@ -269,6 +327,19 @@ export function flattenIndexIterator<A>(
       if (next[0]) return next[0];
     }
   };
+}
+
+export function peekIndexIterator<A>(iterator: IndexIterator<A>): Tuple<Maybe<A>, IndexIterator<A>> {
+  const next = iterator();
+  let consumed = false;
+  return Tuple.from(
+    next,
+    chainIndexIterators(() => {
+      if (consumed) return null;
+      consumed = true;
+      return next;
+    }, iterator)
+  )
 }
 
 export function chainIndexIterators<A>(...iterators: IndexIterator<A>[]) {

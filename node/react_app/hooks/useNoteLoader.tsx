@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Trigger } from '../../shared/semaphore';
-import { NoteIndexes } from '../notes';
 import { useNotesIndex } from './useNotesIndex';
 import { makeContextual } from './makeContextual';
+import { NoteIndexes } from '../services/indexes';
 
 export const [useNoteLoader, NoteLoaderContext] = makeContextual(
   function useNoteLoader() {
-    const [index] = useNotesIndex();
+    const [index, setIndex] = useNotesIndex();
     const [loadedTrigger] = useState(() => new Trigger<void>());
     const [fired, setFired] = useState(false);
     // @ts-ignore
@@ -23,10 +23,10 @@ export const [useNoteLoader, NoteLoaderContext] = makeContextual(
       }: {
         data: { indexes: NoteIndexes };
       }) => {
-        Object.assign(index, indexedData);
+        setIndex(Object.assign({}, index, indexedData));
         loadedTrigger.resolve();
       };
-    }, [fired, index, loadedTrigger, worker]);
+    }, [fired, index, loadedTrigger, setIndex, worker]);
 
     return loadedTrigger.promise;
   }

@@ -7,28 +7,13 @@ import React, {
 import { Indexer } from '../../shared/indexable';
 import { SelectSingle } from './SelectSingle';
 import { useNotesIndex } from '../hooks/useNotesIndex';
+import { useStudyContext } from '../hooks/useStudyContext';
 
 interface Props {
   value: string[];
   language: string;
   onChange: Dispatch<string[]>;
   singular?: boolean;
-}
-
-export function useAllTags(language: string, singular?: boolean) {
-  const [notesIndex] = useNotesIndex();
-
-  const tagsInIndex = useMemo(
-    () =>
-      Indexer.getAllMatching(notesIndex.taggedNotes.byLangAndTagOfFirstNoteId, [
-        language
-      ])
-        .filter(({ tag }) => tag !== language || singular)
-        .map(({ tag }) => tag),
-    [language, notesIndex.taggedNotes.byLangAndTagOfFirstNoteId, singular]
-  );
-
-  return singular ? tagsInIndex : ['', '/new/', ...tagsInIndex];
 }
 
 export function TagsSelector({
@@ -38,7 +23,11 @@ export function TagsSelector({
   singular,
   children
 }: PropsWithChildren<Props>) {
-  const allTags = useAllTags(language, singular);
+  const { allTags } = useStudyContext();
+  const tags = useMemo(() => {
+    if (singular) return allTags;
+    return ['', '/new/', ...allTags.filter((tag) => tag !== language)];
+  }, [allTags, language, singular]);
 
   const updateCurTags = useCallback(
     (newValue: string, i: number) => {
@@ -64,16 +53,16 @@ export function TagsSelector({
           <SelectSingle
             onChange={(tag) => updateCurTags(tag, i)}
             value={tag}
-            values={allTags}
+            values={tags}
           />
         </div>
       ))}
       {!singular ? (
         <div className="ml2 w4 dib">
           <SelectSingle
-            onChange={(tag) => updateCurTags(tag, allTags.length)}
+            onChange={(tag) => updateCurTags(tag, tags.length)}
             value={''}
-            values={allTags}
+            values={tags}
           />
         </div>
       ) : null}

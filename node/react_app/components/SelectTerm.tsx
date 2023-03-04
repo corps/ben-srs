@@ -1,13 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { mapSome, Maybe } from '../../shared/maybe';
-import {
-  Cloze,
-  findNoteTree,
-  DenormalizedNote,
-  NormalizedTerm,
-  NoteTree,
-  Tagged
-} from '../notes';
+import { Cloze, DenormalizedNote, DenormalizedTerm, NoteTree } from '../notes';
 import { addNewTerm, findTermRange } from '../study';
 import { EditNote } from './EditNote';
 import { SimpleNavLink, WorkflowLinks } from './SimpleNavLink';
@@ -25,17 +18,18 @@ import { useSpeechAndAudio } from '../hooks/useSpeechAndAudio';
 import { useNotesIndex } from '../hooks/useNotesIndex';
 import { useStudyContext } from '../hooks/useStudyContext';
 import { useRoute } from '../hooks/useRoute';
+import { findNoteTree, Tagged } from '../services/indexes';
 
 interface Props {
   onReturn?: () => void;
   onApply: (tree: Maybe<NoteTree>, updated: DenormalizedNote) => Promise<void>;
   noteId: string;
-  normalized: DenormalizedNote;
+  denormalized: DenormalizedNote;
 }
 
 type Range = [number, number];
 type Split =
-  | { term: NormalizedTerm; range: Range }
+  | { term: DenormalizedTerm; range: Range }
   | { study: Tagged<Cloze>; range: Range }
   | { content: string; range: Range }
   | { selection: string; range: Range };
@@ -46,36 +40,39 @@ export function SelectTerm(props: Props) {
   const routeEdits = useWorkflowRouting(EditNote, SelectTerm);
   const routeEditTerms = useWorkflowRouting(EditTerm, SelectTerm);
   const routeStudy = useWorkflowRouting(Study, SelectTerm);
-  const [{ tag }] = useStudyContext();
-  const { onReturn = () => setRoute(() => null), noteId, normalized } = props;
+  const { tag } = useStudyContext();
+  const { onReturn = () => setRoute(() => null), noteId, denormalized } = props;
   const time = useTime(1000 * 60 * 5);
   const nowMinutes = minutesOfTime(time);
   const [showStudy, setShowStudy] = useState(false);
   const toggleShowStudy = useToggle(setShowStudy);
 
-  const content = normalized.attributes.content;
+  const content = denormalized.attributes.content;
 
   const editContent = useCallback(() => {
     routeEdits(
       {
         noteId,
-        note: normalized
+        note: denormalized
       },
       props,
-      (baseTree, normalized) => ({ ...props, normalized })
+      (baseTree, normalized) => ({ ...props, denormalized: normalized })
     );
-  }, [normalized, noteId, props, routeEdits]);
+  }, [denormalized, noteId, props, routeEdits]);
 
   const onApply = useCallback(async () => {
-    await props.onApply(findNoteTree(notesIndex, noteId), normalized);
-  }, [normalized, noteId, notesIndex, props]);
+    await props.onApply(findNoteTree(notesIndex, noteId), denormalized);
+  }, [denormalized, noteId, notesIndex, props]);
 
   const { speakInScope } = useSpeechAndAudio();
   const testSpeech = useCallback(() => {
-    speakInScope(normalized.attributes.language, normalized.attributes.content);
+    speakInScope(
+      denormalized.attributes.language,
+      denormalized.attributes.content
+    );
   }, [
-    normalized.attributes.language,
-    normalized.attributes.content,
+    denormalized.attributes.language,
+    denormalized.attributes.content,
     speakInScope
   ]);
 
@@ -125,7 +122,7 @@ export function SelectTerm(props: Props) {
 
   const splits = useMemo(() => {
     const splits: Split[] = [{ content, range: [0, content.length] }];
-    for (let term of normalized.attributes.terms) {
+    for (let term of denormalized.attributes.terms) {
       for (let i = 0; i < splits.length; ++i) {
         const split = splits[i];
         if ('content' in split) {
@@ -166,13 +163,7 @@ export function SelectTerm(props: Props) {
     }
 
     return splits;
-  }, [
-    content,
-    normalized.attributes.terms,
-    dueClozes,
-    notesIndex.terms,
-    notesIndex.taggedClozes
-  ]);
+  }, [content, denormalized.attributes.terms, dueClozes]);
 
   const [selectTermLeft, setSelectTermLeft] = useState(Infinity);
 
@@ -183,7 +174,7 @@ export function SelectTerm(props: Props) {
         return;
       }
 
-      const updated = addNewTerm(normalized, selectTermLeft, i + 1);
+      const updated = addNewTerm(denormalized, selectTermLeft, i + 1);
       const {
         attributes: { terms }
       } = updated;
@@ -194,49 +185,40 @@ export function SelectTerm(props: Props) {
           noteId,
           reference: term.attributes.reference,
           marker: term.attributes.marker,
-          normalized: updated
+          denormalized: updated
         },
         props,
         (baseTree, normalized) => ({
           ...props,
-          normalized
+          denormalized: normalized
         })
       );
     },
-    [normalized, noteId, props, routeEditTerms, selectTermLeft]
+    [denormalized, noteId, props, routeEditTerms, selectTermLeft]
   );
 
   const onSelectStudy = (term: Tagged<Cloze>) => {
-    const {
-      inner: { noteId, marker, reference }
-    } = term;
-    routeStudy(
-      {
-        noteId,
-        marker,
-        reference
-      },
-      props
-    );
+    const { inner: cloze } = term;
+    routeStudy({ termId: cloze }, props);
   };
 
   const onSelectTerm = useCallback(
-    (term: NormalizedTerm) => {
+    (term: DenormalizedTerm) => {
       routeEditTerms(
         {
           noteId,
           reference: term.attributes.reference,
           marker: term.attributes.marker,
-          normalized
+          denormalized: denormalized
         },
         props,
         (baseTree, normalized) => ({
           ...props,
-          normalized
+          denormalized: normalized
         })
       );
     },
-    [normalized, noteId, props, routeEditTerms]
+    [denormalized, noteId, props, routeEditTerms]
   );
 
   const [EditWrapper] = useWithKeybinding('e', editContent);
@@ -324,7 +306,7 @@ export function SelectTerm(props: Props) {
 
       <div className="tc">
         <SentenceAnalyzer
-          language={normalized.attributes.language}
+          language={denormalized.attributes.language}
           sentence={content}
         />
       </div>

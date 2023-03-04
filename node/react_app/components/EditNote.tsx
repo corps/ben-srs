@@ -6,13 +6,7 @@ import React, {
   useState
 } from 'react';
 import { SelectSingle } from './SelectSingle';
-import {
-  findNoteTree,
-  newDenormalizedNote,
-  DenormalizedNote,
-  denormalizedNote,
-  NoteTree
-} from '../notes';
+import { newDenormalizedNote, DenormalizedNote, NoteTree } from '../notes';
 import { mapSome, Maybe, withDefault } from '../../shared/maybe';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useFileStorage } from '../hooks/useFileStorage';
@@ -35,6 +29,7 @@ import { createId } from '../services/storage';
 import { useNotesIndex } from '../hooks/useNotesIndex';
 import { useRoute } from '../hooks/useRoute';
 import { useSync } from '../hooks/useSync';
+import { denormalizedNote, findNoteTree } from '../services/indexes';
 interface Props {
   onReturn?: () => void;
   onApply: (tree: Maybe<NoteTree>, updated: DenormalizedNote) => Promise<void>;
@@ -55,7 +50,7 @@ export function EditNote(props: Props) {
     note
   } = props;
 
-  const [normalized, setNormalized] = useState(() => {
+  const [denormalized, setDenormalized] = useState(() => {
     if (note) {
       return note;
     } else {
@@ -104,7 +99,7 @@ export function EditNote(props: Props) {
             );
 
             if (isImage) {
-              setNormalized((note) => ({
+              setDenormalized((note) => ({
                 ...note,
                 attributes: {
                   ...note.attributes,
@@ -122,11 +117,11 @@ export function EditNote(props: Props) {
 
       triggerSync();
     },
-    [triggerSync, setNormalized]
+    [triggerSync, setDenormalized]
   );
 
   const removeImage = useCallback((toRemove: Image) => {
-    setNormalized((note) => ({
+    setDenormalized((note) => ({
       ...note,
       attributes: {
         ...note.attributes,
@@ -145,7 +140,7 @@ export function EditNote(props: Props) {
   const audioMetadatas = useUnusedAudioFiles();
 
   const setAudioFileId = useCallback((selectedId: Maybe<string>) => {
-    setNormalized((note) => ({
+    setDenormalized((note) => ({
       ...note,
       attributes: {
         ...note.attributes,
@@ -154,23 +149,23 @@ export function EditNote(props: Props) {
     }));
   }, []);
 
-  const audioDataUrl = useDataUrl(normalized.attributes.audioFileId);
+  const audioDataUrl = useDataUrl(denormalized.attributes.audioFileId);
 
   const { playAudioInScope } = useSpeechAndAudio();
   const playAudioPath = useCallback(() => {
     mapSome(audioDataUrl, (dataUrl) => playAudioInScope(dataUrl, null, null));
-  }, [audioDataUrl]);
+  }, [audioDataUrl, playAudioInScope]);
 
   const [PlayWrapper] = useWithKeybinding('j', playAudioPath);
   const [DeleteWrapper] = useWithKeybinding('Delete', deleteNote);
 
   const onApply = useCallback(async () => {
     const baseTree = findNoteTree(notesIndex, noteId);
-    await props.onApply(baseTree, normalized);
-  }, [notesIndex, noteId, props, normalized]);
+    await props.onApply(baseTree, denormalized);
+  }, [notesIndex, noteId, props, denormalized]);
 
   const setNoteContent = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
-    setNormalized((note) => ({
+    setDenormalized((note) => ({
       ...note,
       attributes: {
         ...note.attributes,
@@ -180,7 +175,7 @@ export function EditNote(props: Props) {
   }, []);
 
   const setNoteLanguage = useCallback((language: string) => {
-    setNormalized((note) => ({
+    setDenormalized((note) => ({
       ...note,
       attributes: {
         ...note.attributes,
@@ -190,7 +185,7 @@ export function EditNote(props: Props) {
   }, []);
 
   const setNoteStudyGuide = useCallback((studyGuide: boolean) => {
-    setNormalized((note) => ({
+    setDenormalized((note) => ({
       ...note,
       attributes: {
         ...note.attributes,
@@ -200,7 +195,7 @@ export function EditNote(props: Props) {
   }, []);
 
   const setShareAudio = useCallback((shareAudio: boolean) => {
-    setNormalized((note) => ({
+    setDenormalized((note) => ({
       ...note,
       attributes: {
         ...note.attributes,
@@ -210,7 +205,7 @@ export function EditNote(props: Props) {
   }, []);
 
   const setNoteTags = useCallback((tags: string[]) => {
-    setNormalized((note) => ({
+    setDenormalized((note) => ({
       ...note,
       attributes: {
         ...note.attributes,
@@ -219,7 +214,7 @@ export function EditNote(props: Props) {
     }));
   }, []);
 
-  const images = useCardImages(normalized.attributes.imageFilePaths);
+  const images = useCardImages(denormalized.attributes.imageFilePaths);
   useRef<HTMLVideoElement>(null);
 
   return (
@@ -230,14 +225,14 @@ export function EditNote(props: Props) {
             <SelectSingle
               placeholder="言語を選択"
               onChange={setNoteLanguage}
-              value={normalized.attributes.language}
+              value={denormalized.attributes.language}
               values={allLanguages}
             />
           </div>
 
           <div className="ml2 w4 dib">
             <SelectAudioFile
-              value={normalized.attributes.audioFileId || ''}
+              value={denormalized.attributes.audioFileId || ''}
               options={audioMetadatas}
               onChange={setAudioFileId}
             />
@@ -245,8 +240,8 @@ export function EditNote(props: Props) {
         </div>
 
         <TagsSelector
-          value={normalized.attributes.tags}
-          language={normalized.attributes.language}
+          value={denormalized.attributes.tags}
+          language={denormalized.attributes.language}
           onChange={setNoteTags}
         >
           <label className="dib ml2">
@@ -255,7 +250,7 @@ export function EditNote(props: Props) {
               className="ml2 mr3"
               type="checkbox"
               onChange={(e) => setNoteStudyGuide(e.target.checked)}
-              checked={normalized.attributes.studyGuide}
+              checked={denormalized.attributes.studyGuide}
             />
           </label>
 
@@ -265,7 +260,7 @@ export function EditNote(props: Props) {
               className="ml2 mr3"
               type="checkbox"
               onChange={(e) => setShareAudio(e.target.checked)}
-              checked={normalized.attributes.shareAudio}
+              checked={denormalized.attributes.shareAudio}
             />
           </label>
         </TagsSelector>
@@ -285,7 +280,7 @@ export function EditNote(props: Props) {
             className="w-100 input-reset"
             rows={6}
             onChange={setNoteContent}
-            value={normalized.attributes.content}
+            value={denormalized.attributes.content}
           />
         </div>
 
@@ -299,7 +294,8 @@ export function EditNote(props: Props) {
             onApply={onApply}
             onReturn={onReturn}
             applyDisabled={
-              !normalized.attributes.content || !normalized.attributes.language
+              !denormalized.attributes.content ||
+              !denormalized.attributes.language
             }
           />
         </div>

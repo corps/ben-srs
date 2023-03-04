@@ -13,10 +13,14 @@ import { makeContextual } from './makeContextual';
 export const [useSync, SyncContext] = makeContextual(function useSync() {
   const [session, _] = useSession();
   const storage = useFileStorage();
-  const { pending, completed, onProgress } = useProgress();
+  const { pending, completed, onProgress: _onProgress } = useProgress();
   const [syncId, setSyncId] = useState(0);
   const triggerSync = useCallback(() => setSyncId((i) => i + 1), []);
-  const [notesIndex] = useNotesIndex();
+  const [notesIndex, setNotesIndex] = useNotesIndex();
+  const onProgress = (p: number) => {
+    _onProgress(p);
+    setNotesIndex((i) => ({ ...i }));
+  };
 
   const notesLoaded = useNoteLoader();
 

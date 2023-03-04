@@ -2,7 +2,7 @@ import { makeContextual } from './makeContextual';
 import React, { PropsWithChildren, useState } from 'react';
 import { defaultUser, Session } from '../services/session';
 import { DropboxAuth } from 'dropbox';
-import { State } from './useStateEx';
+import { State } from './makeRider';
 import { useLogin } from './useLogin';
 
 export const [useSession, _SessionContext] = makeContextual<State<Session>>(

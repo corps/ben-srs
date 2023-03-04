@@ -1,13 +1,14 @@
 import { minutesOfTime, startOfDay } from '../utils/time';
 import { useEffect, useState } from 'react';
 import { Indexer } from '../../shared/indexable';
-import { Cloze, indexesInitialState, Tagged } from '../notes';
+import { Cloze } from '../notes';
 import { mapSome, Maybe, withDefault, zipSome } from '../../shared/maybe';
 import { okAnswerFactor } from '../study';
 import { useTime } from './useTime';
 import { useNotesIndex } from './useNotesIndex';
 import { useStudyContext } from './useStudyContext';
 import { useSync } from './useSync';
+import { indexesInitialState, Tagged } from '../services/indexes';
 
 export const newStudyData = {
   studied: 0,
@@ -113,7 +114,7 @@ export function useStudyData() {
   const [notesIndex] = useNotesIndex();
   const now = useTime();
   const minutesNow = minutesOfTime(now);
-  const [{ tag, audioStudy, target }] = useStudyContext();
+  const { tag, audioStudy, target } = useStudyContext();
   const { isSyncing } = useSync();
   const startOfCurDay = minutesOfTime(startOfDay(now));
 

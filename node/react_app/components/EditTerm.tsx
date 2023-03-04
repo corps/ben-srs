@@ -10,12 +10,11 @@ import React, {
 import { mapSome, Maybe, withDefault } from '../../shared/maybe';
 import {
   ClozeType,
-  findNoteTree,
-  newNormalizeCloze,
-  newNormalizedTerm,
-  NormalizedCloze,
+  newDenormalizedCloze,
+  newDenormalizedTerm,
+  DenormalizedCloze,
   DenormalizedNote,
-  NormalizedTerm,
+  DenormalizedTerm,
   NoteTree
 } from '../notes';
 import {
@@ -42,6 +41,7 @@ import { useSpeechAndAudio } from '../hooks/useSpeechAndAudio';
 import { useNotesIndex } from '../hooks/useNotesIndex';
 import { useStudyContext } from '../hooks/useStudyContext';
 import { useRoute } from '../hooks/useRoute';
+import { findNoteTree } from '../services/indexes';
 
 interface Props {
   onReturn?: () => void;
@@ -49,10 +49,10 @@ interface Props {
   noteId: string;
   reference: string;
   marker: string;
-  normalized: DenormalizedNote;
+  denormalized: DenormalizedNote;
 }
 
-function useTypeToggle(workingTerm: NormalizedTerm, type: ClozeType) {
+function useTypeToggle(workingTerm: DenormalizedTerm, type: ClozeType) {
   const [on, setOn] = useState(() =>
     workingTerm.attributes.clozes.some(
       (cloze) => cloze.attributes.type === type
@@ -69,22 +69,22 @@ function useTypeToggle(workingTerm: NormalizedTerm, type: ClozeType) {
 export function EditTerm(props: Props) {
   const [_, setRoute] = useRoute();
   const [notesIndex] = useNotesIndex();
-  const [{ audioStudy }] = useStudyContext();
+  const { audioStudy } = useStudyContext();
 
   const {
     onReturn = () => setRoute(() => null),
-    normalized,
+    denormalized,
     reference,
     marker,
     noteId
   } = props;
   const [workingTerm, setWorkingTerm] = useState(() => {
     return withDefault(
-      findTermInNormalizedNote(normalized, reference, marker),
+      findTermInNormalizedNote(denormalized, reference, marker),
       {
-        ...newNormalizedTerm,
+        ...newDenormalizedTerm,
         attributes: {
-          ...newNormalizedTerm.attributes,
+          ...newDenormalizedTerm.attributes,
           marker: marker,
           reference: reference
         }
@@ -106,7 +106,7 @@ export function EditTerm(props: Props) {
     [marker, noteId, notesIndex, reference, time, audioStudy]
   );
 
-  const noteImages = useCardImages(normalized.attributes.imageFilePaths);
+  const noteImages = useCardImages(denormalized.attributes.imageFilePaths);
   const termImages = useCardImages(workingTerm.attributes.imageFilePaths);
 
   const toggleTermImage = useCallback(
@@ -161,9 +161,9 @@ export function EditTerm(props: Props) {
     const tree = findNoteTree(notesIndex, noteId);
     await props.onApply(
       tree,
-      updateTermInNormalizedNote(normalized, workingTerm)
+      updateTermInNormalizedNote(denormalized, workingTerm)
     );
-  }, [notesIndex, noteId, props, normalized, workingTerm]);
+  }, [notesIndex, noteId, props, denormalized, workingTerm]);
 
   useEffect(() => {
     setWorkingTerm((workingTerm) =>
@@ -183,7 +183,7 @@ export function EditTerm(props: Props) {
   const onDelete = useCallback(async () => {
     if (!confirm('Delete?')) return;
 
-    const updated = { ...normalized };
+    const updated = { ...denormalized };
     const attributes = (updated.attributes = { ...updated.attributes });
     for (let i = 0; i < attributes.terms.length; ++i) {
       const term = attributes.terms[i];
@@ -209,7 +209,7 @@ export function EditTerm(props: Props) {
     const tree = findNoteTree(notesIndex, noteId);
     await props.onApply(tree, updated);
   }, [
-    normalized,
+    denormalized,
     noteId,
     notesIndex,
     props,
@@ -277,7 +277,7 @@ export function EditTerm(props: Props) {
     [setWorkingTerm]
   );
 
-  const audioDataUrl = useDataUrl(normalized.attributes.audioFileId);
+  const audioDataUrl = useDataUrl(denormalized.attributes.audioFileId);
   const { speakInScope, playAudioInScope, timePosition } = useSpeechAndAudio();
   const playAudioPath = useCallback(() => {
     mapSome(audioDataUrl, (url) =>
@@ -290,17 +290,17 @@ export function EditTerm(props: Props) {
   }, [audioDataUrl, workingTerm.attributes, playAudioInScope]);
 
   const testSpeech = useCallback(() => {
-    if (normalized.attributes.audioFileId) {
+    if (denormalized.attributes.audioFileId) {
       playAudioPath();
     } else {
       speakInScope(
-        normalized.attributes.language,
+        denormalized.attributes.language,
         workingTerm.attributes.pronounce || workingTerm.attributes.reference
       );
     }
   }, [
-    normalized.attributes.audioFileId,
-    normalized.attributes.language,
+    denormalized.attributes.audioFileId,
+    denormalized.attributes.language,
     playAudioPath,
     workingTerm.attributes.pronounce,
     workingTerm.attributes.reference,
@@ -314,11 +314,14 @@ export function EditTerm(props: Props) {
       { defaultSearch: reference, defaultMode: 'terms' },
       {
         ...props,
-        normalized: updateTermInNormalizedNote(props.normalized, workingTerm)
+        denormalized: updateTermInNormalizedNote(
+          props.denormalized,
+          workingTerm
+        )
       },
       (linkTo: StudyDetails) => ({
         ...props,
-        normalized: updateTermInNormalizedNote(props.normalized, {
+        denormalized: updateTermInNormalizedNote(props.denormalized, {
           ...workingTerm,
           attributes: {
             ...workingTerm.attributes,
@@ -332,8 +335,8 @@ export function EditTerm(props: Props) {
   const [SearchWrapper] = useWithKeybinding('?', searchTerm);
 
   const studyTerm = useCallback(() => {
-    routeStudy({ noteId, marker, reference }, props, () => props);
-  }, [marker, noteId, props, reference, routeStudy]);
+    routeStudy({ reference }, props, () => props);
+  }, [props, reference, routeStudy]);
 
   const [DeleteWrapper] = useWithKeybinding('Delete', onDelete);
   const [StudyWrapper] = useWithKeybinding(
@@ -503,7 +506,7 @@ export function EditTerm(props: Props) {
 
         <div className="tc">
           <DictionaryLookup
-            language={normalized.attributes.language}
+            language={denormalized.attributes.language}
             word={workingTerm.attributes.reference}
           />
         </div>
@@ -521,7 +524,7 @@ export function EditTerm(props: Props) {
 }
 
 export function applyClozes(
-  workingTerm: NormalizedTerm,
+  workingTerm: DenormalizedTerm,
   produce: boolean,
   speak: boolean,
   recognize: boolean,
@@ -529,7 +532,7 @@ export function applyClozes(
   flash: boolean,
   clozeSplits: string,
   related: string
-): NormalizedTerm {
+): DenormalizedTerm {
   const attributes = { ...workingTerm.attributes };
   attributes.related = related.split(',');
 
@@ -538,7 +541,7 @@ export function applyClozes(
   let produced = attributes.clozes.filter(
     (c) => c.attributes.type === 'produce'
   );
-  let next: NormalizedCloze;
+  let next: DenormalizedCloze;
 
   const newSchedule = medianSchedule(
     attributes.clozes.map((c) => c.attributes.schedule)
@@ -548,7 +551,7 @@ export function applyClozes(
     if (i < produced.length) {
       next = { ...produced[i] };
     } else {
-      next = { ...newNormalizeCloze };
+      next = { ...newDenormalizedCloze };
     }
 
     next.attributes = { ...next.attributes };
@@ -564,7 +567,7 @@ export function applyClozes(
     if (existing) {
       attributes.clozes.push(existing);
     } else {
-      next = { ...newNormalizeCloze };
+      next = { ...newDenormalizedCloze };
       next.attributes = { ...next.attributes };
       next.attributes.type = type;
       next.attributes.schedule = newSchedule;

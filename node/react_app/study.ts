@@ -3,16 +3,12 @@ import {
   ClozeAnswer,
   ClozeType,
   defaultNoteTree,
-  findNoteTree,
   newCloze,
-  newNormalizedTerm,
+  newDenormalizedTerm,
   DenormalizedNote,
-  denormalizedNote,
-  NormalizedTerm,
-  NoteIndexes,
+  DenormalizedTerm,
   NoteTree,
-  Term,
-  TermsRelatableStore
+  Term
 } from './notes';
 import { bindSome, mapSome, Maybe, some, toVoid } from '../shared/maybe';
 import {
@@ -21,6 +17,12 @@ import {
   Indexer
 } from '../shared/indexable';
 import { Answer, isWrongAnswer, scheduledBy } from '../shared/scheduler';
+import {
+  denormalizedNote,
+  findNoteTree,
+  NoteIndexes,
+  TermsRelatableStore
+} from './services/indexes';
 
 export interface StudyDetails {
   noteTree: NoteTree;
@@ -64,7 +66,7 @@ export const defaultStudyDetails: StudyDetails = {
   audioEnd: null
 };
 
-export interface TermId {
+export interface PlacementOfTerm {
   attributes: {
     marker: string;
     reference: string;
@@ -285,17 +287,17 @@ export function studyDetailsForCloze(
   const noteTree = toVoid(findNoteTree(indexes, cloze.noteId));
 
   if (term && note && noteTree) {
-    let normalized = denormalizedNote(noteTree);
+    let denormalized = denormalizedNote(noteTree);
     const termRanges = terms.map((t) =>
-      findTermRange(t, normalized.attributes.content)
+      findTermRange(t, denormalized.attributes.content)
     );
     let [content, contentLeft, contentRight] = getTermFragment(
-      normalized,
+      denormalized,
       term,
       termRanges,
       fullTermMarker(term)
     );
-    const origContent = normalized.attributes.content.slice(
+    const contentOfTermRange = denormalized.attributes.content.slice(
       contentLeft,
       contentRight
     );
@@ -306,8 +308,8 @@ export function studyDetailsForCloze(
     clozeSplits = clozeSplits.slice(0, 2 * (cloze.clozeIdx + 1));
 
     const related = findRelatedTermMarkers(
-      [term],
-      origContent,
+      terms,
+      contentOfTermRange,
       indexes.termsRelatable
     );
 
@@ -368,7 +370,10 @@ function findRelatedTermMarkers(
     .filter(([t, related]) => related.length > 0);
 }
 
-export function findTermRange(term: TermId, text: string): [number, number] {
+export function findTermRange(
+  term: PlacementOfTerm,
+  text: string
+): [number, number] {
   let fullMarker = fullTermMarker(term);
   let start = text.indexOf(fullMarker);
 
@@ -413,7 +418,7 @@ export function findNextUniqueMarker(content: string): string {
 }
 
 export function findContentRange(
-  term: TermId,
+  term: PlacementOfTerm,
   content: string,
   grabCharsMax = 50,
   termRanges: [number, number][]
@@ -464,16 +469,14 @@ export function addNewTerm(
   note = { ...note };
   note.attributes = { ...note.attributes };
 
-  let normalizedTerm: NormalizedTerm = { ...newNormalizedTerm };
-  normalizedTerm.attributes = { ...normalizedTerm.attributes };
-  normalizedTerm.attributes.reference = reference;
-  normalizedTerm.attributes.marker = marker;
+  let term: DenormalizedTerm = { ...newDenormalizedTerm };
+  term.attributes = { ...term.attributes };
+  term.attributes.reference = reference;
+  term.attributes.marker = marker;
 
   content =
-    content.slice(0, left) +
-    fullTermMarker(normalizedTerm) +
-    content.slice(right);
-  note.attributes.terms = note.attributes.terms.concat([normalizedTerm]);
+    content.slice(0, left) + fullTermMarker(term) + content.slice(right);
+  note.attributes.terms = note.attributes.terms.concat([term]);
   note.attributes.content = content;
 
   return note;
@@ -481,7 +484,7 @@ export function addNewTerm(
 
 export function getTermFragment(
   note: DenormalizedNote,
-  term: TermId,
+  term: PlacementOfTerm,
   termRanges: [number, number][],
   termOverride = term.attributes.reference,
   grabCharsMax = 50
@@ -520,7 +523,7 @@ export function findTermInNormalizedNote(
   note: DenormalizedNote,
   reference: string,
   marker: string
-): Maybe<NormalizedTerm> {
+): Maybe<DenormalizedTerm> {
   for (let term of note.attributes.terms) {
     if (
       term.attributes.reference === reference &&
@@ -534,7 +537,7 @@ export function findTermInNormalizedNote(
 
 export function updateTermInNormalizedNote(
   note: DenormalizedNote,
-  update: NormalizedTerm
+  update: DenormalizedTerm
 ): DenormalizedNote {
   const updatedTerms = [...note.attributes.terms];
 
@@ -556,7 +559,7 @@ export function updateTermInNormalizedNote(
   return { ...note, attributes: { ...note.attributes, terms: updatedTerms } };
 }
 
-export function fullTermMarker(term: TermId) {
+export function fullTermMarker(term: PlacementOfTerm) {
   if (term.attributes.marker.indexOf(term.attributes.reference) === 0)
     return term.attributes.marker;
   return term.attributes.reference + '[' + term.attributes.marker + ']';

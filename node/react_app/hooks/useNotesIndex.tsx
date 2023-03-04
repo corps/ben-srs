@@ -1,6 +1,6 @@
 import { makeContextual } from './makeContextual';
 import { useState } from 'react';
-import { indexesInitialState } from '../notes';
+import { indexesInitialState } from '../services/indexes';
 
 export const [useNotesIndex, NotesIndexContext] = makeContextual(
   function useNotesIndex() {

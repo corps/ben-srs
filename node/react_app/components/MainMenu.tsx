@@ -1,10 +1,4 @@
-import React, {
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState
-} from 'react';
+import React, { useCallback, useState } from 'react';
 import { SelectSingle } from './SelectSingle';
 import { useToggle } from '../hooks/useToggle';
 import { useStudyData } from '../hooks/useStudyData';
@@ -16,112 +10,35 @@ import { useWorkflowRouting } from '../hooks/useWorkflowRouting';
 import { EditNote } from './EditNote';
 import { useFileStorage } from '../hooks/useFileStorage';
 import { Search } from './Search';
-import { TagsSelector, useAllTags } from './TagsSelector';
-import { useStoredState } from '../hooks/useStoredState';
-import { getLanguagesOfNotes, DenormalizedNote, NoteTree } from '../notes';
+import { TagsSelector } from './TagsSelector';
+import { DenormalizedNote, NoteTree } from '../notes';
 import { SelectTerm } from './SelectTerm';
 import { NumberTraining } from './NumberTraining';
 import { useSession } from '../hooks/useSession';
 import { createId } from '../services/storage';
-import { useNotesIndex } from '../hooks/useNotesIndex';
 import { useStudyContext } from '../hooks/useStudyContext';
 import { useRoute } from '../hooks/useRoute';
+import { Tuple } from '../../shared/tuple';
 
 const targets = ['7 Days', '30 Days', '90 Days', '1 Day', 'Slow'];
 
 export function MainMenu({ syncFailed }: { syncFailed: boolean }) {
   const [session] = useSession();
-  const storage = useFileStorage();
-  const [notesIndex] = useNotesIndex();
   const [_, setRoute] = useRoute();
-  const [loggingOut, setLoggingOut] = useState(false);
-  const [selectedLanguage, setLanguage] = useStoredState(
-    localStorage,
-    'lastLanguage',
-    ''
-  );
-  const [studyContext, setStudyContext] = useStudyContext();
-
-  const languages = useMemo(() => {
-    notesIndex.notes.byLanguageAndStudyGuide;
-    return getLanguagesOfNotes(notesIndex.notes);
-  }, [notesIndex.notes]);
-
-  const language = languages.includes(selectedLanguage) ? selectedLanguage : '';
-
-  const allTags = useAllTags(language, true);
-  const { tag, target } = studyContext;
-
-  const setTag = useCallback(
-    (tag: string) => {
-      setStudyContext((studyContext) => ({ ...studyContext, tag }));
-    },
-    [setStudyContext]
-  );
-
-  useEffect(() => {
-    if (!allTags.includes(tag)) {
-      setTag(language);
-    }
-  }, [allTags, tag, setStudyContext, language, setTag]);
-
-  const { audioStudy } = studyContext;
-  const setAudioStudy = useCallback(
-    (update: SetStateAction<boolean>) => {
-      setStudyContext((studyContext) => {
-        let { audioStudy } = studyContext;
-        if (update instanceof Function) {
-          audioStudy = update(audioStudy);
-        } else {
-          audioStudy = update;
-        }
-
-        return { ...studyContext, audioStudy };
-      });
-    },
-    [setStudyContext]
-  );
+  const {
+    languages,
+    language,
+    setLanguage,
+    tag,
+    setTag,
+    audioStudy,
+    setAudioStudy
+  } = useStudyContext();
   const toggleAudioStudy = useToggle(setAudioStudy);
-
-  const setTarget = useCallback(
-    (target: string) => {
-      let result: Maybe<number> = null;
-      const parsed = parseInt(target);
-      if (!isNaN(parsed)) {
-        result = some(parsed);
-      }
-
-      setStudyContext((studyContext) => ({ ...studyContext, target: result }));
-    },
-    [setStudyContext]
-  );
-
-  const targetString = target
-    ? `${target[0]} Day${target[0] == 1 ? '' : 's'}`
-    : 'Slow';
-
-  const updateNote = useUpdateNote(true);
-  const selectTermRouting = useWorkflowRouting(SelectTerm, null, updateNote);
-  const visitNewNote = useCallback(() => {
-    const noteId = createId();
-
-    const onFinishEditNote = async (
-      tree: Maybe<NoteTree>,
-      normalized: DenormalizedNote
-    ) => selectTermRouting({ noteId, normalized }, {});
-    setRoute(() =>
-      some(<EditNote onApply={onFinishEditNote} noteId={noteId} />)
-    );
-  }, [selectTermRouting, setRoute]);
-
+  const [target, setTarget] = useTarget();
   const studyData = useStudyData();
-
-  const doLogout = useCallback(async () => {
-    setLoggingOut(true);
-    await session.logout();
-    await storage.clear();
-    location.reload();
-  }, [session, storage]);
+  const [loggingOut, doLogout] = useLogout();
+  const visitNewNote = useVisitNewNote();
 
   if (loggingOut) return null;
 
@@ -155,7 +72,7 @@ export function MainMenu({ syncFailed }: { syncFailed: boolean }) {
           <div className="ml2 w4 dib">
             <SelectSingle
               onChange={setTarget}
-              value={targetString}
+              value={target}
               values={targets}
             />
           </div>
@@ -263,4 +180,55 @@ export function MainMenu({ syncFailed }: { syncFailed: boolean }) {
       <div className="tc f3 fw2 mb1">合計: {studyData.clozes}</div>
     </div>
   );
+}
+
+function useTarget() {
+  const { target, setTarget } = useStudyContext();
+  const setTargetString = useCallback(
+    (target: string) => {
+      let result: Maybe<number> = null;
+      const parsed = parseInt(target);
+      if (!isNaN(parsed)) {
+        result = some(parsed);
+      }
+
+      setTarget(result);
+    },
+    [setTarget]
+  );
+
+  const targetString = target
+    ? `${target[0]} Day${target[0] == 1 ? '' : 's'}`
+    : 'Slow';
+
+  return Tuple.from(targetString, setTargetString);
+}
+
+function useLogout() {
+  const [session] = useSession();
+  const storage = useFileStorage();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const doLogout = useCallback(async () => {
+    setLoggingOut(true);
+    await session.logout();
+    await storage.clear();
+    location.reload();
+  }, [session, storage]);
+  return Tuple.from(loggingOut, doLogout);
+}
+
+function useVisitNewNote() {
+  const updateNote = useUpdateNote(true);
+  const [_, setRoute] = useRoute();
+  const selectTermRouting = useWorkflowRouting(SelectTerm, null, updateNote);
+  return useCallback(() => {
+    const noteId = createId();
+    const onFinishEditNote = async (
+      tree: Maybe<NoteTree>,
+      denormalized: DenormalizedNote
+    ) => selectTermRouting({ noteId, denormalized: denormalized }, {});
+    setRoute(() =>
+      some(<EditNote onApply={onFinishEditNote} noteId={noteId} />)
+    );
+  }, [selectTermRouting, setRoute]);
 }

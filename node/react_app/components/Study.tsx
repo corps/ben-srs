@@ -1,4 +1,10 @@
-import React, { Dispatch, useCallback, useEffect, useState } from 'react';
+import React, {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useState
+} from 'react';
 import { useToggle } from '../hooks/useToggle';
 import { useTime } from '../hooks/useTime';
 import {
@@ -10,14 +16,7 @@ import {
   studyDetailsForCloze
 } from '../study';
 import { describeDuration, minutesOfTime, timeOfMinutes } from '../utils/time';
-import {
-  findNoteTree,
-  newDenormalizedNote,
-  denormalizedNote,
-  NoteIndexes,
-  Tagged,
-  Term
-} from '../notes';
+import { newDenormalizedNote, TermIdentifier } from '../notes';
 import {
   bindSome,
   mapSome,
@@ -33,8 +32,8 @@ import {
   VCentered,
   VCenteringContainer
 } from './layout-utils';
-import { SimpleNavLink, WorkflowLinks } from './SimpleNavLink';
-import { Answer, isWrongAnswer, scheduledBy } from '../../shared/scheduler';
+import { WorkflowLinks } from './SimpleNavLink';
+import { Answer } from '../../shared/scheduler';
 import { useKeypresses } from '../hooks/useKeypress';
 import { BackSide } from './BackSide';
 import { FrontSide } from './FrontSide';
@@ -49,167 +48,35 @@ import { useSpeechAndAudio } from '../hooks/useSpeechAndAudio';
 import { useNotesIndex } from '../hooks/useNotesIndex';
 import { useStudyContext } from '../hooks/useStudyContext';
 import { useRoute } from '../hooks/useRoute';
+import { denormalizedNote, findNoteTree } from '../services/indexes';
 
 interface Props {
   onReturn?: Dispatch<void>;
-  noteId?: string;
+  termId?: TermIdentifier;
   reference?: string;
-  marker?: string;
-  seenNoteIds?: string[];
-  seenRelated?: boolean;
+  seenTermIds?: TermIdentifier[];
 }
 
 export function Study(props: Props) {
-  const [notesIndex] = useNotesIndex();
   const [showBack, setShowBack] = useState(false);
   const toggleShowBack = useToggle(setShowBack);
-  const [cardStartedAt, setCardStartedAt] = useState(0);
   const [_, setRoute] = useRoute();
   const time = useTime(1000);
-  const nowMinutes = minutesOfTime(time);
-  const [{ tag: language, audioStudy }] = useStudyContext();
-
-  const {
-    noteId,
-    reference,
-    marker,
-    seenRelated = false,
-    onReturn = () => setRoute(() => null)
-  } = props;
-  const [seenNoteIds] = useState(() => props.seenNoteIds || []);
-
-  const updateNoteAndConfirm = useUpdateNote(true);
-  const selectTermRouting = useWorkflowRouting(
-    SelectTerm,
-    Study,
-    updateNoteAndConfirm
+  const { onReturn = () => setRoute(() => null) } = props;
+  const editNote = useEditNote(props);
+  const [cardStartedAt, setCardStartedAt] = useState(0);
+  const prepareNext = usePrepareNext(
+    props,
+    setCardStartedAt,
+    setShowBack,
+    onReturn
   );
-  const relatedStudyRouting = useWorkflowRouting(RelatedStudy, Study);
-  const editNote = useCallback(
-    (editNoteId: string) => {
-      const normalized = withDefault(
-        mapSome(findNoteTree(notesIndex, editNoteId), denormalizedNote),
-        { ...newDenormalizedNote }
-      );
-      selectTermRouting(
-        { noteId: editNoteId, normalized },
-        { noteId, reference, marker, onReturn }
-      );
-    },
-    [marker, noteId, notesIndex, onReturn, reference, selectTermRouting]
-  );
-
-  const prepareNext = useCallback(() => {
-    setCardStartedAt(Date.now());
-    setShowBack(false);
-
-    if (noteId && reference && marker) {
-      const next = findNextStudyClozeWithinTerm(
-        noteId,
-        reference,
-        marker,
-        notesIndex,
-        nowMinutes,
-        audioStudy
-      );
-      if (next) {
-        if (
-          next[0].attributes.schedule.nextDueMinutes > nowMinutes &&
-          seenRelated
-        ) {
-          onReturn();
-          return null;
-        }
-        return bindSome(next, (next) => studyDetailsForCloze(next, notesIndex));
-      }
-
-      onReturn();
-      return null;
-    }
-
-    if (reference) {
-      let next = Indexer.iterator(
-        notesIndex.taggedClozes.byTagSpokenReferenceAndNextDue,
-        [language, false, reference]
-      )();
-      if (!next && audioStudy) {
-        Indexer.iterator(
-          notesIndex.taggedClozes.byTagSpokenReferenceAndNextDue,
-          [language, true, reference]
-        )();
-      }
-
-      if (next) {
-        if (
-          next[0].inner.attributes.schedule.nextDueMinutes > nowMinutes &&
-          seenRelated
-        ) {
-          onReturn();
-          return null;
-        }
-
-        return bindSome(next, (next) =>
-          studyDetailsForCloze(next.inner, notesIndex)
-        );
-      }
-
-      onReturn();
-      return null;
-    }
-
-    return findNextStudyDetails(language, nowMinutes, notesIndex, audioStudy);
-  }, [
-    noteId,
-    reference,
-    marker,
-    language,
-    nowMinutes,
-    notesIndex,
-    audioStudy,
-    onReturn,
-    seenRelated
-  ]);
-
   const studyData = useStudyData();
   const [studyDetails] = useState(prepareNext);
-  const answerCloze = useAnswerCloze(notesIndex);
   const readCard = useReadCard(studyDetails);
-
-  const answerFront = useCallback(
-    async (answer: Answer) => {
-      await answerCloze(studyDetails, answer);
-      setShowBack(false);
-
-      mapSome(studyDetails, (studyDetails) => {
-        relatedStudyRouting(
-          { ...studyDetails.cloze, seenNoteIds },
-          { ...props, seenRelated: true }
-        );
-      });
-    },
-    [answerCloze, props, relatedStudyRouting, studyDetails, seenNoteIds]
-  );
-
-  const dueTime = withDefault(
-    mapSome(studyDetails, (studyDetails) =>
-      timeOfMinutes(studyDetails.cloze.attributes.schedule.nextDueMinutes)
-    ),
-    0
-  );
-
-  const lastAnsweredTime = withDefault(
-    mapSome(studyDetails, (studyDetails) =>
-      timeOfMinutes(studyDetails.cloze.attributes.schedule.lastAnsweredMinutes)
-    ),
-    0
-  );
-
-  const intervalTime = withDefault(
-    mapSome(studyDetails, (studyDetails) =>
-      timeOfMinutes(studyDetails.cloze.attributes.schedule.intervalMinutes)
-    ),
-    0
-  );
+  const answerFront = useAnswerFront(studyDetails, setShowBack, props);
+  const { dueTime, lastAnsweredTime, intervalTime } =
+    useTimingData(studyDetails);
 
   useKeypresses(
     (key: string) => {
@@ -315,7 +182,54 @@ function useReadCard(studyDetails: Maybe<StudyDetails>) {
   }, [studyDetails, playAudioPath, speakInScope]);
 }
 
-function useAnswerCloze(noteIndexes: NoteIndexes) {
+function useAnswerFront(
+  studyDetails: Maybe<StudyDetails>,
+  setShowBack: Dispatch<SetStateAction<boolean>>,
+  props: Props
+) {
+  const answerCloze = useAnswerCloze();
+  const [_, setRoute] = useRoute();
+  const { seenTermIds = [] } = props;
+
+  return useCallback(
+    async (answer: Answer) => {
+      await answerCloze(studyDetails, answer);
+      setShowBack(false);
+
+      mapSome(studyDetails, (studyDetails) => {
+        let nextTermIds = seenTermIds;
+        if (!props.reference && !props.termId) {
+          nextTermIds = [...seenTermIds, studyDetails.cloze];
+        }
+
+        setRoute((curRoute) => {
+          let onReturn = () => setRoute(() => curRoute);
+          if (props.reference || props.termId) onReturn = props.onReturn;
+          return some(
+            <RelatedStudy
+              onReturn={onReturn}
+              seenTermIds={nextTermIds}
+              {...studyDetails.cloze}
+            />
+          );
+        });
+      });
+    },
+    [
+      answerCloze,
+      studyDetails,
+      setShowBack,
+      seenTermIds,
+      props.reference,
+      props.termId,
+      props.onReturn,
+      setRoute
+    ]
+  );
+}
+
+function useAnswerCloze() {
+  const [noteIndexes] = useNotesIndex();
   const updateNote = useUpdateNote();
 
   return useCallback(
@@ -352,4 +266,158 @@ export function answerMiss(now: number): Answer {
 
 export function answerSkip(now: number): Answer {
   return [minutesOfTime(now), ['d', 0.6, 2.0]];
+}
+
+function useEditNote(props: Props) {
+  const [notesIndex] = useNotesIndex();
+  const updateNoteAndConfirm = useUpdateNote(true);
+  const selectTermRouting = useWorkflowRouting(
+    SelectTerm,
+    Study,
+    updateNoteAndConfirm
+  );
+  return useCallback(
+    function editNote(editNoteId: string) {
+      const denormalized = withDefault(
+        mapSome(findNoteTree(notesIndex, editNoteId), denormalizedNote),
+        { ...newDenormalizedNote }
+      );
+      selectTermRouting({ noteId: editNoteId, denormalized }, props);
+    },
+    [notesIndex, props, selectTermRouting]
+  );
+}
+
+function prepareNextFromTermId(
+  term: TermIdentifier,
+  notesIndex,
+  nowMinutes: number,
+  audioStudy
+) {
+  const { noteId, reference, marker } = term;
+  const next = findNextStudyClozeWithinTerm(
+    noteId,
+    reference,
+    marker,
+    notesIndex,
+    nowMinutes,
+    audioStudy
+  );
+  if (next) {
+    return bindSome(next, (next) => studyDetailsForCloze(next, notesIndex));
+  }
+
+  return null;
+}
+
+function prepareNextFromReference(
+  notesIndex,
+  language,
+  reference: string,
+  audioStudy
+) {
+  let next = Indexer.iterator(
+    notesIndex.taggedClozes.byTagSpokenReferenceAndNextDue,
+    [language, false, reference]
+  )();
+  if (!next && audioStudy) {
+    Indexer.iterator(notesIndex.taggedClozes.byTagSpokenReferenceAndNextDue, [
+      language,
+      true,
+      reference
+    ])();
+  }
+
+  if (next) {
+    return bindSome(next, ({ inner }) =>
+      studyDetailsForCloze(inner, notesIndex)
+    );
+  }
+
+  return null;
+}
+
+function usePrepareNext(
+  props: Props,
+  setCardStartedAt: Dispatch<SetStateAction<number>>,
+  setShowBack: Dispatch<SetStateAction<boolean>>,
+  onReturn: Dispatch<void>
+) {
+  const { tag: language, audioStudy } = useStudyContext();
+  const { termId, reference = '' } = props;
+  const [notesIndex] = useNotesIndex();
+  const time = useTime(1000);
+  const nowMinutes = minutesOfTime(time);
+
+  return useCallback(
+    function prepareNext() {
+      setCardStartedAt(Date.now());
+      setShowBack(false);
+
+      if (termId) {
+        const result = prepareNextFromTermId(
+          termId,
+          notesIndex,
+          nowMinutes,
+          audioStudy
+        );
+        if (!result) {
+          onReturn();
+          return;
+        }
+        return result;
+      }
+
+      if (reference) {
+        const result = prepareNextFromReference(
+          notesIndex,
+          language,
+          reference,
+          audioStudy
+        );
+        if (!result) {
+          onReturn();
+          return;
+        }
+        return result;
+      }
+
+      return findNextStudyDetails(language, nowMinutes, notesIndex, audioStudy);
+    },
+    [
+      setCardStartedAt,
+      setShowBack,
+      termId,
+      reference,
+      language,
+      nowMinutes,
+      notesIndex,
+      audioStudy,
+      onReturn
+    ]
+  );
+}
+
+function useTimingData(studyDetails: Maybe<StudyDetails>) {
+  const dueTime = withDefault(
+    mapSome(studyDetails, (studyDetails) =>
+      timeOfMinutes(studyDetails.cloze.attributes.schedule.nextDueMinutes)
+    ),
+    0
+  );
+
+  const lastAnsweredTime = withDefault(
+    mapSome(studyDetails, (studyDetails) =>
+      timeOfMinutes(studyDetails.cloze.attributes.schedule.lastAnsweredMinutes)
+    ),
+    0
+  );
+
+  const intervalTime = withDefault(
+    mapSome(studyDetails, (studyDetails) =>
+      timeOfMinutes(studyDetails.cloze.attributes.schedule.intervalMinutes)
+    ),
+    0
+  );
+  return { dueTime, lastAnsweredTime, intervalTime };
 }

@@ -1,12 +1,12 @@
 import { useCallback, useState } from 'react';
-import { makeSink, State } from './useStateEx';
+import { makeStateRider, State } from './makeRider';
 
 export function useStoredState<T>(
   storage: Storage,
   key: string,
   d: T
 ): State<T> {
-  const useStored = makeSink<T>(
+  const useStored = makeStateRider<T>(
     useCallback(
       (v: T) => {
         storage.setItem(key, JSON.stringify(v));

@@ -27,13 +27,7 @@ import {
   withDefault
 } from '../../shared/maybe';
 import { SelectTerm } from './SelectTerm';
-import {
-  findNoteTree,
-  newDenormalizedNote,
-  denormalizedNote,
-  Note,
-  Term
-} from '../notes';
+import { newDenormalizedNote, Note, Term } from '../notes';
 import { createId, normalizeBlob, StoredMetadata } from '../services/storage';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { EditTerm } from './EditTerm';
@@ -49,6 +43,7 @@ import { useFileStorage } from '../hooks/useFileStorage';
 import { useNotesIndex } from '../hooks/useNotesIndex';
 import { useRoute } from '../hooks/useRoute';
 import { useSync } from '../hooks/useSync';
+import { denormalizedNote, findNoteTree } from '../services/indexes';
 
 interface Props {
   onReturn?: () => void;
@@ -287,26 +282,30 @@ function useSearchResults(
 
   const visitNote = useCallback(
     (note: Note) => {
-      const normalized = withDefault(
+      const denormalized = withDefault(
         mapSome(findNoteTree(notesIndex, note.id), denormalizedNote),
         { ...newDenormalizedNote }
       );
-      selectTermRouting({ noteId: note.id, normalized }, { onReturn }, () => ({
-        onReturn
-      }));
+      selectTermRouting(
+        { noteId: note.id, denormalized },
+        { onReturn },
+        () => ({
+          onReturn
+        })
+      );
     },
     [notesIndex, selectTermRouting, onReturn]
   );
 
   const visitTerm = useCallback(
     (sd: StudyDetails) => {
-      const normalized = withDefault(
+      const denormalized = withDefault(
         mapSome(findNoteTree(notesIndex, sd.cloze.noteId), denormalizedNote),
         { ...newDenormalizedNote }
       );
       const { noteId, reference, marker } = sd.cloze;
       editTermRouting(
-        { noteId, reference, marker, normalized },
+        { noteId, reference, marker, denormalized },
         { onReturn },
         () => ({ onReturn })
       );

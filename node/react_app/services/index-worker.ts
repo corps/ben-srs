@@ -1,11 +1,7 @@
-import {
-  expandedNote,
-  indexesInitialState,
-  parseNote,
-  updateNotes
-} from '../notes';
+import { parseNote } from '../notes';
 import { normalizeBlob, readText } from './storage';
 import { createFileStore } from './services';
+import { expandedNote, indexesInitialState, updateNotes } from './indexes';
 
 const store = createFileStore();
 const worker = self;
@@ -16,8 +12,7 @@ worker.onmessage = async () => {
     const trees = await Promise.all(
       noteBlobs.map(async ({ blob, id, rev, path }) => {
         const contents = await readText(normalizeBlob(blob));
-        const normalized = parseNote(contents);
-        return expandedNote(normalized, id, path, rev);
+        return expandedNote(parseNote(contents), id, path, rev);
       })
     );
     updateNotes(indexes, ...trees);

@@ -1,5 +1,4 @@
-import React, { useMemo, useState } from 'react';
-import { useToggle } from '../hooks/useToggle';
+import React, { useState } from 'react';
 import { Maybe, some } from '../../shared/maybe';
 
 export type Image = { imageFilePath: string; url: string };

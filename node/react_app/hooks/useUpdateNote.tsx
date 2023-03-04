@@ -1,20 +1,15 @@
 import { useCallback } from 'react';
 import { mapSome, Maybe, some, withDefault } from '../../shared/maybe';
-import {
-  expandedNote,
-  DenormalizedNote,
-  NoteTree,
-  stringifyNote,
-  updateNotes
-} from '../notes';
+import { DenormalizedNote, NoteTree, stringifyNote } from '../notes';
 import { useFileStorage } from './useFileStorage';
 import { createId } from '../services/storage';
 import { useNotesIndex } from './useNotesIndex';
 import { useSync } from './useSync';
+import { expandedNote, updateNotes } from '../services/indexes';
 
 export function useUpdateNote(confirmEdit = false) {
   const storage = useFileStorage();
-  const [notesIndex] = useNotesIndex();
+  const [notesIndex, setNotesIndex] = useNotesIndex();
   const { triggerSync } = useSync();
 
   return useCallback(
@@ -43,6 +38,7 @@ export function useUpdateNote(confirmEdit = false) {
       );
 
       updateNotes(notesIndex, appliedTree);
+      setNotesIndex({ ...notesIndex });
 
       const blob = new Blob([stringifyNote(updated)]);
       await storage.storeBlob(
@@ -58,6 +54,6 @@ export function useUpdateNote(confirmEdit = false) {
 
       triggerSync();
     },
-    [notesIndex, storage, triggerSync, confirmEdit]
+    [notesIndex, setNotesIndex, storage, triggerSync, confirmEdit]
   );
 }
