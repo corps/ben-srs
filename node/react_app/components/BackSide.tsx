@@ -5,6 +5,19 @@ import { answerMiss, answerOk, answerSkip } from './Study';
 import { useWithKeybinding } from '../hooks/useWithKeybinding';
 import { Images } from './Images';
 import { useCardImages } from '../hooks/useCardImages';
+import { useNotesIndex } from '../hooks/useNotesIndex';
+import { useUpdateNote } from '../hooks/useUpdateNote';
+import { mapSome, Maybe, some, withDefault } from '../../shared/maybe';
+import { denormalizedNote, findNoteTree } from '../services/indexes';
+import {
+  Cloze,
+  DenormalizedNote,
+  newDenormalizedNote,
+  NoteTree
+} from '../notes';
+import { useRoute } from '../hooks/useRoute';
+import { EditTerm } from './EditTerm';
+import { SelectTerm } from './SelectTerm';
 
 interface Props {
   studyDetails: StudyDetails;
@@ -12,7 +25,6 @@ interface Props {
   answerFront: (answer: Answer) => void;
   now: number;
   studyStarted: number;
-  editNote: (noteId: string) => void;
 }
 
 const urlRegex = /(https?:\/\/[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+)/;
@@ -112,8 +124,7 @@ export function BackSide({
   readCard,
   answerFront,
   now,
-  studyStarted,
-  editNote
+  studyStarted
 }: Props) {
   const [OkWrapper, ok] = useWithKeybinding(
     'a',
@@ -136,12 +147,8 @@ export function BackSide({
     }, [answerFront, now])
   );
 
-  const [EditWrapper, edit] = useWithKeybinding(
-    'e',
-    useCallback(() => {
-      editNote(studyDetails.cloze.noteId);
-    }, [editNote, studyDetails.cloze.noteId])
-  );
+  const editNote = useEditNote(studyDetails.cloze);
+  const [EditWrapper, edit] = useWithKeybinding('e', editNote);
 
   const images = useCardImages(studyDetails.imageFilePaths);
 
@@ -167,5 +174,63 @@ export function BackSide({
 
       <Images images={images} />
     </AnswerDetails>
+  );
+}
+
+function useEditNote(cloze: Cloze) {
+  const [notesIndex] = useNotesIndex();
+  const updateNoteAndConfirm = useUpdateNote(true);
+  const [_, setRoute] = useRoute();
+  return useCallback(
+    function editNote() {
+      const noteTree = findNoteTree(notesIndex, cloze.noteId);
+      const denormalized = withDefault(mapSome(noteTree, denormalizedNote), {
+        ...newDenormalizedNote
+      });
+
+      setRoute((cur) => {
+        async function onSelectTermApply(
+          tree: Maybe<NoteTree>,
+          updated: DenormalizedNote
+        ) {
+          updateNoteAndConfirm(tree, updated);
+          setRoute(() => cur);
+        }
+
+        function onSelectTermReturn() {
+          setRoute(cur);
+        }
+
+        async function onEditTermApply(
+          tree: Maybe<NoteTree>,
+          updated: DenormalizedNote
+        ) {
+          setRoute(
+            some(
+              <SelectTerm
+                onApply={onSelectTermApply}
+                onReturn={onSelectTermReturn}
+                noteId={cloze.noteId}
+                denormalized={updated}
+              />
+            )
+          );
+        }
+
+        async function onEditTermReturn() {
+          return onEditTermApply(null, denormalized);
+        }
+
+        return some(
+          <EditTerm
+            {...cloze}
+            denormalized={denormalized}
+            onApply={onEditTermApply}
+            onReturn={onEditTermReturn}
+          />
+        );
+      });
+    },
+    [cloze, notesIndex, setRoute, updateNoteAndConfirm]
   );
 }

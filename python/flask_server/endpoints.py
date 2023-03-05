@@ -16,6 +16,7 @@ from typing import (
     cast,
 )
 
+import openai as openai
 import requests
 import vcr  # type: ignore
 from dropbox import Dropbox  # type: ignore
@@ -30,6 +31,7 @@ from dropbox.oauth import OAuth2FlowResult  # type: ignore
 from dropbox.users import FullAccount  # type: ignore
 from flask import Response, request, make_response, redirect, session, send_file
 from flask.testing import FlaskClient
+from openai.openai_object import OpenAIObject
 from pydantic import ValidationError, BaseModel
 from werkzeug.exceptions import Unauthorized, TooManyRequests
 
@@ -242,6 +244,42 @@ class Login(JsonEndpoint[LoginResponse]):
         session["user_id"] = user_id
         session.permanent = True
         return account, db
+
+
+class CompletionResponse(BaseModel):
+    response: str = ""
+
+
+@as_json_handler("/completion", lambda: CompletionResponse(), methods=["POST"])
+class Completion(JsonEndpoint[CompletionResponse]):
+    prompt: str = ""
+
+    def handle(self, res: CompletionResponse) -> Response | None:
+        user, _ = user_dropbox()
+        openai.api_key = app.openapi_key
+        response: OpenAIObject = openai.Completion.create(
+            model="text-davinci-003",
+            prompt=self.prompt,
+            temperature=0.6,
+            max_tokens=350,
+            n=1,
+        )
+
+        res.response = response.choices[0].text
+        return None
+
+
+@vcr.use_cassette(
+    os.path.join(app.root_path, ".test_cache/completion.yaml"),
+    record_mode="once",
+)
+def test_completion_endpoint(client: FlaskClient, logged_in_user: User) -> None:
+    response = client.post(
+        "/completion", json=Completion(prompt="Just say 'moo'\nback to me.")
+    )
+    json_response = response.get_json(force=True)
+    completion = CompletionResponse.parse_obj(json_response)
+    assert "moo" in completion.response.lower()
 
 
 @app.route("/authorize")

@@ -5,6 +5,12 @@
 /* Do not modify it by hand - just update the pydantic models and then re-run the script
 */
 
+export interface Completion {
+  prompt?: string;
+}
+export interface CompletionResponse {
+  response?: string;
+}
 export interface JsonEndpoint {}
 export interface Login {
   authorization_code?: string;

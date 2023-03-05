@@ -1,11 +1,36 @@
-import React from 'react';
+import React, { useCallback } from 'react';
+import { SimpleNavLink } from './SimpleNavLink';
+import { useRoute } from '../hooks/useRoute';
+import { some } from '../../shared/maybe';
+import { Completion } from './Completion';
 
 export interface DictionaryLookupProps {
   language: string;
   word: string;
+  fragment: string;
 }
 
-export function DictionaryLookup({ language, word }: DictionaryLookupProps) {
+function useShowCompletion(prompt: string) {
+  const [_, setRoute] = useRoute();
+  return useCallback(() => {
+    setRoute((cur) => {
+      return some(
+        <Completion prompt={prompt} onReturn={() => setRoute(cur)} />
+      );
+    });
+  }, [prompt, setRoute]);
+}
+
+export function DictionaryLookup({
+  language,
+  word,
+  fragment
+}: DictionaryLookupProps) {
+  const showJCompletion =
+    useShowCompletion(`以下の文章の中にある"${word}"という言葉を詳しく説明してください。
+文章：${fragment}
+説明：`);
+
   switch (language) {
     case 'Cantonese':
       return (
@@ -65,6 +90,7 @@ export function DictionaryLookup({ language, word }: DictionaryLookupProps) {
     case 'Japanese':
       return (
         <div>
+          <SimpleNavLink onClick={showJCompletion}>openai</SimpleNavLink>
           <a
             target="_blank"
             className="hover-light-blue blue mh1"

@@ -16,7 +16,7 @@ import {
   studyDetailsForCloze
 } from '../study';
 import { describeDuration, minutesOfTime, timeOfMinutes } from '../utils/time';
-import { newDenormalizedNote, TermIdentifier } from '../notes';
+import { TermIdentifier } from '../notes';
 import {
   bindSome,
   mapSome,
@@ -38,8 +38,6 @@ import { useKeypresses } from '../hooks/useKeypress';
 import { BackSide } from './BackSide';
 import { FrontSide } from './FrontSide';
 import { useUpdateNote } from '../hooks/useUpdateNote';
-import { useWorkflowRouting } from '../hooks/useWorkflowRouting';
-import { SelectTerm } from './SelectTerm';
 import { useDataUrl } from '../hooks/useDataUrl';
 import { Indexer } from '../../shared/indexable';
 import { RelatedStudy } from './RelatedStudy';
@@ -48,7 +46,6 @@ import { useSpeechAndAudio } from '../hooks/useSpeechAndAudio';
 import { useNotesIndex } from '../hooks/useNotesIndex';
 import { useStudyContext } from '../hooks/useStudyContext';
 import { useRoute } from '../hooks/useRoute';
-import { denormalizedNote, findNoteTree } from '../services/indexes';
 
 interface Props {
   onReturn?: Dispatch<void>;
@@ -63,7 +60,6 @@ export function Study(props: Props) {
   const [_, setRoute] = useRoute();
   const time = useTime(1000);
   const { onReturn = () => setRoute(() => null) } = props;
-  const editNote = useEditNote(props);
   const [cardStartedAt, setCardStartedAt] = useState(0);
   const prepareNext = usePrepareNext(
     props,
@@ -134,7 +130,6 @@ export function Study(props: Props) {
                 <div></div>
                 <HideIf hidden={!showBack}>
                   <BackSide
-                    editNote={editNote}
                     studyDetails={studyDetails}
                     answerFront={answerFront}
                     readCard={readCard}
@@ -266,26 +261,6 @@ export function answerMiss(now: number): Answer {
 
 export function answerSkip(now: number): Answer {
   return [minutesOfTime(now), ['d', 0.6, 2.0]];
-}
-
-function useEditNote(props: Props) {
-  const [notesIndex] = useNotesIndex();
-  const updateNoteAndConfirm = useUpdateNote(true);
-  const selectTermRouting = useWorkflowRouting(
-    SelectTerm,
-    Study,
-    updateNoteAndConfirm
-  );
-  return useCallback(
-    function editNote(editNoteId: string) {
-      const denormalized = withDefault(
-        mapSome(findNoteTree(notesIndex, editNoteId), denormalizedNote),
-        { ...newDenormalizedNote }
-      );
-      selectTermRouting({ noteId: editNoteId, denormalized }, props);
-    },
-    [notesIndex, props, selectTermRouting]
-  );
 }
 
 function prepareNextFromTermId(

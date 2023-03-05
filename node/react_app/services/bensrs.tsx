@@ -1,4 +1,9 @@
-import { Login, LoginResponse } from '../endpoints';
+import {
+  Completion,
+  CompletionResponse,
+  Login,
+  LoginResponse
+} from '../endpoints';
 
 export type Endpoint<url, Request, Response> = [url, Request, Response];
 
@@ -12,6 +17,12 @@ export class BensrsClient {
     {},
     {}
   ];
+
+  static CompletionEndpoint: Endpoint<
+    '/completion',
+    Completion,
+    CompletionResponse
+  > = ['/completion', {}, {}];
 
   private _openXhr(
     method: string,

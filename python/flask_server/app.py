@@ -52,6 +52,20 @@ class App(Flask):
     max_upload_size: int = 1024 * 1024 * 50
 
     @cached_property
+    def openapi_key(self) -> str:
+        if "OPENAPI_KEY" in os.environ:
+            return os.environ["OPENAPI_KEY"]
+        for path in [
+            "/run/secrets/openapi-key",
+            os.path.join(self.root_path, ".openapi-key"),
+        ]:
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    return f.read().rstrip()
+
+        raise ValueError("Could not determine openapi-key!")
+
+    @cached_property
     def app_secret(self) -> str:
         if "APP_SECRET" in os.environ:
             return os.environ["APP_SECRET"]

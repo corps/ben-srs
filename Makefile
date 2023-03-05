@@ -22,6 +22,7 @@ test:
 ./node/react_app/endpoints.ts: ./python/flask_server/endpoints.py
 	pydantic2ts --module ./python/flask_server/endpoints.py --output ./node/react_app/endpoints.ts
 
+.PHONY: ./python/requirements.txt
 ./python/requirements.txt:
 	pip freeze | grep -v "file:" > ./python/requirements.txt
 

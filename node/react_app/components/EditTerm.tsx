@@ -21,6 +21,8 @@ import {
   findNextStudyClozeWithinTerm,
   findTermInNormalizedNote,
   findTermRange,
+  fullTermMarker,
+  getTermFragment,
   StudyDetails,
   updateTermInNormalizedNote
 } from '../study';
@@ -345,6 +347,14 @@ export function EditTerm(props: Props) {
   );
   const [SpeakWrapper] = useWithKeybinding('j', testSpeech);
 
+  const contentOfTermRange = useMemo(() => {
+    const termRanges = denormalized.attributes.terms.map((t) =>
+      findTermRange(t, denormalized.attributes.content)
+    );
+    let [content] = getTermFragment(denormalized, workingTerm, termRanges);
+    return content;
+  }, [denormalized, workingTerm]);
+
   return (
     <div className="mw6 center">
       <div className="tc">
@@ -506,6 +516,7 @@ export function EditTerm(props: Props) {
 
         <div className="tc">
           <DictionaryLookup
+            fragment={contentOfTermRange}
             language={denormalized.attributes.language}
             word={workingTerm.attributes.reference}
           />

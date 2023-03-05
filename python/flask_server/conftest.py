@@ -67,6 +67,12 @@ def enable_app_secret(secret_key: str):
 
 
 @pytest.fixture(autouse=True)
+def enable_openapi_key(openapi_key: str):
+    with override(openapi_key=openapi_key):
+        yield
+
+
+@pytest.fixture(autouse=True)
 def enable_test_store():
     with override(store_path=":memory:"), app.open_store() as store:
         store.migrate()
@@ -117,6 +123,13 @@ def authorization_code():
 def secret_key(enable_test_app_key):
     return get_value_from_cache_or_browser(
         "secret-key", f"https://www.dropbox.com/developers/apps/info/{app.app_key}"
+    )
+
+
+@pytest.fixture
+def openapi_key(enable_test_app_key):
+    return get_value_from_cache_or_browser(
+        "openapi-key", f"https://platform.openai.com/account/api-keys"
     )
 
 
