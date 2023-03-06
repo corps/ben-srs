@@ -9,6 +9,9 @@ import { useFileStorage } from './useFileStorage';
 import { useNotesIndex } from './useNotesIndex';
 import { useProgress } from './useProgress';
 import { makeContextual } from './makeContextual';
+import {useDebounce} from "./useDebounce";
+import {NoteTree} from "../notes";
+import {updateNotes} from "../services/indexes";
 
 export const [useSync, SyncContext] = makeContextual(function useSync() {
   const [session, _] = useSession();
@@ -16,11 +19,28 @@ export const [useSync, SyncContext] = makeContextual(function useSync() {
   const { pending, completed, onProgress: _onProgress } = useProgress();
   const [syncId, setSyncId] = useState(0);
   const triggerSync = useCallback(() => setSyncId((i) => i + 1), []);
-  const [notesIndex, setNotesIndex] = useNotesIndex();
+  const [__, setNotesIndex] = useNotesIndex();
+  const debouncer = useDebounce(500);
   const onProgress = (p: number) => {
     _onProgress(p);
-    setNotesIndex((i) => ({ ...i }));
+    debouncer(() => {
+      setNotesIndex((i) => ({ ...i }));
+    });
   };
+
+  const onStoreNote = useCallback((note: NoteTree) => {
+    setNotesIndex(notesIndex => {
+      updateNotes(notesIndex, note);
+      debouncer(() => {
+        setNotesIndex(i => ({...i}));
+      })
+      return notesIndex;
+    })
+  }, [debouncer, setNotesIndex])
+
+  const onRemoveNote = useCallback((path: string) => {
+
+  }, [])
 
   const notesLoaded = useNoteLoader();
 
@@ -41,7 +61,8 @@ export const [useSync, SyncContext] = makeContextual(function useSync() {
           new DropboxSyncBackend(new Dropbox({ auth: session.auth })),
           storage,
           onProgress,
-          notesIndex
+          onStoreNote,
+          onRemoveNote,
         );
       } catch (e) {
         console.error(e);

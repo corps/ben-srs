@@ -9,14 +9,9 @@ import {
 import { runPromise } from '../cancellable';
 import 'regenerator-runtime';
 import { FileStore, normalizeBlob, readText, StoredMedia } from './storage';
-import { parseNote } from '../notes';
+import {NoteTree, parseNote} from '../notes';
 import { getExt } from '../../shared/files';
-import {
-  expandedNote,
-  NoteIndexes,
-  removeNotesByPath,
-  updateNotes
-} from './indexes';
+import { expandedNote } from './indexes';
 
 export const defaultFileMetadata = {
   path: '/',
@@ -57,7 +52,8 @@ export function* syncFiles(
   backend: SyncBackend,
   storage: FileStore,
   onSetPending: (v: number) => void = () => null,
-  notesIndex: NoteIndexes | null,
+  onStoreNote: (tree: NoteTree) => void | null = null,
+  onRemoveNote: (path: string) => void | null = null,
   ignoreBin = false
 ) {
   let pending = 0;
@@ -89,7 +85,7 @@ export function* syncFiles(
       const conflicted = yield* handleConflict(backend.deleteFile(d), d);
       if (!conflicted) {
         yield storage.deleteId(d.id);
-        if (notesIndex) removeNotesByPath(notesIndex, d.path);
+        if (onRemoveNote) onRemoveNote(d.path);
       }
     } else {
       for (let work of backend.uploadFile(d)) {
@@ -124,7 +120,7 @@ export function* syncFiles(
       if (!d.rev) {
         // Remove the local copy, force sync to hand back a copy with updated id.
         yield storage.deleteId(d.id);
-        if (notesIndex) removeNotesByPath(notesIndex, d.path);
+        if (onRemoveNote) onRemoveNote(d.path);
       }
     }
 
@@ -159,7 +155,7 @@ export function* syncFiles(
                 md.path,
                 md.rev
               );
-              if (notesIndex) updateNotes(notesIndex, note);
+              if (onStoreNote) onStoreNote(note);
             }
 
             try {
@@ -193,7 +189,7 @@ export function* syncFiles(
 
     updatePending(deletePaths.length);
     for (let path of deletePaths) {
-      if (notesIndex) removeNotesByPath(notesIndex, path);
+      if (onRemoveNote) onRemoveNote(path);
       yield storage.deletePath(path);
       updatePending(-1);
     }
