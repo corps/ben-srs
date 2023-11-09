@@ -1,5 +1,5 @@
 flask_server/data
+data
 .secret-key
 .test_cache
 .mypy_cache
-venv

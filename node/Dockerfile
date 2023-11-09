@@ -4,10 +4,7 @@ WORKDIR /app
 
 COPY package.json /app
 COPY package-lock.json /app
-COPY Makefile /app
-
-RUN make installation
-
+RUN npm install
 ENV PATH=/app/node_modules/.bin:$PATH
 COPY . /app
 

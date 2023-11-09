@@ -44,5 +44,8 @@
   "devDependencies": {
     "prettier": "^2.8.4",
     "webpack-dev-server": "^4.11.1"
+  },
+  "scripts": {
+    "test": "eslint --ext .jsx,.js.jsx,.js,ts,tsx ./react_app"
   }
 }
