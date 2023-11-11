@@ -4,6 +4,7 @@ services:
     image: corps/ben-srs:latest
     networks:
       - traefik-public
+      - mistral
     deploy:
       replicas: 1
       labels:
@@ -34,6 +35,8 @@ secrets:
 
 networks:
   traefik-public:
+    external: true
+  mistral:
     external: true
     
 volumes:
